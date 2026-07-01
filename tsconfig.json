@@ -1,0 +1,138 @@
+{
+    "extends": "@mat3ra/tsconfig/tsconfig-react-jsx.json",
+    "compilerOptions": {
+        "baseUrl": ".",
+        "outDir": "dist",
+        "rootDir": "src",
+        "moduleResolution": "node",
+        "esModuleInterop": true,
+        "allowSyntheticDefaultImports": true,
+        "declaration": true,
+        "declarationMap": true,
+        "skipLibCheck": true,
+        "strict": false,
+        "noImplicitAny": false,
+        "strictNullChecks": false,
+        "strictFunctionTypes": false,
+        "strictBindCallApply": false,
+        "strictPropertyInitialization": false,
+        "noImplicitThis": false,
+        "alwaysStrict": false,
+        "paths": {
+            "@mat3ra/wode": [
+                "node_modules/@mat3ra/wode"
+            ],
+            "@mat3ra/wode/*": [
+                "node_modules/@mat3ra/wode/*"
+            ],
+            "@mat3ra/esse": [
+                "node_modules/@mat3ra/esse"
+            ],
+            "@mat3ra/esse/*": [
+                "node_modules/@mat3ra/esse/*"
+            ],
+            "@mat3ra/ade": [
+                "node_modules/@mat3ra/ade"
+            ],
+            "@mat3ra/ade/*": [
+                "node_modules/@mat3ra/ade/*"
+            ],
+            "@mat3ra/mode": [
+                "node_modules/@mat3ra/mode"
+            ],
+            "@mat3ra/mode/*": [
+                "node_modules/@mat3ra/mode/*"
+            ],
+            "@mat3ra/code": [
+                "node_modules/@mat3ra/code"
+            ],
+            "@mat3ra/code/*": [
+                "node_modules/@mat3ra/code/*"
+            ],
+            "@mat3ra/standata": [
+                "node_modules/@mat3ra/standata"
+            ],
+            "@mat3ra/standata/*": [
+                "node_modules/@mat3ra/standata/*"
+            ],
+            "@mat3ra/utils": [
+                "node_modules/@mat3ra/utils"
+            ],
+            "@mat3ra/utils/*": [
+                "node_modules/@mat3ra/utils/*"
+            ],
+            "@mat3ra/wove": [
+                "../wove"
+            ],
+            "@mat3ra/wove/*": [
+                "../wove/*"
+            ],
+            "@mat3ra/workflow-designer": [
+                "../workflow-designer"
+            ],
+            "@mat3ra/workflow-designer/*": [
+                "../workflow-designer/*"
+            ],
+            "@mat3ra/ive": [
+                "../ive"
+            ],
+            "@mat3ra/ive/*": [
+                "../ive/*"
+            ],
+            "@mat3ra/ave": [
+                "../ave"
+            ],
+            "@mat3ra/ave/*": [
+                "../ave/*"
+            ],
+            "@mat3ra/move": [
+                "../move"
+            ],
+            "@mat3ra/move/*": [
+                "../move/*"
+            ],
+            "@mat3ra/jove": [
+                "../jove"
+            ],
+            "@mat3ra/jove/*": [
+                "../jove/*"
+            ],
+            "@mat3ra/job-designer": [
+                "../job-designer"
+            ],
+            "@mat3ra/job-designer/*": [
+                "../job-designer/*"
+            ],
+            "@mat3ra/jode": [
+                "../jode"
+            ],
+            "@mat3ra/jode/*": [
+                "../jode/*"
+            ],
+            "@mat3ra/*": [
+                "src/typings.d.ts"
+            ],
+            "/imports/*": [
+                "src/typings.d.ts"
+            ],
+            "meteor/*": [
+                "src/typings.d.ts"
+            ],
+            "simple-react-form": [
+                "src/typings.d.ts"
+            ],
+            "redux-logger": [
+                "src/typings.d.ts"
+            ],
+            "flat": [
+                "src/typings.d.ts"
+            ],
+            "path": [
+                "src/typings.d.ts"
+            ]
+        }
+    },
+    "include": [
+        "src/**/*"
+    ]
+}
