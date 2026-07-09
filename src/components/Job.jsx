@@ -19,12 +19,35 @@ import WorkflowTab from "./WorkflowTab";
 
 import TabsMenu from "@exabyte-io/cove.js/dist/mui/components/tabs/TabsMenu";
 import LoadingIndicator from "@exabyte-io/cove.js/dist/mui-composed/components/loading/LoadingIndicator";
+import { EntityHeader } from "@exabyte-io/cove.js/dist/mui-composed/components/entity-header/EntityHeader";
+import ButtonMultiSelect from "@exabyte-io/cove.js/dist/mui/components/button/ButtonMultiSelect";
+import Dropdown from "@exabyte-io/cove.js/dist/mui/components/dropdown/Dropdown";
 import { ComputableEntityMixin } from "@mat3ra/ive";
 
 // Webapp-specific mixins/utilities — stubbed for standalone build; injected from webapp at runtime.
-const DescriptionUpdateMixin = (superclass) => class extends superclass {};
-const EntityHeader = () => null;
-const StatefulEntityMixin = (superclass) => class extends superclass {};
+const DescriptionUpdateMixin = (superclass) => class extends superclass {
+    // In the webapp this checks user permissions; in standalone always allow editing.
+    isDescriptionEditable(_job) { return true; }
+
+    onDescriptionUpdateGenerator =
+        (entity, postProcessor, callback) => (descriptionObject, description) => {
+            entity.descriptionObject = descriptionObject;
+            entity.description = description;
+            postProcessor(entity, callback);
+        };
+};
+
+const StatefulEntityMixin = (superclass) => class extends superclass {
+    // In the webapp this fetches the parent job document from Meteor; no parent in standalone.
+    getParentJobClient() { return null; }
+
+    _resetStateEntityAndUpdateParents(entity, callback) {
+        this.setState({ entity: entity || this.state.entity }, () => {
+            this.props.onUpdate(this.state.entity);
+            if (callback) callback();
+        });
+    }
+};
 const DAOProvider = { get: () => ({ findByIds: () => [] }) };
 const triggerChartsResize = () => {};
 const getConditionalTabs = (config, conditionalMap, key) =>
@@ -99,8 +122,7 @@ class Job extends mix(React.Component).with(
     }
 
     get defaultTab() {
-        const route = Router.current();
-        let tab = lodash.get(route, "params.query.tab");
+        let tab = this.props.getRouteQueryTab?.() ?? null;
         const { job } = this.props;
         if (job.isSubmitted || job.isActive || job.isError) {
             tab = TAB_NAVIGATION_CONFIG.workflow.id;
@@ -183,7 +205,7 @@ class Job extends mix(React.Component).with(
     };
 
     renderParentJob() {
-        const parentJob = this.state.entity.getParentJobClient();
+        const parentJob = this.state.entity.getParentJobClient?.();
         return parentJob ? (
             <Alert severity="info" onClose={this.props.editable ? this.onParentRemove : undefined}>
                 <div className="search-pill-selected">
@@ -257,12 +279,19 @@ class Job extends mix(React.Component).with(
         const job = this.state.entity;
         const isDesignerLoading = this.props.isLoading || this.state.isWorkflowLoading;
         return {
-            isShown: this.props.editable,
-            className: "pull-right",
+            id: "save-button",
+            buttonConfigs: [
+                {
+                    id: "save",
+                    label: "Save",
+                    iconName: "shapes.save",
+                    onClick: (...args) => {
+                        this._resetStateEntityAndUpdateParents(job, () => this.props.onSave(...args));
+                    },
+                },
+            ],
+            localStorageKey: "job-designer-save-button",
             isLoading: isDesignerLoading,
-            onSave: (...args) => {
-                this._resetStateEntityAndUpdateParents(job, () => this.props.onSave(...args));
-            },
         };
     }
 
@@ -461,6 +490,9 @@ class Job extends mix(React.Component).with(
             createMetaProperty,
             fetchMaterials,
             renderGeneration,
+            MaterialViewerComponent,
+            /** Optional children rendered in the right side of the EntityHeader (selectors, export button, etc.). */
+            headerChildren,
         } = this.props;
 
         const currentAccount = profile.account.entity;
@@ -506,25 +538,20 @@ class Job extends mix(React.Component).with(
         const isActive = (value) => (value ? "active" : null);
 
         return (
-            <ErrorBoundary>
+            <ErrorBoundary fallback={<div />}>
                 <EntityHeader
                     name={job.name}
-                    editable={editable}
+                    editable={this.props.editable}
                     onNameUpdate={this.onNameUpdate}
                     isLoading={isDesignerLoading}
-                    subtitle={{ project: project.name }}
-                    description={job.description}
+                    subtitle={project?.name ? { project: project.name } : undefined}
                     icon="entities.job"
-                    iconCls={`text-${job.statusCls}`}
                     id="job-designer-header"
-                    saveBtnProps={this.getSaveBtnProps()}
-                    dropdownProps={this.getDropdownProps()}
-                    descriptionEditorTitle="Job Description"
-                    isDescriptionEditorHidden={hideDescription}
-                    item={job}
-                    isDescriptionEditable={isDescriptionEditable}
-                    onDescriptionUpdate={this.onDescriptionUpdate}
-                />
+                >
+                    {this.props.editable && <ButtonMultiSelect {...this.getSaveBtnProps()} />}
+                    <Dropdown {...this.getDropdownProps()} />
+                    {headerChildren ?? null}
+                </EntityHeader>
                 {this.renderParentJob()}
                 {this.renderErrors()}
                 {this.renderWarnings()}
@@ -554,6 +581,7 @@ class Job extends mix(React.Component).with(
                                         onMaterialRemove={onMaterialRemove}
                                         addRemoveAllowed={!job.id}
                                         openAddMaterialsDialog={this.openAddMaterialsDialog}
+                                        MaterialViewerComponent={MaterialViewerComponent}
                                     />
                                 )}
                                 {isCurrentTabDataset && (
@@ -575,7 +603,7 @@ class Job extends mix(React.Component).with(
                                         role="tabpanel"
                                         workflow={job.workflow}
                                         onJobRender={this.persistJob}
-                                        jobHasParent={Boolean(job.getParentJobClient())}
+                                        jobHasParent={Boolean(job.getParentJobClient?.())}
                                         profile={profile}
                                         publicAccount={publicAccount}
                                         allowedWorkflows={allowedWorkflows}

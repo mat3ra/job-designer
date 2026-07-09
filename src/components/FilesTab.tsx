@@ -17,8 +17,9 @@ function FilesTab({ className, id, role, job, account }: FilesTabProps) {
     return (
         <div className={setClass(className, "row files-step")} id={id} role={role}>
             <div className="job-units-view-wrap">
-                {/* TODO: improve explorer Redux dependencies and remove Redux Provider below */}
-                {job.clusterFqdn && FilesExplorerContainer ? (
+                {/* Show FilesExplorerContainer if injected (standalone stub or webapp explorer).
+                    Falls back to the error alert only when no container is provided at all. */}
+                {FilesExplorerContainer ? (
                     <FilesExplorerContainer
                         name={`JobFilesExplorer-${job._id}`}
                         job={job}

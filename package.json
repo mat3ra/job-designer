@@ -2,6 +2,14 @@
     "name": "@mat3ra/job-designer",
     "version": "0.0.0",
     "description": "Job Designer application",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/mat3ra/job-designer.git"
+    },
+    "bugs": {
+        "url": "https://github.com/mat3ra/job-designer/issues"
+    },
+    "homepage": "https://github.com/mat3ra/job-designer",
     "main": "dist/exports.js",
     "types": "dist/exports.d.ts",
     "files": [
@@ -15,6 +23,7 @@
         "transpile": "tsc",
         "test": "node --import tsx --test tests/*.tests.ts",
         "dev": "vite --port 3003",
+        "lint": "eslint src tests && prettier --check src tests",
         "test:e2e": "cd tests/e2e && npm run test:headless"
     },
     "dependencies": {
@@ -32,9 +41,15 @@
         "swig": "^1.4.2"
     },
     "peerDependencies": {
+        "@mat3ra/ade": "*",
+        "@mat3ra/code": "*",
+        "@mat3ra/esse": "*",
+        "@mat3ra/ive": "*",
         "@mat3ra/jode": "*",
         "@mat3ra/jove": "*",
-        "@mat3ra/workflow-designer": "file:../workflow-designer/mat3ra-workflow-designer-0.0.0.tgz",
+        "@mat3ra/standata": "*",
+        "@mat3ra/wode": "*",
+        "@mat3ra/workflow-designer": "*",
         "react": "^17.0.0",
         "react-dom": "^17.0.0"
     },
@@ -43,19 +58,19 @@
         "@exabyte-io/cove.js": "2026.5.28-0",
         "@exabyte-io/wave.js": "2026.6.22-0",
         "@mat3ra/ade": "2026.5.29-0",
-        "@mat3ra/ave": "file:../ave/mat3ra-ave-0.0.0.tgz",
+        "@mat3ra/ave": "*",
         "@mat3ra/code": "2026.5.27-0",
         "@mat3ra/esse": "2026.6.16-0",
-        "@mat3ra/ive": "file:../ive/mat3ra-ive-0.0.0.tgz",
-        "@mat3ra/jode": "file:../jode/mat3ra-jode-0.0.0.tgz",
-        "@mat3ra/jove": "file:../jove/mat3ra-jove-0.0.0.tgz",
+        "@mat3ra/ive": "*",
+        "@mat3ra/jode": "*",
+        "@mat3ra/jove": "*",
         "@mat3ra/mode": "2026.5.28-0",
-        "@mat3ra/move": "file:../move/mat3ra-move-0.0.0.tgz",
+        "@mat3ra/move": "*",
         "@mat3ra/standata": "2026.6.12-1",
         "@mat3ra/tsconfig": "^2024.6.3-0",
-        "@mat3ra/wode": "2026.6.19-0",
-        "@mat3ra/workflow-designer": "file:../workflow-designer/mat3ra-workflow-designer-0.0.0.tgz",
-        "@mat3ra/wove": "file:../wove/mat3ra-wove-0.0.0.tgz",
+        "@mat3ra/wode": "2026.7.9-0",
+        "@mat3ra/workflow-designer": "*",
+        "@mat3ra/wove": "*",
         "@mui/icons-material": "^5.11.9",
         "@mui/lab": "^5.0.0-alpha.120",
         "@mui/material": "^5.11.9",

@@ -4,7 +4,16 @@ import { defineConfig } from "vite";
 import { nodePolyfills } from "vite-plugin-node-polyfills";
 
 export default defineConfig({
-    server: { port: 3009 },
+    server: {
+        port: 3003,
+        fs: {
+            // Allow serving aliased sibling packages (cove.js, wave.js) outside this package dir.
+            allow: [
+                path.resolve(__dirname, ".."),
+                path.resolve(__dirname, "node_modules"),
+            ],
+        },
+    },
     plugins: [
         react({
             jsxImportSource: "@emotion/react",
@@ -37,6 +46,16 @@ export default defineConfig({
             {
                 find: /^@exabyte-io\/cove\.js$/,
                 replacement: path.resolve(__dirname, "../cove.js/dist/index.js"),
+            },
+            // cove.js src/* — ThreeDEditor from wave.js imports AlertProvider via the /src/ path.
+            {
+                find: /^@exabyte-io\/cove\.js\/src\/(.*)$/,
+                replacement: path.resolve(__dirname, "../cove.js/src/$1"),
+            },
+            // @exabyte-io/wave.js — point to the local installed dist.
+            {
+                find: /^@exabyte-io\/wave\.js$/,
+                replacement: path.resolve(__dirname, "node_modules/@exabyte-io/wave.js/dist/exports.js"),
             },
             // Bypass narrow prode exports field
             {
@@ -160,7 +179,6 @@ export default defineConfig({
             "@mat3ra/ive",
             "@mat3ra/move",
             "@mat3ra/jove",
-            "@mat3ra/jode",
             "@mat3ra/workflow-designer",
             "@mat3ra/job-designer",
             "moment-duration-format",
@@ -203,10 +221,17 @@ export default defineConfig({
             "@mat3ra/wode",
             "@mat3ra/mode",
             "@mat3ra/code",
+            "@mat3ra/jode",
             "@exabyte-io/periodic-table.js",
             "react-json-view",
             "use-sync-external-store/shim/with-selector",
         ],
+        // Prevent esbuild from inlining @mat3ra/wode/dist/js/Workflow into jode's pre-bundle.
+        // Without this, esbuild creates a split esse/JSONSchemasInterface instance that doesn't
+        // see the schemas set in preloads.ts — causing "missing schema id" errors at runtime.
+        esbuildOptions: {
+            external: ["@mat3ra/wode/dist/js/Workflow"],
+        },
     },
     build: {
         outDir: "build",

@@ -13,15 +13,7 @@ import {
     JOB_WORKFLOW_SYNC,
 } from "../actions";
 import { renderJobForDesignerState } from "./renderJobForDesignerState";
-
-// Webapp-specific utilities — stubbed for standalone build; provided by webapp at runtime.
-const AccountsSelector = { currentUser: () => ({ getAsEntityReference: () => ({}) }) };
-const createOrUpdate = async () => {};
-const getRouteQueryParametersFromInSet = () => ({});
-const Router = { current: () => null, go: () => {} };
-const setIsLoading = (value) => ({ type: "IS_LOADING_SET", isLoading: value });
-const submitJobAPI = async () => {};
-const terminateJobAPI = async () => {};
+import { reducerDeps } from "./reducerDeps";
 
 
 function jobUpdate(state, action) {
@@ -57,8 +49,8 @@ export function jobSetMaterial(state, action) {
 
 function jobSave(state, action) {
     const { job, materials: stateMaterials } = state;
-    
-    const user = AccountsSelector.currentUser();
+
+    const user = reducerDeps.accountsSelector.currentUser();
     let materials = stateMaterials;
     if (materials.length === 0 && job.materials?.length) {
         materials = job.materials;
@@ -79,24 +71,24 @@ function jobSave(state, action) {
         };
     });
 
-    createOrUpdate(configs)
+    reducerDeps.createOrUpdate(configs)
         .then(() => {
             const { project } = action;
             if (action.omitRedirect !== true)
-                Router.go(
+                reducerDeps.router.go(
                     "projectsEditOrView",
                     {
                         accountSlug: project.owner.slug,
                         projectSlug: project.slug,
                     },
                     {
-                        query: getRouteQueryParametersFromInSet(job.inSet),
+                        query: reducerDeps.getRouteQueryParametersFromInSet(job.inSet),
                     },
                 );
-            action.dispatch(setIsLoading(false));
+            action.dispatch(reducerDeps.setIsLoading(false));
         })
         .catch((err) => {
-            action.dispatch(setIsLoading(false));
+            action.dispatch(reducerDeps.setIsLoading(false));
             console.log("Error saving job", err);
             showErrorAlert(err.message);
         });
@@ -105,9 +97,9 @@ function jobSave(state, action) {
 }
 
 function jobSubmit(state, action) {
-    submitJobAPI({ ids: [state.job.id] })
+    reducerDeps.submitJobAPI({ ids: [state.job.id] })
         .then(() => {
-            action.dispatch(setIsLoading(false));
+            action.dispatch(reducerDeps.setIsLoading(false));
         })
         .catch((err) => {
             showErrorAlert(err.message);
@@ -117,9 +109,9 @@ function jobSubmit(state, action) {
 }
 
 function jobTerminate(state, action) {
-    terminateJobAPI({ ids: [state.job.id] })
+    reducerDeps.terminateJobAPI({ ids: [state.job.id] })
         .then(() => {
-            action.dispatch(setIsLoading(false));
+            action.dispatch(reducerDeps.setIsLoading(false));
         })
         .catch((err) => {
             showErrorAlert(err.message);

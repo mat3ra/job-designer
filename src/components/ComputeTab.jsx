@@ -4,7 +4,7 @@ import setClass from "classnames";
 import PropTypes from "prop-types";
 import React from "react";
 
-import Compute from "@mat3ra/ive";
+import { Compute } from "@mat3ra/ive";
 
 export default function ComputeTab(props) {
     const {

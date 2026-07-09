@@ -62,6 +62,7 @@ import JobContainer from "./JobContainer";
 import { createJobDesignerReducer } from "../reducers";
 import type { Job } from "@mat3ra/jode";
 import { setJobNameBasedOnMaterials } from "@mat3ra/jode";
+import { useJobDesignerDeps } from "../JobDesignerContext";
 
 interface JobStoreLocalReduxContainerProps {
     jobId?: string;
@@ -97,6 +98,12 @@ interface JobStoreLocalReduxContainerProps {
     onMaterialRemove?: (indices: number[]) => void;
     onDestroy?: () => void;
     getJobMaterialClient?: (job: Job) => Promise<any>;
+    /** Optional injectable material viewer component (e.g. ThreeDEditor from wave.js). */
+    MaterialViewerComponent?: React.ComponentType<{ material: any }>;
+    /** Optional children rendered in the EntityHeader right slot (selectors, export button, etc.). */
+    headerChildren?: React.ReactNode;
+    /** Whether the job is editable. */
+    editable?: boolean;
 }
 
 type JobStoreLocalReduxContainerInnerProps = JobStoreLocalReduxContainerProps & {
@@ -137,6 +144,9 @@ function JobStoreLocalReduxContainer({
     onMaterialRemove,
     onDestroy,
     getJobMaterialClient,
+    MaterialViewerComponent,
+    headerChildren,
+    editable,
 }: JobStoreLocalReduxContainerInnerProps) {
     const dispatch = useDispatch();
     const stateMaterials = useSelector((state: State) => state.materials);
@@ -145,6 +155,7 @@ function JobStoreLocalReduxContainer({
     const stateWorkflowContexts = useSelector((state: State) => state.workflowContexts);
     const stateIndex = useSelector((state: State) => state.index);
     const stateMaterialsSet = useSelector((state: State) => state.materialsSet);
+    const { getRouteQueryTab } = useJobDesignerDeps();
 
     const syncWorkflowWithJob = useCallback(
         (nextWorkflow: any) => {
@@ -293,6 +304,10 @@ function JobStoreLocalReduxContainer({
             getJobMaterialClient={getJobMaterialClient}
             onWorkflowSelect={handleWorkflowSelect}
             onWorkflowUpdate={syncWorkflowWithJob}
+            getRouteQueryTab={getRouteQueryTab}
+            MaterialViewerComponent={MaterialViewerComponent}
+            headerChildren={headerChildren}
+            editable={editable}
         />
     );
 }

@@ -1,4 +1,5 @@
 import React, { createContext, useContext } from "react";
+import { getInjectedDeps } from "./setDependencies";
 
 /**
  * Stub dialog hook result: [open, close] with no-op functions.
@@ -21,6 +22,12 @@ export interface JobDesignerDeps {
     useReduxDialog: (dialogType: string) => JobDesignerDialogTuple;
     /** Optional Files explorer component. In standalone, renders nothing. */
     FilesExplorerContainer?: React.ComponentType<any>;
+    /**
+     * Returns the current URL query parameter `tab` if present, or null.
+     * In the webapp this reads from Meteor's FlowRouter (Router.current()).
+     * In standalone mode the stub returns null so the default tab is used.
+     */
+    getRouteQueryTab: () => string | null;
 }
 
 /** Stub implementations safe for standalone (no Meteor, no Redux store). */
@@ -30,9 +37,11 @@ const STANDALONE_JOB_DESIGNER_DEPS: JobDesignerDeps = {
     useFetchProjectsList: () => ({ list: [], loading: false }),
     useReduxDialog: () => [() => {}, () => {}],
     FilesExplorerContainer: undefined,
+    getRouteQueryTab: () => null,
 };
 
-const JobDesignerContext = createContext<JobDesignerDeps>(STANDALONE_JOB_DESIGNER_DEPS);
+const DEFAULT_DEPS = STANDALONE_JOB_DESIGNER_DEPS;
+const JobDesignerContext = createContext<JobDesignerDeps>(DEFAULT_DEPS);
 
 export function JobDesignerProvider({
     deps,
@@ -46,5 +55,11 @@ export function JobDesignerProvider({
 }
 
 export function useJobDesignerDeps(): JobDesignerDeps {
-    return useContext(JobDesignerContext);
+    const contextDeps = useContext(JobDesignerContext);
+    // When no JobDesignerProvider is in the tree, contextDeps is the DEFAULT_DEPS
+    // sentinel. In that case, merge imperatively injected deps from setDependencies().
+    if (contextDeps === DEFAULT_DEPS) {
+        return { ...DEFAULT_DEPS, ...getInjectedDeps() };
+    }
+    return contextDeps;
 }

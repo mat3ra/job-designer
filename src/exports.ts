@@ -10,7 +10,10 @@ export { default as useQueryMaterials } from "./containers/utils/useQueryMateria
 export { default as DatasetTab } from "./components/DatasetTab";
 export { default as SelectProjectModal } from "./components/SelectProjectModal";
 export { JobDesignerProvider, useJobDesignerDeps } from "./JobDesignerContext";
+// Imperative dep injection shim — used by webapp's registerDependencies.ts
+export { setDependencies, getDependency } from "./setDependencies";
 export type { JobDesignerDeps, JobDesignerDialogTuple } from "./JobDesignerContext";
+export type { MaterialViewerComponentProps } from "./components/MaterialTab";
 
 // Re-export core job design elements from @mat3ra/jode for convenience
 export {

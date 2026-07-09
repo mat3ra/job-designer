@@ -5,7 +5,7 @@ import {
     type SubworkflowDesignerUpdate,
     applySubworkflowUpdateToWorkflow,
     isWodeSubworkflowInstance,
-} from "@mat3ra/workflow-designer/src/utils/subworkflowDesignerUpdate";
+} from "@mat3ra/workflow-designer/dist/utils/subworkflowDesignerUpdate";
 
 /** @deprecated Use {@link applySubworkflowUpdateToWorkflow} from `subworkflowDesignerUpdate.ts`. */
 export function syncSubworkflowSchemaOnWorkflow(
