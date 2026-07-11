@@ -23,6 +23,7 @@
         "transpile": "tsc",
         "test": "node --import tsx --test tests/*.tests.ts",
         "dev": "vite --port 3003",
+        "build:standalone": "vite build",
         "lint": "eslint src tests && prettier --check src tests",
         "test:e2e": "cd tests/e2e && npm run test:headless",
         "prepublishOnly": "npm run build"

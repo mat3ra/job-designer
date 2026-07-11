@@ -4,6 +4,9 @@ import { defineConfig } from "vite";
 import { nodePolyfills } from "vite-plugin-node-polyfills";
 
 export default defineConfig({
+    // Matches the repo name so assets resolve under the GitHub Pages
+    // subpath (mat3ra.github.io/job-designer/). Harmless for `npm run dev`.
+    base: "/job-designer/",
     server: {
         port: 3003,
         fs: {
