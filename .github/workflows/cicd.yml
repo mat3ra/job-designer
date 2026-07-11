@@ -35,3 +35,26 @@ jobs:
           github-token: ${{ secrets.BOT_GITHUB_TOKEN }}
           verify-tests: false
           npm-options: '--legacy-peer-deps'
+
+  deploy-bundle:
+    needs: [publish]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup NodeJS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          registry-url: https://registry.npmjs.org
+
+      - name: Build
+        shell: bash -l {0}
+        run: |
+          npm install --legacy-peer-deps && npm run build:standalone
+
+      - name: Deploy Build
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./build
