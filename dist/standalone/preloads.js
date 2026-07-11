@@ -1,0 +1,29 @@
+import { math } from "@mat3ra/code/dist/js/math";
+import JSONSchemasInterface from "@mat3ra/esse/dist/js/esse/JSONSchemasInterface";
+import esseSchemas from "@mat3ra/esse/dist/js/schemas.json";
+import { ApplicationRegistry } from "@mat3ra/standata";
+import { ApplicationDriver } from "@mat3ra/standata/dist/js/ApplicationDriver";
+import { sharedUtils } from "@mat3ra/utils";
+import moment from "moment";
+// Bootstrap — must run before any component renders
+JSONSchemasInterface.setSchemas(esseSchemas);
+ApplicationRegistry.setDriver(new ApplicationDriver());
+window.moment = moment;
+/**
+ * Compatibility patch: wave.js bonds.js calls sharedUtils.math.max / sharedUtils.math.vDist,
+ * but the current @mat3ra/utils only exposes { math: { numberToPrecision, default } }.
+ * The full mathjs instance is available from @mat3ra/code — we merge it in here.
+ */
+if ((sharedUtils === null || sharedUtils === void 0 ? void 0 : sharedUtils.math) && typeof sharedUtils.math.max !== "function") {
+    const mathFull = math;
+    // Add standard mathjs functions that wave.js bonds.js relies on
+    sharedUtils.math.max = (...args) => mathFull.max(...args);
+    sharedUtils.math.min = (...args) => mathFull.min(...args);
+    // vDist: Euclidean distance between two coordinate arrays
+    sharedUtils.math.vDist = (a, b) => {
+        const sum = a.reduce((acc, ai, i) => acc + (ai - b[i]) ** 2, 0);
+        return Math.sqrt(sum);
+    };
+    // vLen: vector length
+    sharedUtils.math.vLen = (v) => Math.sqrt(v.reduce((acc, vi) => acc + vi ** 2, 0));
+}

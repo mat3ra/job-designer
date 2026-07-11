@@ -3,8 +3,24 @@
         "@exabyte-io/eslint-config"
     ],
     "ignorePatterns": [
-        "dist/"
+        "dist/",
+        "src/standalone/stubs/",
+        "*.d.ts"
     ],
+    "plugins": [
+        "react-hooks"
+    ],
+    "rules": {
+        "import/no-extraneous-dependencies": "off",
+        "import/no-unresolved": "off",
+        "import/no-cycle": "off",
+        "import/export": "off",
+        "react/jsx-props-no-spreading": "off",
+        "react/no-array-index-key": "off",
+        "@typescript-eslint/no-empty-function": "off",
+        "react-hooks/exhaustive-deps": "warn",
+        "default-param-last": "off"
+    },
     "settings": {
         "import/resolver": {
             "node": {

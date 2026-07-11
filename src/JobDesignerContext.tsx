@@ -1,4 +1,5 @@
-import React, { createContext, useContext } from "react";
+import React, { createContext, useContext, useMemo } from "react";
+
 import { getInjectedDeps } from "./setDependencies";
 
 /**
@@ -13,9 +14,15 @@ export type JobDesignerDialogTuple = [() => void, () => void];
  */
 export interface JobDesignerDeps {
     /** Returns the current user profile. Stub returns a minimal safe profile. */
-    useProfile: () => { account?: { entity?: { slug?: string } }; user?: { entity?: { id?: string } } };
+    useProfile: () => {
+        account?: { entity?: { slug?: string } };
+        user?: { entity?: { id?: string } };
+    };
     /** Fetches a list of materials by list ID + filter params. Stub returns empty state. */
-    useFetchMaterialsList: (listId: string, params?: any) => { list: any[]; loading: boolean } | null;
+    useFetchMaterialsList: (
+        listId: string,
+        params?: any,
+    ) => { list: any[]; loading: boolean } | null;
     /** Fetches a list of projects. Stub returns empty list. */
     useFetchProjectsList: (listId: string) => { list: any[]; loading: boolean } | null;
     /** Opens/closes a Redux-controlled dialog. Stub returns a no-op tuple. */
@@ -50,7 +57,7 @@ export function JobDesignerProvider({
     deps?: Partial<JobDesignerDeps>;
     children: React.ReactNode;
 }) {
-    const value = { ...STANDALONE_JOB_DESIGNER_DEPS, ...deps };
+    const value = useMemo(() => ({ ...STANDALONE_JOB_DESIGNER_DEPS, ...deps }), [deps]);
     return <JobDesignerContext.Provider value={value}>{children}</JobDesignerContext.Provider>;
 }
 

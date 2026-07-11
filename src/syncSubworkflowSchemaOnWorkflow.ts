@@ -1,6 +1,5 @@
 import type { SubworkflowSchema } from "@mat3ra/esse/dist/js/types";
 import type { Workflow as WodeWorkflow } from "@mat3ra/wode";
-
 import {
     type SubworkflowDesignerUpdate,
     applySubworkflowUpdateToWorkflow,

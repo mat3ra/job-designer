@@ -62,52 +62,49 @@
                 "node_modules/@mat3ra/utils/*"
             ],
             "@mat3ra/wove": [
-                "../wove"
+                "node_modules/@mat3ra/wove/dist/exports"
             ],
             "@mat3ra/wove/*": [
-                "../wove/*"
+                "node_modules/@mat3ra/wove/dist/*"
             ],
             "@mat3ra/workflow-designer": [
-                "../workflow-designer"
+                "node_modules/@mat3ra/workflow-designer/dist/exports"
             ],
             "@mat3ra/workflow-designer/*": [
-                "../workflow-designer/*"
+                "node_modules/@mat3ra/workflow-designer/dist/*"
             ],
             "@mat3ra/ive": [
-                "../ive"
+                "node_modules/@mat3ra/ive/dist/exports"
             ],
             "@mat3ra/ive/*": [
-                "../ive/*"
+                "node_modules/@mat3ra/ive/dist/*"
             ],
             "@mat3ra/ave": [
-                "../ave"
+                "node_modules/@mat3ra/ave/dist/exports"
             ],
             "@mat3ra/ave/*": [
-                "../ave/*"
+                "node_modules/@mat3ra/ave/dist/*"
             ],
             "@mat3ra/move": [
-                "../move"
+                "node_modules/@mat3ra/move/dist/exports"
+            ],
+            "@mat3ra/move/pseudo": [
+                "node_modules/@mat3ra/move/dist/pseudo"
             ],
             "@mat3ra/move/*": [
-                "../move/*"
+                "node_modules/@mat3ra/move/dist/*"
             ],
             "@mat3ra/jove": [
-                "../jove"
+                "node_modules/@mat3ra/jove/dist/exports"
             ],
             "@mat3ra/jove/*": [
-                "../jove/*"
-            ],
-            "@mat3ra/job-designer": [
-                "../job-designer"
-            ],
-            "@mat3ra/job-designer/*": [
-                "../job-designer/*"
+                "node_modules/@mat3ra/jove/dist/*"
             ],
             "@mat3ra/jode": [
-                "../jode"
+                "node_modules/@mat3ra/jode/dist/js/index"
             ],
             "@mat3ra/jode/*": [
-                "../jode/*"
+                "node_modules/@mat3ra/jode/dist/js/*"
             ],
             "@mat3ra/*": [
                 "src/typings.d.ts"

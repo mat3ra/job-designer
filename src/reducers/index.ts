@@ -1,4 +1,5 @@
 import { defaultDataset } from "@mat3ra/jode";
+
 import DatasetReducer from "./DatasetReducer";
 import JobReducer from "./JobReducer";
 import MaterialReducer from "./MaterialReducer";
@@ -58,11 +59,7 @@ const initialStateFromJobAndAccounts = (
     };
 };
 
-export const createJobDesignerReducer = (
-    job: any,
-    jobMaterials: any[],
-    metaProperties: any[],
-) => {
+export const createJobDesignerReducer = (job: any, jobMaterials: any[], metaProperties: any[]) => {
     const SubscriptionsReducer = {};
     return createReducer(
         {

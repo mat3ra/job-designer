@@ -1,11 +1,17 @@
 import "./preloads";
-import React, { useMemo, useRef, useState } from "react";
-import ReactDOM from "react-dom";
-import CssBaseline from "@mui/material/CssBaseline";
-import { createTheme, ThemeProvider } from "@mui/material/styles";
+
+import { ThreeDEditor } from "@exabyte-io/wave.js";
+import { Job } from "@mat3ra/jode";
+import { Material } from "@mat3ra/made";
+import { MaterialStandata, WorkflowStandata } from "@mat3ra/standata";
+import { Workflow as WodeWorkflow } from "@mat3ra/wode";
+import WorkIcon from "@mui/icons-material/AccountTree";
+import DownloadIcon from "@mui/icons-material/Download";
+import ScienceIcon from "@mui/icons-material/Science";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
+import CssBaseline from "@mui/material/CssBaseline";
 import Divider from "@mui/material/Divider";
 import FormControl from "@mui/material/FormControl";
 import InputLabel from "@mui/material/InputLabel";
@@ -13,19 +19,14 @@ import MenuItem from "@mui/material/MenuItem";
 import Paper from "@mui/material/Paper";
 import Select from "@mui/material/Select";
 import Stack from "@mui/material/Stack";
+import { createTheme, ThemeProvider } from "@mui/material/styles";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
-import DownloadIcon from "@mui/icons-material/Download";
-import WorkIcon from "@mui/icons-material/AccountTree";
-import ScienceIcon from "@mui/icons-material/Science";
+import React, { useMemo, useRef, useState } from "react";
+import ReactDOM from "react-dom";
 
-import { WorkflowStandata, MaterialStandata } from "@mat3ra/standata";
-import { Workflow as WodeWorkflow } from "@mat3ra/wode";
-import { Material } from "@mat3ra/made";
-import { Job } from "@mat3ra/jode";
-import { ThreeDEditor } from "@exabyte-io/wave.js";
-import { JobDesignerProvider } from "../JobDesignerContext";
 import JobLocalReduxContainer from "../containers/JobLocalReduxContainer";
+import { JobDesignerProvider } from "../JobDesignerContext";
 
 const demoTheme = createTheme({
     palette: {
@@ -70,7 +71,9 @@ function App() {
     const allWorkflowJsons = useMemo(() => new WorkflowStandata().getAll() ?? [], []);
     const [workflowIndex, setWorkflowIndex] = useState(0);
     const wodeWorkflow = useMemo(
-        () => tryCreateWorkflow(allWorkflowJsons[workflowIndex]) ?? tryCreateWorkflow(allWorkflowJsons[0]),
+        () =>
+            tryCreateWorkflow(allWorkflowJsons[workflowIndex]) ??
+            tryCreateWorkflow(allWorkflowJsons[0]),
         [workflowIndex, allWorkflowJsons],
     );
 
@@ -96,11 +99,25 @@ function App() {
     const job = useMemo(() => {
         if (!wodeWorkflow || !selectedMaterial) return null;
         try {
-            const matName = allMaterialJsons[materialIndex]?.formula ?? allMaterialJsons[materialIndex]?.name ?? "Material";
+            const matName =
+                allMaterialJsons[materialIndex]?.formula ??
+                allMaterialJsons[materialIndex]?.name ??
+                "Material";
             const name = `${wodeWorkflow.name} — ${matName}`;
             const newJob = new Job({ name });
             newJob.setWorkflow(wodeWorkflow);
             newJob.setMaterial(selectedMaterial);
+
+            // job-designer's own reducers (inherited from the webapp's original Job
+            // model) read `job.workflow.updateMethodData(...)` directly; jode's Job
+            // class exposes the live instance as `workflowInstance` instead. Bridge
+            // the two here at the demo boundary only — do not change job-designer's
+            // reducer code or jode's Job class.
+            Object.defineProperty(newJob, "workflow", {
+                get: () => (newJob as any).workflowInstance,
+                configurable: true,
+            });
+
             return newJob;
         } catch (e) {
             console.error("[job-designer standalone] Job creation failed:", e);
@@ -116,7 +133,9 @@ function App() {
         if (!jobInstance) return;
         const raw = (jobInstance as any).toJSON?.() ?? (jobInstance as any)._json ?? {};
         const name = (jobInstance as any).name ?? "job";
-        const safeFilename = `job-${name.replace(/[^a-z0-9_-]/gi, "_").toLowerCase()}-${Date.now()}.json`;
+        const safeFilename = `job-${name
+            .replace(/[^a-z0-9_-]/gi, "_")
+            .toLowerCase()}-${Date.now()}.json`;
         downloadJson(raw, safeFilename);
     };
 
@@ -142,7 +161,8 @@ function App() {
                     bgcolor: "background.paper",
                     borderBottom: "1px solid",
                     borderColor: "divider",
-                }}>
+                }}
+            >
                 <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
                     {/* Workflow selector */}
                     <Stack direction="row" spacing={1} alignItems="center">
@@ -153,7 +173,8 @@ function App() {
                                 labelId="workflow-select-label"
                                 value={workflowIndex}
                                 label="Workflow"
-                                onChange={(e) => setWorkflowIndex(Number(e.target.value))}>
+                                onChange={(e) => setWorkflowIndex(Number(e.target.value))}
+                            >
                                 {allWorkflowJsons.map((wf: any, i: number) => (
                                     <MenuItem key={i} value={i}>
                                         {wf?.name ?? `Workflow ${i + 1}`}
@@ -165,14 +186,18 @@ function App() {
 
                     {/* Material selector */}
                     <Stack direction="row" spacing={1} alignItems="center">
-                        <ScienceIcon fontSize="small" sx={{ color: "secondary.main", flexShrink: 0 }} />
+                        <ScienceIcon
+                            fontSize="small"
+                            sx={{ color: "secondary.main", flexShrink: 0 }}
+                        />
                         <FormControl size="small" sx={{ minWidth: 240 }}>
                             <InputLabel id="material-select-label">Material</InputLabel>
                             <Select
                                 labelId="material-select-label"
                                 value={materialIndex}
                                 label="Material"
-                                onChange={(e) => setMaterialIndex(Number(e.target.value))}>
+                                onChange={(e) => setMaterialIndex(Number(e.target.value))}
+                            >
                                 {allMaterialJsons.map((mat: any, i: number) => (
                                     <MenuItem key={i} value={i}>
                                         {mat?.name ?? mat?.formula ?? `Material ${i + 1}`}
@@ -184,7 +209,9 @@ function App() {
 
                     <Divider orientation="vertical" flexItem />
 
-                    <Tooltip title={`${allWorkflowJsons.length} workflows · ${allMaterialJsons.length} materials from standata`}>
+                    <Tooltip
+                        title={`${allWorkflowJsons.length} workflows · ${allMaterialJsons.length} materials from standata`}
+                    >
                         <Chip label="standata" size="small" variant="outlined" color="secondary" />
                     </Tooltip>
 
@@ -202,7 +229,8 @@ function App() {
                                 borderColor: "primary.main",
                                 bgcolor: "rgba(124,77,255,0.08)",
                             },
-                        }}>
+                        }}
+                    >
                         Export JSON
                     </Button>
                 </Stack>
@@ -230,10 +258,26 @@ function App() {
                     clusters={[]}
                     refreshMetaProperties={() => {}}
                     jobDialogs={{
-                        selectMaterialsReduxDialog: { isOpen: false, open: () => {}, close: () => {} },
-                        selectParentJobExplorerDialog: { isOpen: false, open: () => {}, close: () => {} },
-                        selectWorkflowReduxDialog: { isOpen: false, open: () => {}, close: () => {} },
-                        datasetUploadsReduxDialog: { isOpen: false, open: () => {}, close: () => {} },
+                        selectMaterialsReduxDialog: {
+                            isOpen: false,
+                            open: () => {},
+                            close: () => {},
+                        },
+                        selectParentJobExplorerDialog: {
+                            isOpen: false,
+                            open: () => {},
+                            close: () => {},
+                        },
+                        selectWorkflowReduxDialog: {
+                            isOpen: false,
+                            open: () => {},
+                            close: () => {},
+                        },
+                        datasetUploadsReduxDialog: {
+                            isOpen: false,
+                            open: () => {},
+                            close: () => {},
+                        },
                     }}
                     workflowDialogs={{
                         pseudoUploadReduxDialog: [() => {}, () => {}] as any,

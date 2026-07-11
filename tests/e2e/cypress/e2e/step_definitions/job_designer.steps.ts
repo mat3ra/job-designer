@@ -1,4 +1,4 @@
-import { When, Then, And } from "@badeball/cypress-cucumber-preprocessor";
+import { And, Then, When } from "@badeball/cypress-cucumber-preprocessor";
 
 When("I open the job designer app", () => {
     cy.visit("/");

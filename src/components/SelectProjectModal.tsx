@@ -1,12 +1,13 @@
 /* eslint-disable react/destructuring-assignment,react/jsx-props-no-spreading */
 import Dialog from "@exabyte-io/cove.js/dist/mui/components/dialog/Dialog";
-import { useJobDesignerDeps } from "../JobDesignerContext";
 import Link from "@mui/material/Link";
 import MenuItem from "@mui/material/MenuItem";
 import Select from "@mui/material/Select";
 import { useTheme } from "@mui/material/styles";
 import Typography from "@mui/material/Typography";
 import React, { useCallback, useEffect, useMemo } from "react";
+
+import { useJobDesignerDeps } from "../JobDesignerContext";
 
 export interface SelectProjectModalProps {
     id?: string;
@@ -59,7 +60,8 @@ function SelectProjectModal({
             onCancel={onCancel}
             submitButtonText="Create New Job"
             maxWidth="sm"
-            fullWidth>
+            fullWidth
+        >
             <div style={{ width: "100%" }}>
                 <div>
                     {/* TODO: maybe move to core_cove in case if similar appears */}
@@ -68,12 +70,14 @@ function SelectProjectModal({
                         id="demo-simple-select"
                         sx={{ width: "100%", height: 56, fontSize: 14 }}
                         value={selectedProjectId || ""}
-                        onChange={handleChange}>
+                        onChange={handleChange}
+                    >
                         {projects.map((project) => (
                             <MenuItem
                                 key={project.entity.id}
                                 value={project.entity.id}
-                                sx={{ fontSize: 14 }}>
+                                sx={{ fontSize: 14 }}
+                            >
                                 {project.entity.name}
                             </MenuItem>
                         ))}

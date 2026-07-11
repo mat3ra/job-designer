@@ -1,11 +1,13 @@
 import { useMemo } from "react";
+
 import { useJobDesignerDeps } from "../../JobDesignerContext";
 
 function sortMaterialsByQueryIds(materials: any[], queryMaterialIds: string[]) {
-    return [...materials].sort((a, b) => (
-        queryMaterialIds.findIndex((id) => id === a.id) -
-        queryMaterialIds.findIndex((id) => id === b.id)
-    ));
+    return [...materials].sort(
+        (a, b) =>
+            queryMaterialIds.findIndex((id) => id === a.id) -
+            queryMaterialIds.findIndex((id) => id === b.id),
+    );
 }
 
 export default function useQueryMaterials(

@@ -3,7 +3,10 @@ export { default as JobLocalReduxContainer } from "./containers/JobLocalReduxCon
 export { createJobDesignerReducer } from "./reducers";
 export { syncSubworkflowSchemaOnWorkflow } from "./syncSubworkflowSchemaOnWorkflow";
 export { shouldPersistJobOnUpdate } from "./shouldPersistJobOnUpdate";
-export { normalizeQueryMaterialIds, queryMaterialIdsCacheKey } from "./containers/utils/normalizeQueryMaterialIds";
+export {
+    normalizeQueryMaterialIds,
+    queryMaterialIdsCacheKey,
+} from "./containers/utils/normalizeQueryMaterialIds";
 export { default as useJobMaterials } from "./containers/utils/useJobMaterials";
 export { default as useJobReduxDialogs } from "./containers/utils/useJobReduxDialogs";
 export { default as useQueryMaterials } from "./containers/utils/useQueryMaterials";

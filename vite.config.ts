@@ -34,10 +34,20 @@ export default defineConfig({
             "@mui/system",
             "@mui/lab",
             "@mui/icons-material",
-            "@mui/utils",
-            "@mui/base",
         ],
         alias: [
+            {
+                find: "vite-plugin-node-polyfills/shims/global",
+                replacement: path.resolve(__dirname, "node_modules/vite-plugin-node-polyfills/shims/global"),
+            },
+            {
+                find: "vite-plugin-node-polyfills/shims/process",
+                replacement: path.resolve(__dirname, "node_modules/vite-plugin-node-polyfills/shims/process"),
+            },
+            {
+                find: "vite-plugin-node-polyfills/shims/buffer",
+                replacement: path.resolve(__dirname, "node_modules/vite-plugin-node-polyfills/shims/buffer"),
+            },
             // Local cove.js reference (has entityIcons, TabsMenu, LoadingIndicator etc.)
             {
                 find: /^@exabyte-io\/cove\.js\/dist\/(.*)$/,
@@ -79,70 +89,6 @@ export default defineConfig({
                 replacement: path.resolve(__dirname, "src/$1"),
             },
             {
-                find: /^@mat3ra\/wove$/,
-                replacement: path.resolve(__dirname, "../wove/src/exports.ts"),
-            },
-            {
-                find: /^@mat3ra\/wove\/dist\/(.*)$/,
-                replacement: path.resolve(__dirname, "../wove/src/$1"),
-            },
-            {
-                find: /^@mat3ra\/ave$/,
-                replacement: path.resolve(__dirname, "../ave/src/exports.ts"),
-            },
-            {
-                find: /^@mat3ra\/ave\/dist\/(.*)$/,
-                replacement: path.resolve(__dirname, "../ave/src/$1"),
-            },
-            {
-                find: /^@mat3ra\/ive$/,
-                replacement: path.resolve(__dirname, "../ive/src/exports.ts"),
-            },
-            {
-                find: /^@mat3ra\/ive\/dist\/(.*)$/,
-                replacement: path.resolve(__dirname, "../ive/src/$1"),
-            },
-            {
-                find: /^@mat3ra\/move$/,
-                replacement: path.resolve(__dirname, "../move/src/exports.ts"),
-            },
-            {
-                find: /^@mat3ra\/move\/dist\/(.*)$/,
-                replacement: path.resolve(__dirname, "../move/src/$1"),
-            },
-            {
-                find: /^@mat3ra\/jove$/,
-                replacement: path.resolve(__dirname, "../jove/src/exports.ts"),
-            },
-            {
-                find: /^@mat3ra\/jove\/dist\/(.*)$/,
-                replacement: path.resolve(__dirname, "../jove/src/$1"),
-            },
-            {
-                find: /^@mat3ra\/jode$/,
-                replacement: path.resolve(__dirname, "../jode/src/js/index.ts"),
-            },
-            {
-                find: /^@mat3ra\/jode\/dist\/(.*)$/,
-                replacement: path.resolve(__dirname, "../jode/src/$1"),
-            },
-            {
-                find: /^@mat3ra\/prove$/,
-                replacement: path.resolve(__dirname, "../prove/src/exports.ts"),
-            },
-            {
-                find: /^@mat3ra\/prove\/dist\/(.*)$/,
-                replacement: path.resolve(__dirname, "../prove/src/$1"),
-            },
-            {
-                find: /^@mat3ra\/workflow-designer$/,
-                replacement: path.resolve(__dirname, "../workflow-designer/src/exports.ts"),
-            },
-            {
-                find: /^@mat3ra\/workflow-designer\/dist\/(.*)$/,
-                replacement: path.resolve(__dirname, "../workflow-designer/src/$1"),
-            },
-            {
                 find: /^\/imports\/(.*)$/,
                 replacement: path.resolve(__dirname, "src/standalone/stubs/meteor.js"),
             },
@@ -173,14 +119,12 @@ export default defineConfig({
     },
     optimizeDeps: {
         exclude: [
+            // Still resolves via a local-source resolve.alias (../cove.js/dist), not a
+            // real node_modules package.
             "@exabyte-io/cove.js",
-            "@mat3ra/wove",
-            "@mat3ra/ave",
-            "@mat3ra/ive",
-            "@mat3ra/move",
-            "@mat3ra/jove",
-            "@mat3ra/workflow-designer",
+            // Self-referencing alias to local src/exports.ts.
             "@mat3ra/job-designer",
+            // Aliased to a local stub file, not a real package.
             "moment-duration-format",
         ],
         include: [
@@ -235,6 +179,9 @@ export default defineConfig({
     },
     build: {
         outDir: "build",
+        commonjsOptions: {
+            include: [/node_modules/, /reference/],
+        },
         rollupOptions: {
             output: {
                 entryFileNames: "main.js",

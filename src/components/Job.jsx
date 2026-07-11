@@ -25,35 +25,40 @@ import Dropdown from "@exabyte-io/cove.js/dist/mui/components/dropdown/Dropdown"
 import { ComputableEntityMixin } from "@mat3ra/ive";
 
 // Webapp-specific mixins/utilities — stubbed for standalone build; injected from webapp at runtime.
-const DescriptionUpdateMixin = (superclass) => class extends superclass {
-    // In the webapp this checks user permissions; in standalone always allow editing.
-    isDescriptionEditable(_job) { return true; }
+const DescriptionUpdateMixin = (superclass) =>
+    class extends superclass {
+        // In the webapp this checks user permissions; in standalone always allow editing.
+        isDescriptionEditable(_job) {
+            return true;
+        }
 
-    onDescriptionUpdateGenerator =
-        (entity, postProcessor, callback) => (descriptionObject, description) => {
-            entity.descriptionObject = descriptionObject;
-            entity.description = description;
-            postProcessor(entity, callback);
-        };
-};
+        onDescriptionUpdateGenerator =
+            (entity, postProcessor, callback) => (descriptionObject, description) => {
+                entity.descriptionObject = descriptionObject;
+                entity.description = description;
+                postProcessor(entity, callback);
+            };
+    };
 
-const StatefulEntityMixin = (superclass) => class extends superclass {
-    // In the webapp this fetches the parent job document from Meteor; no parent in standalone.
-    getParentJobClient() { return null; }
+const StatefulEntityMixin = (superclass) =>
+    class extends superclass {
+        // In the webapp this fetches the parent job document from Meteor; no parent in standalone.
+        getParentJobClient() {
+            return null;
+        }
 
-    _resetStateEntityAndUpdateParents(entity, callback) {
-        this.setState({ entity: entity || this.state.entity }, () => {
-            this.props.onUpdate(this.state.entity);
-            if (callback) callback();
-        });
-    }
-};
+        _resetStateEntityAndUpdateParents(entity, callback) {
+            this.setState({ entity: entity || this.state.entity }, () => {
+                this.props.onUpdate(this.state.entity);
+                if (callback) callback();
+            });
+        }
+    };
 const DAOProvider = { get: () => ({ findByIds: () => [] }) };
 const triggerChartsResize = () => {};
 const getConditionalTabs = (config, conditionalMap, key) =>
     Object.values(config).filter((tab) => conditionalMap[tab[key]] !== false);
 const createMessageTextTAPi18n = (key) => key;
-
 
 // TODO: resolve the problem with unit output update and make job component deep-comparable again
 class Job extends mix(React.Component).with(
@@ -286,7 +291,9 @@ class Job extends mix(React.Component).with(
                     label: "Save",
                     iconName: "shapes.save",
                     onClick: (...args) => {
-                        this._resetStateEntityAndUpdateParents(job, () => this.props.onSave(...args));
+                        this._resetStateEntityAndUpdateParents(job, () =>
+                            this.props.onSave(...args),
+                        );
                     },
                 },
             ],

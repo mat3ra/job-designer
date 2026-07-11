@@ -1,14 +1,9 @@
 import { type MaterialsSet, type Workflow as WodeWorkflow } from "@mat3ra/wode";
 import type { AnyWorkflowUnit } from "@mat3ra/wode/dist/js/units/factory";
+import type { SubworkflowDesignerUpdate, WorkflowProps } from "@mat3ra/workflow-designer";
+import { applySubworkflowUpdateToWorkflow, Workflow } from "@mat3ra/workflow-designer";
 import setClass from "classnames";
 import React, { useCallback } from "react";
-
-import type { WorkflowProps } from "@mat3ra/workflow-designer";
-import { Workflow } from "@mat3ra/workflow-designer";
-import {
-    type SubworkflowDesignerUpdate,
-    applySubworkflowUpdateToWorkflow,
-} from "@mat3ra/workflow-designer";
 
 export type WorkflowTabProps = Pick<
     WorkflowProps,
@@ -95,7 +90,7 @@ export default function WorkflowTab({
             );
             if (unitIndex >= 0) {
                 const nextUnits = [...workflow.unitInstances];
-                nextUnits[unitIndex] = unit as (typeof nextUnits)[number];
+                nextUnits[unitIndex] = unit as typeof nextUnits[number];
                 workflow.setUnits(nextUnits);
                 workflow.syncLinkedSubworkflowNameFromUnit(unit as AnyWorkflowUnit);
             }

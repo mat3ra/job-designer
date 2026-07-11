@@ -1,11 +1,17 @@
 /* eslint-disable react/jsx-props-no-spreading */
 import type { Template } from "@mat3ra/ade";
+import type { Job } from "@mat3ra/jode";
+import { setJobNameBasedOnMaterials } from "@mat3ra/jode";
+import type { ResultsProps } from "@mat3ra/jove";
 import React, { memo, useCallback, useEffect, useMemo } from "react";
 import { Provider, useDispatch, useSelector } from "react-redux";
 import { applyMiddleware, createStore } from "redux";
 import logger from "redux-logger";
 
-import type { ResultsProps } from "@mat3ra/jove";
+import { setMaterials, syncJobWorkflow, updateJob } from "../actions";
+import { useJobDesignerDeps } from "../JobDesignerContext";
+import { createJobDesignerReducer } from "../reducers";
+import JobContainer from "./JobContainer";
 
 interface JobDesignerUser {
     entity: { id: string; firstName?: string; lastName?: string; email?: string };
@@ -52,17 +58,6 @@ interface JobDesignerMetaPropertyHolderSchema {
 interface JobDesignerCreateMetaPropertyConfig {
     [key: string]: unknown;
 }
-
-import {
-    setMaterials,
-    syncJobWorkflow,
-    updateJob,
-} from "../actions";
-import JobContainer from "./JobContainer";
-import { createJobDesignerReducer } from "../reducers";
-import type { Job } from "@mat3ra/jode";
-import { setJobNameBasedOnMaterials } from "@mat3ra/jode";
-import { useJobDesignerDeps } from "../JobDesignerContext";
 
 interface JobStoreLocalReduxContainerProps {
     jobId?: string;
@@ -326,11 +321,10 @@ function JobLocalReduxContainer(props: JobLocalReduxContainerProps) {
     const store = useMemo(() => {
         const reducer = createJobDesignerReducer(job, jobMaterials, metaProperties);
 
-        const enableLogging = typeof window !== "undefined" && (window as any).Meteor?.settings?.public?.enableJobDesignerLogging;
-        return createStore(
-            reducer,
-            enableLogging ? applyMiddleware(logger as any) : undefined,
-        );
+        const enableLogging =
+            typeof window !== "undefined" &&
+            (window as any).Meteor?.settings?.public?.enableJobDesignerLogging;
+        return createStore(reducer, enableLogging ? applyMiddleware(logger as any) : undefined);
     }, []);
 
     return (

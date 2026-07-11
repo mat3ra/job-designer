@@ -1,9 +1,6 @@
 import { showErrorAlert } from "@exabyte-io/cove.js/dist/other/alerts";
 
-import {
-    renderConfigsFromJobMaterialsWorkflows,
-    setJobNameBasedOnMaterials,
-} from "@mat3ra/jode";
+import { renderConfigsFromJobMaterialsWorkflows, setJobNameBasedOnMaterials } from "@mat3ra/jode";
 import {
     JOB_IS_MULTI_MATERIAL_SET,
     JOB_SAVE,
@@ -14,7 +11,6 @@ import {
 } from "../actions";
 import { renderJobForDesignerState } from "./renderJobForDesignerState";
 import { reducerDeps } from "./reducerDeps";
-
 
 function jobUpdate(state, action) {
     const job = renderJobForDesignerState(state, action.job, action.metaProperties ?? []);
@@ -71,7 +67,8 @@ function jobSave(state, action) {
         };
     });
 
-    reducerDeps.createOrUpdate(configs)
+    reducerDeps
+        .createOrUpdate(configs)
         .then(() => {
             const { project } = action;
             if (action.omitRedirect !== true)
@@ -97,7 +94,8 @@ function jobSave(state, action) {
 }
 
 function jobSubmit(state, action) {
-    reducerDeps.submitJobAPI({ ids: [state.job.id] })
+    reducerDeps
+        .submitJobAPI({ ids: [state.job.id] })
         .then(() => {
             action.dispatch(reducerDeps.setIsLoading(false));
         })
@@ -109,7 +107,8 @@ function jobSubmit(state, action) {
 }
 
 function jobTerminate(state, action) {
-    reducerDeps.terminateJobAPI({ ids: [state.job.id] })
+    reducerDeps
+        .terminateJobAPI({ ids: [state.job.id] })
         .then(() => {
             action.dispatch(reducerDeps.setIsLoading(false));
         })

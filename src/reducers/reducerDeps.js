@@ -25,7 +25,8 @@ export const reducerDeps = {
 export function setReducerDeps(deps) {
     if (deps.AccountsSelector) reducerDeps.accountsSelector = deps.AccountsSelector;
     if (deps.createOrUpdate) reducerDeps.createOrUpdate = deps.createOrUpdate;
-    if (deps.getRouteQueryParametersFromInSet) reducerDeps.getRouteQueryParametersFromInSet = deps.getRouteQueryParametersFromInSet;
+    if (deps.getRouteQueryParametersFromInSet)
+        reducerDeps.getRouteQueryParametersFromInSet = deps.getRouteQueryParametersFromInSet;
     if (deps.Router) reducerDeps.router = deps.Router;
     if (deps.setIsLoading) reducerDeps.setIsLoading = deps.setIsLoading;
     if (deps.submitJob) reducerDeps.submitJobAPI = deps.submitJob;
