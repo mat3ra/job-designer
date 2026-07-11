@@ -51,20 +51,6 @@ export default defineConfig({
                 find: "vite-plugin-node-polyfills/shims/buffer",
                 replacement: path.resolve(__dirname, "node_modules/vite-plugin-node-polyfills/shims/buffer"),
             },
-            // Local cove.js reference (has entityIcons, TabsMenu, LoadingIndicator etc.)
-            {
-                find: /^@exabyte-io\/cove\.js\/dist\/(.*)$/,
-                replacement: path.resolve(__dirname, "../cove.js/dist/$1"),
-            },
-            {
-                find: /^@exabyte-io\/cove\.js$/,
-                replacement: path.resolve(__dirname, "../cove.js/dist/index.js"),
-            },
-            // cove.js src/* — ThreeDEditor from wave.js imports AlertProvider via the /src/ path.
-            {
-                find: /^@exabyte-io\/cove\.js\/src\/(.*)$/,
-                replacement: path.resolve(__dirname, "../cove.js/src/$1"),
-            },
             // @exabyte-io/wave.js — point to the local installed dist.
             {
                 find: /^@exabyte-io\/wave\.js$/,
@@ -122,9 +108,6 @@ export default defineConfig({
     },
     optimizeDeps: {
         exclude: [
-            // Still resolves via a local-source resolve.alias (../cove.js/dist), not a
-            // real node_modules package.
-            "@exabyte-io/cove.js",
             // Self-referencing alias to local src/exports.ts.
             "@mat3ra/job-designer",
             // Aliased to a local stub file, not a real package.
