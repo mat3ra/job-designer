@@ -1,6 +1,9 @@
 node_modules/
 build/
 *.tgz
+# Exception: vendored, temporarily-unpublished @mat3ra/workflow-designer tarball —
+# see package.json's devDependencies comment. Remove once it's really on npm.
+!vendor/*.tgz
 *.log
 .DS_Store
 *.tsbuildinfo

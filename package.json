@@ -71,7 +71,7 @@
         "@mat3ra/tsconfig": "^2024.6.3-0",
         "@mat3ra/utils": "2026.7.9-0",
         "@mat3ra/wode": "2026.7.9-0",
-        "@mat3ra/workflow-designer": "file:../tarballs/mat3ra-workflow-designer-0.0.0.tgz",
+        "@mat3ra/workflow-designer": "file:./vendor/mat3ra-workflow-designer-0.0.0.tgz",
         "@mat3ra/wove": "2026.7.11-1",
         "@mui/icons-material": "^5.11.9",
         "@mui/lab": "^5.0.0-alpha.120",
