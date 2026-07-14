@@ -285,7 +285,6 @@ class Job extends mix(React.Component).with(
     };
 
     getSaveBtnProps() {
-        const job = this.state.entity;
         const isDesignerLoading = this.props.isLoading || this.state.isWorkflowLoading;
         return {
             id: "save-button",
@@ -295,7 +294,16 @@ class Job extends mix(React.Component).with(
                     label: "Save",
                     iconName: "shapes.save",
                     onClick: (...args) => {
-                        this._resetStateEntityAndUpdateParents(job, () =>
+                        // NOTE: read `this.state.entity` at click time rather than closing over a
+                        // `job` local captured at render time. `ButtonMultiSelect` snapshots
+                        // `buttonConfigs[0]` into its own local state on mount (and does not
+                        // resync it on prop changes), so it keeps calling the *first* onClick
+                        // closure it ever received for the whole lifetime of the component. If
+                        // that closure captured a `job` variable by value, it would forever
+                        // persist the entity as it was on the very first render (e.g. the
+                        // original auto-generated job, before any parent/workflow/materials
+                        // selection or rename) — silently reverting all later edits on Save.
+                        this._resetStateEntityAndUpdateParents(this.state.entity, () =>
                             this.props.onSave(...args),
                         );
                     },

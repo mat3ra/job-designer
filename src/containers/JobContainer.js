@@ -4,6 +4,7 @@ import { connect } from "react-redux";
 import { JobStatus } from "../exports";
 import {
     datasetUpdate,
+    materialsAdd,
     saveJob,
     setJobMultiMaterial,
     setMaterials,
@@ -13,6 +14,7 @@ import {
     updateJob,
 } from "../actions";
 import Job from "../components/Job";
+import { JobDesignerReduxContext } from "./JobDesignerReduxContext";
 
 /**
  * State of JobDesigner contains:
@@ -69,6 +71,7 @@ const mapDispatchToProps = (dispatch, ownProps) => {
         onMaterialSwitch: (index) => dispatch(switchMaterialByIndex(index)),
 
         onMaterialAdd: (materials, accounts) => {
+            dispatch(materialsAdd(materials, ownProps.metaProperties));
             if (ownProps.onMaterialAdd) {
                 ownProps.onMaterialAdd(materials, accounts);
             }
@@ -102,6 +105,8 @@ const mapDispatchToProps = (dispatch, ownProps) => {
     };
 };
 
-const JobContainer = connect(mapStateToProps, mapDispatchToProps)(Job);
+const JobContainer = connect(mapStateToProps, mapDispatchToProps, null, {
+    context: JobDesignerReduxContext,
+})(Job);
 
 export default JobContainer;

@@ -1,8 +1,9 @@
 /* eslint-disable import/named */
 import { connect } from "react-redux";
 import { JobStatus } from "../exports";
-import { datasetUpdate, saveJob, setJobMultiMaterial, setMaterials, submitJob, switchMaterialByIndex, terminateJob, updateJob, } from "../actions";
+import { datasetUpdate, materialsAdd, saveJob, setJobMultiMaterial, setMaterials, submitJob, switchMaterialByIndex, terminateJob, updateJob, } from "../actions";
 import Job from "../components/Job";
+import { JobDesignerReduxContext } from "./JobDesignerReduxContext";
 /**
  * State of JobDesigner contains:
  * - job - a class that contains the job data
@@ -51,6 +52,7 @@ const mapDispatchToProps = (dispatch, ownProps) => {
         onUpdateIndex: (index) => dispatch(switchMaterialByIndex(index)),
         onMaterialSwitch: (index) => dispatch(switchMaterialByIndex(index)),
         onMaterialAdd: (materials, accounts) => {
+            dispatch(materialsAdd(materials, ownProps.metaProperties));
             if (ownProps.onMaterialAdd) {
                 ownProps.onMaterialAdd(materials, accounts);
             }
@@ -79,5 +81,7 @@ const mapDispatchToProps = (dispatch, ownProps) => {
         },
     };
 };
-const JobContainer = connect(mapStateToProps, mapDispatchToProps)(Job);
+const JobContainer = connect(mapStateToProps, mapDispatchToProps, null, {
+    context: JobDesignerReduxContext,
+})(Job);
 export default JobContainer;

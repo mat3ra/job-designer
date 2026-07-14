@@ -8,6 +8,16 @@ export function switchMaterialByIndex(index: any): {
     type: string;
     index: any;
 };
+export function materialsAdd(materials: any, metaProperties: any): {
+    type: string;
+    materials: any;
+    metaProperties: any;
+};
+export function materialsRemove(indices: any, metaProperties: any): {
+    type: string;
+    indices: any;
+    metaProperties: any;
+};
 export const MATERIAL_SWITCH: "MATERIAL_SWITCH";
 export const MATERIALS_SET: "MATERIALS_SET";
 export const MATERIALS_ADD: "MATERIALS_ADD";
