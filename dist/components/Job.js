@@ -17,6 +17,7 @@ import MaterialTab from "./MaterialTab";
 import { StatePropsCompareOnUpdateForJobMIxin } from "./mixins";
 import { ResultsTab } from "@mat3ra/jove";
 import WorkflowTab from "./WorkflowTab";
+import { getInjectedDeps } from "../setDependencies";
 import TabsMenu from "@exabyte-io/cove.js/dist/mui/components/tabs/TabsMenu";
 import LoadingIndicator from "@exabyte-io/cove.js/dist/mui-composed/components/loading/LoadingIndicator";
 import { EntityHeader } from "@exabyte-io/cove.js/dist/mui-composed/components/entity-header/EntityHeader";
@@ -51,7 +52,9 @@ const StatefulEntityMixin = (superclass) => class extends superclass {
         });
     }
 };
-const DAOProvider = { get: () => ({ findByIds: () => [] }) };
+// Resolved lazily (not at module load) so it picks up the real webapp DAOProvider
+// injected via setDependencies(), which runs after this module is first imported.
+const getDAOProvider = () => { var _a; return (_a = getInjectedDeps().DAOProvider) !== null && _a !== void 0 ? _a : { get: () => ({ findByIds: () => [] }) }; };
 const triggerChartsResize = () => { };
 const getConditionalTabs = (config, conditionalMap, key) => Object.values(config).filter((tab) => conditionalMap[tab[key]] !== false);
 const createMessageTextTAPi18n = (key) => key;
@@ -137,7 +140,7 @@ class Job extends mix(React.Component).with(StatePropsCompareOnUpdateForJobMIxin
             return actions;
         };
         this.onSelectParentJobSubmit = async (ids) => {
-            const jobs = DAOProvider.get(Job.name).findByIds(ids);
+            const jobs = getDAOProvider().get(Job.name).findByIds(ids);
             if (jobs.length > 1) {
                 showWarningAlert(createMessageTextTAPi18n("workflow.errors.select.singleOnly"));
                 return;
