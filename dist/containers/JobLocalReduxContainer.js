@@ -1,21 +1,22 @@
 import { jsx as _jsx } from "react/jsx-runtime";
 import { setJobNameBasedOnMaterials } from "@mat3ra/jode";
 import { memo, useCallback, useEffect, useMemo } from "react";
-import { Provider, useDispatch, useSelector } from "react-redux";
+import { Provider } from "react-redux";
 import { applyMiddleware, createStore } from "redux";
 import logger from "redux-logger";
 import { setMaterials, syncJobWorkflow, updateJob } from "../actions";
 import { useJobDesignerDeps } from "../JobDesignerContext";
 import { createJobDesignerReducer } from "../reducers";
 import JobContainer from "./JobContainer";
+import { JobDesignerReduxContext, useJobDesignerDispatch, useJobDesignerSelector, } from "./JobDesignerReduxContext";
 function JobStoreLocalReduxContainer({ jobId, workflowId, materials, job, project, publicAccount, metaProperties, accountUsers, accountUsersIsLoading, profile, clusters, refreshMetaProperties, jobDialogs, workflowDialogs, templates, resultsProperties, jobProperties, createMetaProperty, fetchMaterials, loadWorkflowEntityById, onMaterialAdd, onMaterialRemove, onDestroy, getJobMaterialClient, MaterialViewerComponent, headerChildren, editable, }) {
-    const dispatch = useDispatch();
-    const stateMaterials = useSelector((state) => state.materials);
-    const stateMaterial = useSelector((state) => state.material);
-    const stateJob = useSelector((state) => state.job);
-    const stateWorkflowContexts = useSelector((state) => state.workflowContexts);
-    const stateIndex = useSelector((state) => state.index);
-    const stateMaterialsSet = useSelector((state) => state.materialsSet);
+    const dispatch = useJobDesignerDispatch();
+    const stateMaterials = useJobDesignerSelector((state) => state.materials);
+    const stateMaterial = useJobDesignerSelector((state) => state.material);
+    const stateJob = useJobDesignerSelector((state) => state.job);
+    const stateWorkflowContexts = useJobDesignerSelector((state) => state.workflowContexts);
+    const stateIndex = useJobDesignerSelector((state) => state.index);
+    const stateMaterialsSet = useJobDesignerSelector((state) => state.materialsSet);
     const { getRouteQueryTab } = useJobDesignerDeps();
     const syncWorkflowWithJob = useCallback((nextWorkflow) => {
         const nextJob = stateJob.clone();
@@ -125,6 +126,6 @@ function JobLocalReduxContainer(props) {
             ((_c = (_b = (_a = window.Meteor) === null || _a === void 0 ? void 0 : _a.settings) === null || _b === void 0 ? void 0 : _b.public) === null || _c === void 0 ? void 0 : _c.enableJobDesignerLogging);
         return createStore(reducer, enableLogging ? applyMiddleware(logger) : undefined);
     }, []);
-    return (_jsx(Provider, { store: store, children: _jsx(JobStoreLocalReduxContainer, { ...storeContainerProps }) }));
+    return (_jsx(Provider, { store: store, context: JobDesignerReduxContext, children: _jsx(JobStoreLocalReduxContainer, { ...storeContainerProps }) }));
 }
 export default memo(JobLocalReduxContainer);

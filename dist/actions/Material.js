@@ -17,3 +17,17 @@ export function switchMaterialByIndex(index) {
         index,
     };
 }
+export function materialsAdd(materials, metaProperties) {
+    return {
+        type: MATERIALS_ADD,
+        materials,
+        metaProperties,
+    };
+}
+export function materialsRemove(indices, metaProperties) {
+    return {
+        type: MATERIALS_REMOVE,
+        indices,
+        metaProperties,
+    };
+}

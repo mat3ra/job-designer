@@ -4,7 +4,7 @@ import type { Job } from "@mat3ra/jode";
 import { setJobNameBasedOnMaterials } from "@mat3ra/jode";
 import type { ResultsProps } from "@mat3ra/jove";
 import React, { memo, useCallback, useEffect, useMemo } from "react";
-import { Provider, useDispatch, useSelector } from "react-redux";
+import { Provider } from "react-redux";
 import { applyMiddleware, createStore } from "redux";
 import logger from "redux-logger";
 
@@ -12,6 +12,11 @@ import { setMaterials, syncJobWorkflow, updateJob } from "../actions";
 import { useJobDesignerDeps } from "../JobDesignerContext";
 import { createJobDesignerReducer } from "../reducers";
 import JobContainer from "./JobContainer";
+import {
+    JobDesignerReduxContext,
+    useJobDesignerDispatch,
+    useJobDesignerSelector,
+} from "./JobDesignerReduxContext";
 
 interface JobDesignerUser {
     entity: { id: string; firstName?: string; lastName?: string; email?: string };
@@ -143,13 +148,13 @@ function JobStoreLocalReduxContainer({
     headerChildren,
     editable,
 }: JobStoreLocalReduxContainerInnerProps) {
-    const dispatch = useDispatch();
-    const stateMaterials = useSelector((state: State) => state.materials);
-    const stateMaterial = useSelector((state: State) => state.material);
-    const stateJob = useSelector((state: State) => state.job);
-    const stateWorkflowContexts = useSelector((state: State) => state.workflowContexts);
-    const stateIndex = useSelector((state: State) => state.index);
-    const stateMaterialsSet = useSelector((state: State) => state.materialsSet);
+    const dispatch = useJobDesignerDispatch();
+    const stateMaterials = useJobDesignerSelector((state: State) => state.materials);
+    const stateMaterial = useJobDesignerSelector((state: State) => state.material);
+    const stateJob = useJobDesignerSelector((state: State) => state.job);
+    const stateWorkflowContexts = useJobDesignerSelector((state: State) => state.workflowContexts);
+    const stateIndex = useJobDesignerSelector((state: State) => state.index);
+    const stateMaterialsSet = useJobDesignerSelector((state: State) => state.materialsSet);
     const { getRouteQueryTab } = useJobDesignerDeps();
 
     const syncWorkflowWithJob = useCallback(
@@ -328,7 +333,7 @@ function JobLocalReduxContainer(props: JobLocalReduxContainerProps) {
     }, []);
 
     return (
-        <Provider store={store}>
+        <Provider store={store} context={JobDesignerReduxContext}>
             <JobStoreLocalReduxContainer {...storeContainerProps} />
         </Provider>
     );

@@ -16,6 +16,7 @@ import MaterialTab from "./MaterialTab";
 import { StatePropsCompareOnUpdateForJobMIxin } from "./mixins";
 import { ResultsTab } from "@mat3ra/jove";
 import WorkflowTab from "./WorkflowTab";
+import { getInjectedDeps } from "../setDependencies";
 
 import TabsMenu from "@exabyte-io/cove.js/dist/mui/components/tabs/TabsMenu";
 import LoadingIndicator from "@exabyte-io/cove.js/dist/mui-composed/components/loading/LoadingIndicator";
@@ -54,7 +55,10 @@ const StatefulEntityMixin = (superclass) =>
             });
         }
     };
-const DAOProvider = { get: () => ({ findByIds: () => [] }) };
+// Resolved lazily (not at module load) so it picks up the real webapp DAOProvider
+// injected via setDependencies(), which runs after this module is first imported.
+const getDAOProvider = () =>
+    getInjectedDeps().DAOProvider ?? { get: () => ({ findByIds: () => [] }) };
 const triggerChartsResize = () => {};
 const getConditionalTabs = (config, conditionalMap, key) =>
     Object.values(config).filter((tab) => conditionalMap[tab[key]] !== false);
@@ -281,7 +285,6 @@ class Job extends mix(React.Component).with(
     };
 
     getSaveBtnProps() {
-        const job = this.state.entity;
         const isDesignerLoading = this.props.isLoading || this.state.isWorkflowLoading;
         return {
             id: "save-button",
@@ -291,7 +294,16 @@ class Job extends mix(React.Component).with(
                     label: "Save",
                     iconName: "shapes.save",
                     onClick: (...args) => {
-                        this._resetStateEntityAndUpdateParents(job, () =>
+                        // NOTE: read `this.state.entity` at click time rather than closing over a
+                        // `job` local captured at render time. `ButtonMultiSelect` snapshots
+                        // `buttonConfigs[0]` into its own local state on mount (and does not
+                        // resync it on prop changes), so it keeps calling the *first* onClick
+                        // closure it ever received for the whole lifetime of the component. If
+                        // that closure captured a `job` variable by value, it would forever
+                        // persist the entity as it was on the very first render (e.g. the
+                        // original auto-generated job, before any parent/workflow/materials
+                        // selection or rename) — silently reverting all later edits on Save.
+                        this._resetStateEntityAndUpdateParents(this.state.entity, () =>
                             this.props.onSave(...args),
                         );
                     },
@@ -312,7 +324,7 @@ class Job extends mix(React.Component).with(
     }
 
     onSelectParentJobSubmit = async (ids) => {
-        const jobs = DAOProvider.get(Job.name).findByIds(ids);
+        const jobs = getDAOProvider().get(Job.name).findByIds(ids);
 
         if (jobs.length > 1) {
             showWarningAlert(createMessageTextTAPi18n("workflow.errors.select.singleOnly"));
