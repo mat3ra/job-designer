@@ -106,6 +106,12 @@
             "@mat3ra/jode/*": [
                 "node_modules/@mat3ra/jode/dist/js/*"
             ],
+            "@mat3ra/wave.js": [
+                "node_modules/@mat3ra/wave.js/dist/exports"
+            ],
+            "@mat3ra/wave.js/*": [
+                "node_modules/@mat3ra/wave.js/dist/*"
+            ],
             "@mat3ra/*": [
                 "src/typings.d.ts"
             ],

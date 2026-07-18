@@ -1,6 +1,6 @@
 import "./preloads";
 
-import { ThreeDEditor } from "@exabyte-io/wave.js";
+import { ThreeDEditor } from "@mat3ra/wave.js";
 import { Job } from "@mat3ra/jode";
 import { Material } from "@mat3ra/made";
 import { MaterialStandata, WorkflowStandata } from "@mat3ra/standata";
