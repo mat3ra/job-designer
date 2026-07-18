@@ -1,4 +1,4 @@
-import { showErrorAlert } from "@exabyte-io/cove.js/dist/other/alerts";
+import { showErrorAlert } from "@mat3ra/cove/dist/other/alerts";
 import { renderConfigsFromJobMaterialsWorkflows, setJobNameBasedOnMaterials } from "@mat3ra/jode";
 import { JOB_IS_MULTI_MATERIAL_SET, JOB_SAVE, JOB_SUBMIT, JOB_TERMINATE, JOB_UPDATE, JOB_WORKFLOW_SYNC, } from "../actions";
 import { renderJobForDesignerState } from "./renderJobForDesignerState";

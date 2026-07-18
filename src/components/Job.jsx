@@ -1,6 +1,6 @@
 /* eslint-disable jsx-a11y/anchor-is-valid */
-import IconByName from "@exabyte-io/cove.js/dist/mui/components/icon/IconByName";
-import { showWarningAlert } from "@exabyte-io/cove.js/dist/other/alerts";
+import IconByName from "@mat3ra/cove/dist/mui/components/icon/IconByName";
+import { showWarningAlert } from "@mat3ra/cove/dist/other/alerts";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import lodash from "lodash";
@@ -18,11 +18,11 @@ import { ResultsTab } from "@mat3ra/jove";
 import WorkflowTab from "./WorkflowTab";
 import { getInjectedDeps } from "../setDependencies";
 
-import TabsMenu from "@exabyte-io/cove.js/dist/mui/components/tabs/TabsMenu";
-import LoadingIndicator from "@exabyte-io/cove.js/dist/mui-composed/components/loading/LoadingIndicator";
-import { EntityHeader } from "@exabyte-io/cove.js/dist/mui-composed/components/entity-header/EntityHeader";
-import ButtonMultiSelect from "@exabyte-io/cove.js/dist/mui/components/button/ButtonMultiSelect";
-import Dropdown from "@exabyte-io/cove.js/dist/mui/components/dropdown/Dropdown";
+import TabsMenu from "@mat3ra/cove/dist/mui/components/tabs/TabsMenu";
+import LoadingIndicator from "@mat3ra/cove/dist/mui-composed/components/loading/LoadingIndicator";
+import { EntityHeader } from "@mat3ra/cove/dist/mui-composed/components/entity-header/EntityHeader";
+import ButtonMultiSelect from "@mat3ra/cove/dist/mui/components/button/ButtonMultiSelect";
+import Dropdown from "@mat3ra/cove/dist/mui/components/dropdown/Dropdown";
 import { ComputableEntityMixin } from "@mat3ra/ive";
 
 // Webapp-specific mixins/utilities — stubbed for standalone build; injected from webapp at runtime.
