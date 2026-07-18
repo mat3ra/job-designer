@@ -1,4 +1,4 @@
-import { showErrorAlert } from "@exabyte-io/cove.js/dist/other/alerts";
+import { showErrorAlert } from "@mat3ra/cove.js/dist/other/alerts";
 
 import { renderConfigsFromJobMaterialsWorkflows, setJobNameBasedOnMaterials } from "@mat3ra/jode";
 import {

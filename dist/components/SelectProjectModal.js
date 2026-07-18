@@ -1,6 +1,6 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 /* eslint-disable react/destructuring-assignment,react/jsx-props-no-spreading */
-import Dialog from "@exabyte-io/cove.js/dist/mui/components/dialog/Dialog";
+import Dialog from "@mat3ra/cove.js/dist/mui/components/dialog/Dialog";
 import Link from "@mui/material/Link";
 import MenuItem from "@mui/material/MenuItem";
 import Select from "@mui/material/Select";

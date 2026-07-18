@@ -55,7 +55,7 @@
     },
     "license": "Apache-2.0",
     "devDependencies": {
-        "@exabyte-io/cove.js": "2026.7.9-1",
+        "@mat3ra/cove.js": "2026.7.18-1",
         "@exabyte-io/wave.js": "2026.6.22-0",
         "@mat3ra/ade": "2026.5.29-0",
         "@mat3ra/ave": "2026.7.10-0",
