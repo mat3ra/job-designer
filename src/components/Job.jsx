@@ -675,6 +675,7 @@ class Job extends mix(React.Component).with(
                                         resultsProperties={resultsProperties}
                                         jobProperties={jobProperties}
                                         fetchMaterials={fetchMaterials}
+                                        MaterialComponent={MaterialViewerComponent}
                                     />
                                 )}
                                 {isCurrentTabFiles && (
