@@ -59,6 +59,16 @@ const StatefulEntityMixin = (superclass) =>
 // injected via setDependencies(), which runs after this module is first imported.
 const getDAOProvider = () =>
     getInjectedDeps().DAOProvider ?? { get: () => ({ findByIds: () => [] }) };
+// Same lazy-resolution pattern: pulls host-app file helpers already registered via
+// setDependencies() for forwarding into ResultsTab (see the render() method below).
+const getFileUtils = () => {
+    const deps = getInjectedDeps();
+    return {
+        downloadAndProcessFile: deps.downloadAndProcessFile,
+        handleGetSignedURL: deps.handleGetSignedURL,
+        handleGetSignedUrlAsCSV: deps.handleGetSignedUrlAsCSV,
+    };
+};
 const triggerChartsResize = () => {};
 const getConditionalTabs = (config, conditionalMap, key) =>
     Object.values(config).filter((tab) => conditionalMap[tab[key]] !== false);
@@ -676,6 +686,8 @@ class Job extends mix(React.Component).with(
                                         jobProperties={jobProperties}
                                         fetchMaterials={fetchMaterials}
                                         MaterialComponent={MaterialViewerComponent}
+                                        fileUtils={getFileUtils()}
+                                        DataGridComponent={getInjectedDeps().DataGridComponent}
                                     />
                                 )}
                                 {isCurrentTabFiles && (
