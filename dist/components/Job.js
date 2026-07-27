@@ -150,7 +150,10 @@ class Job extends mix(React.Component).with(StatePropsCompareOnUpdateForJobMIxin
             return actions;
         };
         this.onSelectParentJobSubmit = async (ids) => {
-            const jobs = getDAOProvider().get(Job.name).findByIds(ids);
+            // Entity DAO key is the string "Job"; do not use this React class's .name -
+            // build tools may mangle/shorten class names during minification
+            // (ports mat3ra/web-app#2928, SOF-7962).
+            const jobs = getDAOProvider().get("Job").findByIds(ids);
             if (jobs.length > 1) {
                 showWarningAlert(createMessageTextTAPi18n("workflow.errors.select.singleOnly"));
                 return;
