@@ -302,7 +302,9 @@ class Job extends mix(React.Component).with(
                 {
                     id: "save",
                     label: "Save",
-                    iconName: "shapes.save",
+                    // "actions.save" is the real map entry (MUI Save); "shapes.save" doesn't
+                    // exist in cove's IconByName map and fell back to a plain Circle glyph.
+                    iconName: "actions.save",
                     onClick: (...args) => {
                         // NOTE: read `this.state.entity` at click time rather than closing over a
                         // `job` local captured at render time. `ButtonMultiSelect` snapshots
@@ -586,8 +588,10 @@ class Job extends mix(React.Component).with(
                     icon="entities.job"
                     id="job-designer-header"
                 >
-                    {this.props.editable && <ButtonMultiSelect {...this.getSaveBtnProps()} />}
+                    {/* Actions dropdown to the left of Save, matching the pre-extraction header
+                        (EntityHeader organism rendered Dropdown -> Pager -> Save). */}
                     <Dropdown {...this.getDropdownProps()} />
+                    {this.props.editable && <ButtonMultiSelect {...this.getSaveBtnProps()} />}
                     {headerChildren ?? null}
                 </EntityHeader>
                 {this.renderParentJob()}
