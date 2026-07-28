@@ -104,7 +104,10 @@ function App() {
                 allMaterialJsons[materialIndex]?.name ??
                 "Material";
             const name = `${wodeWorkflow.name} — ${matName}`;
-            const newJob = new Job({ name });
+            // pre-submission status makes the header editable (name input + Save button),
+            // matching how the webapp shows a new job - without it the demo header hides
+            // the exact controls the designer is meant to demo.
+            const newJob = new Job({ name, status: "pre-submission" });
             newJob.setWorkflow(wodeWorkflow);
             newJob.setMaterial(selectedMaterial);
 
