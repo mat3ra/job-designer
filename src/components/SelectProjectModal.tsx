@@ -26,7 +26,11 @@ function SelectProjectModal({
 
     const { useProfile, useFetchProjectsList } = useJobDesignerDeps();
     const { account } = useProfile();
-    const state = useFetchProjectsList("SelectProjectModal");
+    // Scope to the current account - without ownerId, the webapp's real useFetchProjectsList
+    // returns every project accessible to the user (any team/sharing route), not just this
+    // account's own, and the "pick the isDefault one" effect below could then auto-select
+    // another account's default project instead of the current one's.
+    const state = useFetchProjectsList("SelectProjectModal", { ownerId: account?.entity?.id });
     const projects = useMemo(() => state?.list || [], [state?.list]);
 
     const [selectedProjectId, setSelectedProjectId] = React.useState(

@@ -9,13 +9,17 @@ import Typography from "@mui/material/Typography";
 import React, { useCallback, useEffect, useMemo } from "react";
 import { useJobDesignerDeps } from "../JobDesignerContext";
 function SelectProjectModal({ id, title = "Select a project for the new job", onSubmit, onCancel, }) {
-    var _a, _b;
+    var _a, _b, _c;
     const theme = useTheme();
     const { useProfile, useFetchProjectsList } = useJobDesignerDeps();
     const { account } = useProfile();
-    const state = useFetchProjectsList("SelectProjectModal");
+    // Scope to the current account - without ownerId, the webapp's real useFetchProjectsList
+    // returns every project accessible to the user (any team/sharing route), not just this
+    // account's own, and the "pick the isDefault one" effect below could then auto-select
+    // another account's default project instead of the current one's.
+    const state = useFetchProjectsList("SelectProjectModal", { ownerId: (_a = account === null || account === void 0 ? void 0 : account.entity) === null || _a === void 0 ? void 0 : _a.id });
     const projects = useMemo(() => (state === null || state === void 0 ? void 0 : state.list) || [], [state === null || state === void 0 ? void 0 : state.list]);
-    const [selectedProjectId, setSelectedProjectId] = React.useState(((_b = (_a = projects[0]) === null || _a === void 0 ? void 0 : _a.entity) === null || _b === void 0 ? void 0 : _b.id) || null);
+    const [selectedProjectId, setSelectedProjectId] = React.useState(((_c = (_b = projects[0]) === null || _b === void 0 ? void 0 : _b.entity) === null || _c === void 0 ? void 0 : _c.id) || null);
     const handleChange = useCallback((event) => {
         setSelectedProjectId(event.target.value);
     }, []);

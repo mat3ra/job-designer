@@ -3,7 +3,10 @@ import { createContext, useContext, useMemo } from "react";
 import { getInjectedDeps } from "./setDependencies";
 /** Stub implementations safe for standalone (no Meteor, no Redux store). */
 const STANDALONE_JOB_DESIGNER_DEPS = {
-    useProfile: () => ({ account: { entity: { slug: "demo" } }, user: { entity: { id: "1" } } }),
+    useProfile: () => ({
+        account: { entity: { id: "1", slug: "demo" } },
+        user: { entity: { id: "1" } },
+    }),
     useFetchMaterialsList: () => ({ list: [], loading: false }),
     useFetchProjectsList: () => ({ list: [], loading: false }),
     useReduxDialog: () => [() => { }, () => { }],
