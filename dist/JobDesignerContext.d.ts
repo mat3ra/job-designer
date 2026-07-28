@@ -13,6 +13,7 @@ export interface JobDesignerDeps {
     useProfile: () => {
         account?: {
             entity?: {
+                id?: string;
                 slug?: string;
             };
         };
@@ -27,8 +28,16 @@ export interface JobDesignerDeps {
         list: any[];
         loading: boolean;
     } | null;
-    /** Fetches a list of projects. Stub returns empty list. */
-    useFetchProjectsList: (listId: string) => {
+    /**
+     * Fetches a list of projects. Callers that need the results scoped to the current account
+     * (e.g. SelectProjectModal) must pass `ownerId` - the webapp's real implementation returns
+     * every project accessible to the user (any team/sharing route, not just this account's own)
+     * when it's omitted. Stub returns empty list.
+     */
+    useFetchProjectsList: (listId: string, params?: {
+        ownerId?: string;
+        limit?: number;
+    }) => {
         list: any[];
         loading: boolean;
     } | null;

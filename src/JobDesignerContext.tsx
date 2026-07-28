@@ -15,7 +15,7 @@ export type JobDesignerDialogTuple = [() => void, () => void];
 export interface JobDesignerDeps {
     /** Returns the current user profile. Stub returns a minimal safe profile. */
     useProfile: () => {
-        account?: { entity?: { slug?: string } };
+        account?: { entity?: { id?: string; slug?: string } };
         user?: { entity?: { id?: string } };
     };
     /** Fetches a list of materials by list ID + filter params. Stub returns empty state. */
@@ -23,8 +23,16 @@ export interface JobDesignerDeps {
         listId: string,
         params?: any,
     ) => { list: any[]; loading: boolean } | null;
-    /** Fetches a list of projects. Stub returns empty list. */
-    useFetchProjectsList: (listId: string) => { list: any[]; loading: boolean } | null;
+    /**
+     * Fetches a list of projects. Callers that need the results scoped to the current account
+     * (e.g. SelectProjectModal) must pass `ownerId` - the webapp's real implementation returns
+     * every project accessible to the user (any team/sharing route, not just this account's own)
+     * when it's omitted. Stub returns empty list.
+     */
+    useFetchProjectsList: (
+        listId: string,
+        params?: { ownerId?: string; limit?: number },
+    ) => { list: any[]; loading: boolean } | null;
     /** Opens/closes a Redux-controlled dialog. Stub returns a no-op tuple. */
     useReduxDialog: (dialogType: string) => JobDesignerDialogTuple;
     /** Optional Files explorer component. In standalone, renders nothing. */
@@ -39,7 +47,10 @@ export interface JobDesignerDeps {
 
 /** Stub implementations safe for standalone (no Meteor, no Redux store). */
 const STANDALONE_JOB_DESIGNER_DEPS: JobDesignerDeps = {
-    useProfile: () => ({ account: { entity: { slug: "demo" } }, user: { entity: { id: "1" } } }),
+    useProfile: () => ({
+        account: { entity: { id: "1", slug: "demo" } },
+        user: { entity: { id: "1" } },
+    }),
     useFetchMaterialsList: () => ({ list: [], loading: false }),
     useFetchProjectsList: () => ({ list: [], loading: false }),
     useReduxDialog: () => [() => {}, () => {}],
