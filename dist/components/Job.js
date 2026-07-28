@@ -159,6 +159,12 @@ class Job extends mix(React.Component).with(StatePropsCompareOnUpdateForJobMIxin
                 return;
             }
             const parentJob = jobs[0];
+            if (!parentJob) {
+                // DAO lookup miss for a job the user just picked from a loaded list (e.g. a stale
+                // cache) - getJobMaterialClient's own contract expects a real Job, not undefined.
+                console.error("onSelectParentJobSubmit: no Job entity found for the selected id(s)");
+                return;
+            }
             // TODO: figure out how to deal with multimaterial jobs
             const parentMaterials = [await this.props.getJobMaterialClient(parentJob)];
             this.setParentJob(parentJob);
