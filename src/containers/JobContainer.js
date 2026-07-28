@@ -5,6 +5,7 @@ import { JobStatus } from "../exports";
 import {
     datasetUpdate,
     materialsAdd,
+    materialsRemove,
     saveJob,
     setJobMultiMaterial,
     setMaterials,
@@ -77,6 +78,7 @@ const mapDispatchToProps = (dispatch, ownProps) => {
             }
         },
         onMaterialRemove: (indices) => {
+            dispatch(materialsRemove(indices, ownProps.metaProperties));
             if (ownProps.onMaterialRemove) {
                 ownProps.onMaterialRemove(indices);
             }

@@ -54,16 +54,24 @@ function materialsAdd(state, action) {
  * @summary Removes material from materials set:
  */
 function materialsRemove(state, action) {
+    var _a;
     if (state.materials.length <= 1)
         return state;
     const materials = [].concat(state.materials);
-    action.indices.forEach((index) => {
-        materials.splice(index, 1);
+    // no indices passed => remove the material at the current index
+    const rawIndices = ((_a = action.indices) === null || _a === void 0 ? void 0 : _a.length) ? action.indices : [state.index];
+    // sort ascending; in-place splices shift later positions, compensated by `- position` below
+    const indices = [...rawIndices].sort((a, b) => a - b);
+    indices.forEach((index, position) => {
+        materials.splice(index - position, 1);
         // remove contexts for deleted materials
-        state.workflowContexts.splice(index, 1);
+        state.workflowContexts.splice(index - position, 1);
     });
     action.materials = materials;
-    return materialsSet(state, action, [], { index: state.index >= materials.length ? state.index - 1 : state.index }, false);
+    // keep the viewer on a valid material: stay at the same position (which now holds the next
+    // material), stepping back only when the removed one was last
+    const index = Math.min(state.index, materials.length - 1);
+    return materialsSet({ ...state, index }, action, [], false);
 }
 /**
  * @summary Handles switching materials in unit input preview.

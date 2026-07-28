@@ -1,7 +1,7 @@
 /* eslint-disable import/named */
 import { connect } from "react-redux";
 import { JobStatus } from "../exports";
-import { datasetUpdate, materialsAdd, saveJob, setJobMultiMaterial, setMaterials, submitJob, switchMaterialByIndex, terminateJob, updateJob, } from "../actions";
+import { datasetUpdate, materialsAdd, materialsRemove, saveJob, setJobMultiMaterial, setMaterials, submitJob, switchMaterialByIndex, terminateJob, updateJob, } from "../actions";
 import Job from "../components/Job";
 import { JobDesignerReduxContext } from "./JobDesignerReduxContext";
 /**
@@ -58,6 +58,7 @@ const mapDispatchToProps = (dispatch, ownProps) => {
             }
         },
         onMaterialRemove: (indices) => {
+            dispatch(materialsRemove(indices, ownProps.metaProperties));
             if (ownProps.onMaterialRemove) {
                 ownProps.onMaterialRemove(indices);
             }
