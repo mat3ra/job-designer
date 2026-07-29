@@ -38,6 +38,12 @@ export interface JobDesignerDeps {
     /** Optional Files explorer component. In standalone, renders nothing. */
     FilesExplorerContainer?: React.ComponentType<any>;
     /**
+     * Optional full-featured page header (the webapp's EntityHeader organism: description
+     * toggle/editor, Save & Exit split button, dropdown). When absent, Job renders a minimal
+     * header built on cove's EntityHeader (no description support) so standalone still works.
+     */
+    EntityHeaderComponent?: React.ComponentType<any>;
+    /**
      * Returns the current URL query parameter `tab` if present, or null.
      * In the webapp this reads from Meteor's FlowRouter (Router.current()).
      * In standalone mode the stub returns null so the default tab is used.
