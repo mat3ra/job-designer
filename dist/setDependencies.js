@@ -29,6 +29,12 @@ export function setDependencies(deps) {
         mapped.FilesExplorerContainer =
             deps.FilesExplorerContainer;
     }
+    if (deps.EntityHeaderComponent || deps.EntityHeader) {
+        // The webapp has always injected its EntityHeader organism under the `EntityHeader`
+        // key (a compat shim nothing consumed until now) - accept both spellings.
+        mapped.EntityHeaderComponent = (deps.EntityHeaderComponent ||
+            deps.EntityHeader);
+    }
     if (deps.getRouteQueryParametersFromInSet) {
         // Map old getRouteQueryParametersFromInSet(paramNames) to getRouteQueryTab()
         const getter = deps.getRouteQueryParametersFromInSet;

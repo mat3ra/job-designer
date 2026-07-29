@@ -328,10 +328,19 @@ class Job extends mix(React.Component).with(
 
     getDropdownProps() {
         const actions = this.getDefaultActions();
+        // Collapse separators with no visible action after them (e.g. the trailing group
+        // divider when nothing follows) - otherwise the menu renders a dangling divider line.
+        const hasVisibleActionAfter = (index) =>
+            actions
+                .slice(index + 1)
+                .some((action) => !action.isDivider && action.isShown !== false);
+        const cleanedActions = actions.filter(
+            (action, index) => !action.isDivider || hasVisibleActionAfter(index),
+        );
         return {
-            isShown: actions.some((action) => action.isShown !== false),
+            isShown: cleanedActions.some((action) => !action.isDivider && action.isShown !== false),
             className: "pull-right action-dropdown",
-            actions,
+            actions: cleanedActions,
             buttonContent: "Select Job Actions",
         };
     }
@@ -579,24 +588,64 @@ class Job extends mix(React.Component).with(
 
         const isActive = (value) => (value ? "active" : null);
 
+        // The webapp injects its full EntityHeader organism (description toggle/editor,
+        // Save & Exit split button) for production parity; standalone falls back to a
+        // minimal header built on cove's EntityHeader below.
+        const InjectedEntityHeader = getInjectedDeps().EntityHeaderComponent;
+
         return (
             <ErrorBoundary fallback={<div />}>
-                <EntityHeader
-                    name={job.name}
-                    editable={this.props.editable}
-                    onNameUpdate={this.onNameUpdate}
-                    isLoading={isDesignerLoading}
-                    subtitle={project?.name ? { project: project.name } : undefined}
-                    icon="entities.job"
-                    id="job-designer-header"
-                >
-                    {/* Actions dropdown to the left of Save, matching the pre-extraction header
-                        (EntityHeader organism rendered Dropdown -> Pager -> Save). Hidden when no
-                        action is currently shown - otherwise it opens an empty menu. */}
-                    {dropdownProps.isShown && <Dropdown {...dropdownProps} />}
-                    {this.props.editable && <ButtonMultiSelect {...this.getSaveBtnProps()} />}
-                    {headerChildren ?? null}
-                </EntityHeader>
+                {InjectedEntityHeader ? (
+                    <InjectedEntityHeader
+                        name={job.name}
+                        editable={this.props.editable}
+                        onNameUpdate={this.onNameUpdate}
+                        isLoading={isDesignerLoading}
+                        subtitle={project?.name ? { project: project.name } : undefined}
+                        description={job.description}
+                        icon="entities.job"
+                        iconCls={`text-${job.statusCls}`}
+                        id="job-designer-header"
+                        saveBtnProps={{
+                            isShown: Boolean(this.props.editable),
+                            isLoading: isDesignerLoading,
+                            // Read `this.state.entity` at call time (not a render-time `job`
+                            // capture): the organism's ButtonMultiSelect snapshots its configs
+                            // on mount, so a captured entity would forever persist the very
+                            // first render's state - see getSaveBtnProps for the full note.
+                            onSave: (omitRedirect) =>
+                                this._resetStateEntityAndUpdateParents(this.state.entity, () =>
+                                    this.props.onSave(omitRedirect),
+                                ),
+                        }}
+                        dropdownProps={dropdownProps}
+                        descriptionEditorTitle="Job Description"
+                        isDescriptionEditorHidden={hideDescription}
+                        item={job}
+                        isDescriptionEditable={isDescriptionEditable}
+                        onDescriptionUpdate={this.onDescriptionUpdate}
+                    >
+                        {headerChildren ?? null}
+                    </InjectedEntityHeader>
+                ) : (
+                    <EntityHeader
+                        name={job.name}
+                        editable={this.props.editable}
+                        onNameUpdate={this.onNameUpdate}
+                        isLoading={isDesignerLoading}
+                        subtitle={project?.name ? { project: project.name } : undefined}
+                        icon="entities.job"
+                        id="job-designer-header"
+                    >
+                        {/* Actions dropdown to the left of Save, matching the pre-extraction
+                            header (EntityHeader organism rendered Dropdown -> Pager -> Save).
+                            Hidden when no action is currently shown - otherwise it opens an
+                            empty menu. */}
+                        {dropdownProps.isShown && <Dropdown {...dropdownProps} />}
+                        {this.props.editable && <ButtonMultiSelect {...this.getSaveBtnProps()} />}
+                        {headerChildren ?? null}
+                    </EntityHeader>
+                )}
                 {this.renderParentJob()}
                 {this.renderErrors()}
                 {this.renderWarnings()}
