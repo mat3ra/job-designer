@@ -327,10 +327,11 @@ class Job extends mix(React.Component).with(
     }
 
     getDropdownProps() {
+        const actions = this.getDefaultActions();
         return {
-            isShown: true,
+            isShown: actions.some((action) => action.isShown !== false),
             className: "pull-right action-dropdown",
-            actions: this.getDefaultActions(),
+            actions,
             buttonContent: "Select Job Actions",
         };
     }
@@ -574,6 +575,7 @@ class Job extends mix(React.Component).with(
 
         const isDescriptionEditable = this.isDescriptionEditable(job);
         const isDesignerLoading = isLoading || this.state.isWorkflowLoading;
+        const dropdownProps = this.getDropdownProps();
 
         const isActive = (value) => (value ? "active" : null);
 
@@ -589,8 +591,9 @@ class Job extends mix(React.Component).with(
                     id="job-designer-header"
                 >
                     {/* Actions dropdown to the left of Save, matching the pre-extraction header
-                        (EntityHeader organism rendered Dropdown -> Pager -> Save). */}
-                    <Dropdown {...this.getDropdownProps()} />
+                        (EntityHeader organism rendered Dropdown -> Pager -> Save). Hidden when no
+                        action is currently shown - otherwise it opens an empty menu. */}
+                    {dropdownProps.isShown && <Dropdown {...dropdownProps} />}
                     {this.props.editable && <ButtonMultiSelect {...this.getSaveBtnProps()} />}
                     {headerChildren ?? null}
                 </EntityHeader>

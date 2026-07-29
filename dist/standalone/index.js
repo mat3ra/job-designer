@@ -85,7 +85,10 @@ function App() {
         try {
             const matName = (_d = (_b = (_a = allMaterialJsons[materialIndex]) === null || _a === void 0 ? void 0 : _a.formula) !== null && _b !== void 0 ? _b : (_c = allMaterialJsons[materialIndex]) === null || _c === void 0 ? void 0 : _c.name) !== null && _d !== void 0 ? _d : "Material";
             const name = `${wodeWorkflow.name} — ${matName}`;
-            const newJob = new Job({ name });
+            // pre-submission status makes the header editable (name input + Save button),
+            // matching how the webapp shows a new job - without it the demo header hides
+            // the exact controls the designer is meant to demo.
+            const newJob = new Job({ name, status: "pre-submission" });
             newJob.setWorkflow(wodeWorkflow);
             newJob.setMaterial(selectedMaterial);
             // job-designer's own reducers (inherited from the webapp's original Job
