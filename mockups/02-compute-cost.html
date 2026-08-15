@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mockup 02 — Compute &amp; cost</title>
+<style>
+  /* Deliberately single-theme: mockup of the dark standalone shell. */
+  :root {
+    --bg: #0f1115; --surface: #161a21; --surface-2: #1c212a; --surface-3: #232936;
+    --border: #2a303c; --border-soft: #212734;
+    --text: #e8eaf0; --text-2: #9aa3b2; --text-3: #626c7d;
+    --accent: #8b6cf0; --accent-soft: rgba(139,108,240,.14); --accent-border: rgba(139,108,240,.45);
+    --ok: #4cc38a; --ok-soft: rgba(76,195,138,.13);
+    --warn: #e5a13d; --warn-soft: rgba(229,161,61,.13);
+    --err: #ef6a6a; --err-soft: rgba(239,106,106,.12);
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 13.5px/1.5 -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
+  button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .bar {
+    display: flex; align-items: baseline; gap: 12px; padding: 12px 20px;
+    background: var(--surface); border-bottom: 1px solid var(--border); flex-wrap: wrap;
+  }
+  .bar h1 { margin: 0; font-size: 15px; font-weight: 680; }
+  .bar .ctx { color: var(--text-3); font-size: 12px; }
+  .wrap { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(280px, 1fr); gap: 16px; padding: 18px 20px; align-items: start; }
+  @media (max-width: 860px) { .wrap { grid-template-columns: 1fr; } }
+
+  .cap { font: 600 10px/1 var(--mono); letter-spacing: .14em; color: var(--text-3); text-transform: uppercase; margin: 0 0 9px; }
+  .sect + .sect { margin-top: 18px; }
+
+  /* cluster cards */
+  .clusters { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+  .cluster {
+    text-align: left; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 12px 14px; display: grid; gap: 7px;
+  }
+  .cluster:hover { border-color: var(--accent-border); }
+  .cluster[aria-pressed="true"] { border-color: var(--accent); background: linear-gradient(0deg, var(--accent-soft), var(--accent-soft)), var(--surface); }
+  .cluster .nm { font-weight: 660; font-size: 13.5px; display: flex; align-items: center; gap: 8px; }
+  .cluster .hw { color: var(--text-2); font-size: 11.5px; }
+  .cluster .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .cluster .price { font: 600 11.5px/1 var(--mono); color: var(--text-2); font-variant-numeric: tabular-nums; }
+  .qbadge { display: inline-flex; align-items: center; gap: 5px; font-size: 10.5px; font-weight: 640; border-radius: 6px; padding: 3px 7px; }
+  .qbadge .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .qbadge.free { color: var(--ok); background: var(--ok-soft); }
+  .qbadge.busy { color: var(--warn); background: var(--warn-soft); }
+
+  /* presets */
+  .presets { display: flex; gap: 8px; flex-wrap: wrap; }
+  .preset { border: 1px solid var(--border); border-radius: 9px; padding: 8px 12px; background: var(--surface-2); text-align: left; }
+  .preset:hover { border-color: var(--accent-border); }
+  .preset.on { border-color: var(--accent); background: var(--accent-soft); }
+  .preset .t { font-weight: 640; font-size: 12.5px; }
+  .preset .d { color: var(--text-3); font-size: 10.5px; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+  /* form */
+  .form { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  .field { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+  .field label { display: block; font: 600 9.5px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--text-3); margin-bottom: 7px; }
+  .stepper { display: flex; align-items: center; gap: 8px; }
+  .stepper button {
+    width: 26px; height: 26px; border-radius: 7px; background: var(--surface-3);
+    border: 1px solid var(--border); font-size: 14px; line-height: 1; color: var(--text-2);
+  }
+  .stepper button:hover { color: var(--text); border-color: var(--text-3); }
+  .stepper output { font: 640 16px/1 var(--mono); min-width: 42px; text-align: center; font-variant-numeric: tabular-nums; }
+  .stepper .unit { color: var(--text-3); font-size: 11px; }
+  select, input[type="text"] {
+    width: 100%; background: var(--surface-3); color: var(--text); border: 1px solid var(--border);
+    border-radius: 7px; padding: 6px 8px; font: 500 13px/1.3 inherit;
+  }
+  .field .note { font-size: 10.5px; color: var(--text-3); margin-top: 6px; }
+  .field.invalid { border-color: rgba(239,106,106,.55); }
+  .field.invalid .note { color: var(--err); }
+  .toggle { display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text-2); cursor: pointer; margin-top: 3px; }
+  .toggle input { accent-color: var(--accent); width: 15px; height: 15px; }
+  .hintline { color: var(--text-3); font-size: 11.5px; margin-top: 10px; }
+
+  /* estimate rail */
+  .rail { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px; position: sticky; top: 14px; }
+  .rail h2 { margin: 0 0 2px; font-size: 14px; font-weight: 680; }
+  .rail .sub { color: var(--text-3); font-size: 11.5px; margin-bottom: 14px; }
+  .big { display: flex; align-items: baseline; gap: 8px; }
+  .big .n { font: 700 30px/1 var(--mono); font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+  .big .u { color: var(--text-3); font-size: 12px; }
+  .est-rows { margin: 14px 0; display: grid; gap: 0; }
+  .est-row { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-top: 1px solid var(--border-soft); font-size: 12.5px; }
+  .est-row .k { color: var(--text-2); }
+  .est-row .v { font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; }
+  .quota { border-top: 1px solid var(--border-soft); padding-top: 12px; }
+  .quota .lab { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--text-2); margin-bottom: 7px; }
+  .quota .lab b { font-family: var(--mono); font-weight: 640; font-variant-numeric: tabular-nums; }
+  .meter { height: 8px; border-radius: 5px; background: var(--surface-3); overflow: hidden; display: flex; }
+  .meter .used { background: var(--text-3); }
+  .meter .job { background: var(--accent); margin-left: 2px; }
+  .meter .job.over { background: var(--warn); }
+  .quota .foot { font-size: 10.5px; color: var(--text-3); margin-top: 7px; }
+  .quota .foot.over { color: var(--warn); }
+  .flags { margin-top: 12px; display: grid; gap: 7px; }
+  .flag { display: flex; gap: 8px; font-size: 11.5px; border-radius: 8px; padding: 8px 10px; align-items: baseline; }
+  .flag .ic { font: 700 10px/1.4 var(--mono); }
+  .flag.ok { background: var(--ok-soft); color: var(--ok); }
+  .flag.warn { background: var(--warn-soft); color: var(--warn); }
+  .flag.err { background: var(--err-soft); color: var(--err); }
+  .flag .m { color: var(--text-2); }
+  .flag.err .m, .flag.warn .m { color: inherit; }
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <h1>Compute</h1>
+  <span class="ctx">Molecular Dynamics — DeePMD · Si₂ (mp-149) · Demo Project</span>
+</div>
+
+<div class="wrap">
+  <div>
+    <div class="sect">
+      <p class="cap">Cluster — live queue status inline</p>
+      <div class="clusters" role="group" aria-label="Cluster">
+        <button class="cluster" data-cluster="c7" aria-pressed="true">
+          <span class="nm">cluster-007</span>
+          <span class="hw">AMD EPYC · 128 cores/node · 512 GB</span>
+          <span class="row"><span class="qbadge free"><span class="dot"></span>queue ~2 min</span><span class="price">$0.08/core·h</span></span>
+        </button>
+        <button class="cluster" data-cluster="c12" aria-pressed="false">
+          <span class="nm">cluster-012 · GPU</span>
+          <span class="hw">4× A100 · 64 cores/node · 1 TB</span>
+          <span class="row"><span class="qbadge busy"><span class="dot"></span>queue ~25 min</span><span class="price">$0.32/core·h</span></span>
+        </button>
+        <button class="cluster" data-cluster="c1" aria-pressed="false">
+          <span class="nm">cluster-001</span>
+          <span class="hw">Xeon v4 · 36 cores/node · 128 GB</span>
+          <span class="row"><span class="qbadge free"><span class="dot"></span>queue ~1 min</span><span class="price">$0.04/core·h</span></span>
+        </button>
+      </div>
+    </div>
+
+    <div class="sect">
+      <p class="cap">Presets</p>
+      <div class="presets" role="group" aria-label="Presets">
+        <button class="preset" data-n="1" data-c="4" data-w="0.5"><span class="t">Debug</span><br><span class="d">1×4 · 30 min</span></button>
+        <button class="preset on" data-n="1" data-c="16" data-w="4"><span class="t">Standard</span><br><span class="d">1×16 · 4 h</span></button>
+        <button class="preset" data-n="2" data-c="64" data-w="24"><span class="t">Production</span><br><span class="d">2×64 · 24 h</span></button>
+        <button class="preset" data-n="1" data-c="8" data-w="2"><span class="t">Same as last job</span><br><span class="d">1×8 · 2 h · Aug 12</span></button>
+      </div>
+    </div>
+
+    <div class="sect">
+      <p class="cap">Resources</p>
+      <div class="form">
+        <div class="field" id="fNodes">
+          <label for="outNodes">Nodes</label>
+          <div class="stepper">
+            <button data-t="nodes" data-d="-1" aria-label="Fewer nodes">−</button>
+            <output id="outNodes">1</output>
+            <button data-t="nodes" data-d="1" aria-label="More nodes">+</button>
+          </div>
+          <div class="note" id="nNodes">up to 16 per job</div>
+        </div>
+        <div class="field" id="fCores">
+          <label for="outCores">Cores per node</label>
+          <div class="stepper">
+            <button data-t="cores" data-d="-1" aria-label="Fewer cores">−</button>
+            <output id="outCores">16</output>
+            <button data-t="cores" data-d="1" aria-label="More cores">+</button>
+          </div>
+          <div class="note" id="nCores">128 available on cluster-007</div>
+        </div>
+        <div class="field" id="fWall">
+          <label for="outWall">Walltime</label>
+          <div class="stepper">
+            <button data-t="wall" data-d="-1" aria-label="Less walltime">−</button>
+            <output id="outWall">4</output><span class="unit">h</span>
+            <button data-t="wall" data-d="1" aria-label="More walltime">+</button>
+          </div>
+          <div class="note" id="nWall">queue OR allows up to 12 h</div>
+        </div>
+        <div class="field">
+          <label for="selQueue">Queue</label>
+          <select id="selQueue">
+            <option value="OR">OR — on-demand, regular</option>
+            <option value="D">D — debug (≤ 1 h)</option>
+            <option value="SR">SR — spot, interruptible (−70%)</option>
+          </select>
+          <label class="toggle"><input type="checkbox" checked> restartable</label>
+        </div>
+      </div>
+      <p class="hintline">Nothing is marked red until you interact — validation runs on change and again at preflight.</p>
+    </div>
+  </div>
+
+  <aside class="rail" aria-label="Estimate">
+    <h2>Estimate</h2>
+    <div class="sub">updates as you type · charged per core-hour</div>
+    <div class="big"><span class="n" id="eCost">$5.12</span><span class="u">est. total</span></div>
+    <div class="est-rows">
+      <div class="est-row"><span class="k">Core-hours</span><span class="v" id="eCoreH">64 core·h</span></div>
+      <div class="est-row"><span class="k">Rate</span><span class="v" id="eRate">$0.08 / core·h</span></div>
+      <div class="est-row"><span class="k">Queue wait</span><span class="v" id="eWait">~2 min</span></div>
+      <div class="est-row"><span class="k">Earliest finish</span><span class="v" id="eFinish">today ≈ 18:24</span></div>
+    </div>
+    <div class="quota">
+      <div class="lab"><span>Monthly budget</span><b id="qLabel">142 + 64 of 500 core·h</b></div>
+      <div class="meter" aria-hidden="true"><div class="used" id="qUsed" style="width:28%"></div><div class="job" id="qJob" style="width:13%"></div></div>
+      <div class="foot" id="qFoot">294 core·h will remain after this job.</div>
+    </div>
+    <div class="flags" id="flags"></div>
+  </aside>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var CLUSTERS = {
+    c7:  { name: "cluster-007", rate: 0.08, maxCores: 128, maxNodes: 16, wait: "~2 min",  waitMin: 2 },
+    c12: { name: "cluster-012", rate: 0.32, maxCores: 64,  maxNodes: 8,  wait: "~25 min", waitMin: 25 },
+    c1:  { name: "cluster-001", rate: 0.04, maxCores: 36,  maxNodes: 32, wait: "~1 min",  waitMin: 1 }
+  };
+  var QUEUE_LIMIT_H = { OR: 12, D: 1, SR: 48 };
+  var USED = 142, QUOTA = 500;
+  var state = { cluster: "c7", nodes: 1, cores: 16, wall: 4, touched: false };
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  function fmtWall(w) { return w < 1 ? (w * 60) + " min" : w + " h"; }
+
+  function render() {
+    var cl = CLUSTERS[state.cluster];
+    var coreH = state.nodes * state.cores * state.wall;
+    var cost = coreH * cl.rate;
+    $("outNodes").textContent = state.nodes;
+    $("outCores").textContent = state.cores;
+    $("outWall").textContent = state.wall;
+    $("eCoreH").textContent = coreH + " core·h";
+    $("eRate").textContent = "$" + cl.rate.toFixed(2) + " / core·h";
+    $("eCost").textContent = "$" + cost.toFixed(2);
+    $("eWait").textContent = cl.wait;
+    var finish = new Date(Date.now() + (cl.waitMin + state.wall * 60) * 60000);
+    var dayLabel = finish.getDate() === new Date().getDate() ? "today" : "tomorrow";
+    $("eFinish").textContent = dayLabel + " ≈ " +
+      String(finish.getHours()).padStart(2, "0") + ":" + String(finish.getMinutes()).padStart(2, "0");
+    $("nCores").textContent = cl.maxCores + " available on " + cl.name;
+    $("nNodes").textContent = "up to " + cl.maxNodes + " per job";
+
+    // quota meter
+    var total = USED + coreH, over = total > QUOTA;
+    $("qLabel").textContent = USED + " + " + coreH + " of " + QUOTA + " core·h";
+    $("qUsed").style.width = (USED / QUOTA * 100) + "%";
+    $("qJob").style.width = Math.min(coreH / QUOTA * 100, 100 - USED / QUOTA * 100) + "%";
+    $("qJob").classList.toggle("over", over);
+    $("qFoot").classList.toggle("over", over);
+    $("qFoot").textContent = over
+      ? "Exceeds the monthly budget by " + (total - QUOTA) + " core·h — preflight will ask for confirmation."
+      : (QUOTA - total) + " core·h will remain after this job.";
+
+    // validation flags — only after first interaction (B4)
+    var queue = $("selQueue").value;
+    var flags = [];
+    var coresBad = state.cores > cl.maxCores, wallBad = state.wall > QUEUE_LIMIT_H[queue];
+    if (state.touched) {
+      if (coresBad) flags.push(["err", "✕", state.cores + " cores/node exceeds " + cl.name + " (max " + cl.maxCores + ")."]);
+      if (wallBad) flags.push(["err", "✕", "Walltime " + fmtWall(state.wall) + " exceeds queue " + queue + " limit (" + QUEUE_LIMIT_H[queue] + " h)."]);
+      if (over) flags.push(["warn", "!", "Over monthly budget — confirmation required at submit."]);
+      if (queue === "SR") flags.push(["warn", "!", "Spot queue: job may be interrupted; restartable is recommended."]);
+      if (!flags.length) flags.push(["ok", "✓", "Request fits " + cl.name + " and queue " + queue + " limits."]);
+    }
+    $("flags").innerHTML = flags.map(function (f) {
+      return '<div class="flag ' + f[0] + '"><span class="ic">' + f[1] + '</span><span class="m">' + f[2] + "</span></div>";
+    }).join("");
+    $("fCores").classList.toggle("invalid", state.touched && coresBad);
+    $("fWall").classList.toggle("invalid", state.touched && wallBad);
+  }
+
+  document.querySelectorAll(".cluster").forEach(function (b) {
+    b.addEventListener("click", function () {
+      document.querySelectorAll(".cluster").forEach(function (x) { x.setAttribute("aria-pressed", "false"); });
+      b.setAttribute("aria-pressed", "true");
+      state.cluster = b.dataset.cluster; state.touched = true; render();
+    });
+  });
+  document.querySelectorAll(".preset").forEach(function (b) {
+    b.addEventListener("click", function () {
+      document.querySelectorAll(".preset").forEach(function (x) { x.classList.remove("on"); });
+      b.classList.add("on");
+      state.nodes = +b.dataset.n; state.cores = +b.dataset.c; state.wall = +b.dataset.w;
+      state.touched = true; render();
+    });
+  });
+  document.querySelectorAll(".stepper button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var d = +b.dataset.d, t = b.dataset.t;
+      state.touched = true;
+      if (t === "nodes") state.nodes = Math.max(1, state.nodes + d);
+      if (t === "cores") state.cores = Math.max(1, state.cores + d * (state.cores >= 16 || d > 0 && state.cores >= 8 ? 8 : 1));
+      if (t === "wall")  state.wall  = Math.max(0.5, state.wall + d * (state.wall >= 4 || d > 0 && state.wall >= 2 ? 2 : 0.5));
+      document.querySelectorAll(".preset").forEach(function (x) { x.classList.remove("on"); });
+      render();
+    });
+  });
+  $("selQueue").addEventListener("change", function () { state.touched = true; render(); });
+
+  render();
+})();
+</script>
+</body>
+</html>
