@@ -11,12 +11,14 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogContentText from "@mui/material/DialogContentText";
 import DialogTitle from "@mui/material/DialogTitle";
 import Tooltip from "@mui/material/Tooltip";
+import Typography from "@mui/material/Typography";
 import lodash from "lodash";
 import { mix } from "mixwith";
 import React from "react";
 import { ErrorBoundary } from "react-error-boundary";
 import { TAB_NAVIGATION_CONFIG } from "@mat3ra/jode";
 import { getSubmitBlockedReason } from "../jobSubmission";
+import { getSaveState, getSaveStateLabel, shouldWarnBeforeLeaving } from "../saveState";
 import { shouldPersistJobOnUpdate } from "../shouldPersistJobOnUpdate";
 import ComputeTab from "./ComputeTab";
 import DatasetTab from "./DatasetTab";
@@ -140,6 +142,7 @@ class Job extends mix(React.Component).with(
             currentTab: this.defaultTab,
             isWorkflowLoading: false,
             isTerminateConfirmationOpen: false,
+            hasUnsavedChanges: false,
         };
         this.onEntityUpdate = this.props.onUpdate;
         this.onWorkflowUpdate = this.onWorkflowUpdate.bind(this);
@@ -159,7 +162,18 @@ class Job extends mix(React.Component).with(
     onWorkflowUpdate(workflow) {
         const job = this.state.entity;
         job.setWorkflow(workflow);
+        this.markUnsavedChanges();
         this.props.onUpdate(job);
+    }
+
+    /**
+     * Something the reader did changed the job. Deliberately called from the
+     * handlers rather than from `persistJob()`: that also runs on mount and on
+     * entering the Workflow tab, neither of which is an edit, and claiming
+     * unsaved changes for them would make the indicator meaningless.
+     */
+    markUnsavedChanges() {
+        if (!this.state.hasUnsavedChanges) this.setState({ hasUnsavedChanges: true });
     }
 
     get computedEntity() {
@@ -214,6 +228,27 @@ class Job extends mix(React.Component).with(
 
     componentDidMount() {
         this.persistJob();
+        window.addEventListener("beforeunload", this.warnIfLeavingWithUnsavedChanges);
+    }
+
+    /**
+     * Browsers ignore custom text here and show their own wording; setting
+     * returnValue is what makes the prompt appear at all.
+     */
+    warnIfLeavingWithUnsavedChanges = (event) => {
+        if (!shouldWarnBeforeLeaving(this.saveStateInputs)) return undefined;
+
+        event.preventDefault();
+        event.returnValue = "";
+        return "";
+    };
+
+    get saveStateInputs() {
+        return {
+            hasUnsavedChanges: this.state.hasUnsavedChanges,
+            editable: Boolean(this.props.editable),
+            isSaving: Boolean(this.props.isLoading),
+        };
     }
 
     componentDidUpdate(prevProps) {
@@ -226,6 +261,7 @@ class Job extends mix(React.Component).with(
     }
 
     componentWillUnmount() {
+        window.removeEventListener("beforeunload", this.warnIfLeavingWithUnsavedChanges);
         this.props.onDestroy();
     }
 
@@ -238,13 +274,15 @@ class Job extends mix(React.Component).with(
             // Without this the confirmation never appears: the mixins below only
             // consider the job entity, so a state change this component owns is
             // invisible to them and the render is skipped.
-            this.state.isTerminateConfirmationOpen !== nextState.isTerminateConfirmationOpen
+            this.state.isTerminateConfirmationOpen !== nextState.isTerminateConfirmationOpen ||
+            this.state.hasUnsavedChanges !== nextState.hasUnsavedChanges
         );
     }
 
     onComputeUpdate = (compute) => {
         const job = this.state.entity;
         job.setCompute(compute);
+        this.markUnsavedChanges();
         this._resetStateEntityAndUpdateParents(job);
     };
 
@@ -263,18 +301,21 @@ class Job extends mix(React.Component).with(
     onNameUpdate = (name) => {
         const job = this.state.entity;
         job.setName(name);
+        this.markUnsavedChanges();
         this._resetStateEntityAndUpdateParents(job);
     };
 
     setParentJob = (parent) => {
         const job = this.state.entity;
         job.setParent(parent);
+        this.markUnsavedChanges();
         this._resetStateEntityAndUpdateParents(job);
     };
 
     onParentRemove = () => {
         const job = this.state.entity;
         job.unsetParent();
+        this.markUnsavedChanges();
         // Workaround to propagate changes to component TODO: figure out how to avoid using forceUpdate
         this._resetStateEntityAndUpdateParents(job);
     };
@@ -342,6 +383,21 @@ class Job extends mix(React.Component).with(
         return actions;
     };
 
+    /**
+     * Persists the entity, then clears the unsaved-changes flag.
+     *
+     * Both header paths (injected organism and package-native fallback) go
+     * through here so the indicator cannot be cleared by one and missed by the
+     * other - and so the flag only drops once the save has actually been handed
+     * off, not merely requested.
+     */
+    saveJob(save, ...args) {
+        this._resetStateEntityAndUpdateParents(this.state.entity, () => {
+            save(...args);
+            this.setState({ hasUnsavedChanges: false });
+        });
+    }
+
     openTerminateConfirmation = () => this.setState({ isTerminateConfirmationOpen: true });
 
     closeTerminateConfirmation = () => this.setState({ isTerminateConfirmationOpen: false });
@@ -358,6 +414,27 @@ class Job extends mix(React.Component).with(
      * the dropdown did. Terminate asks first - it kills a running job, and it
      * used to be a single unconfirmed click.
      */
+    /**
+     * Says whether the job on screen has been persisted. Only while editable:
+     * a read-only view has nothing to save, so the words would be noise.
+     */
+    renderSaveStateIndicator() {
+        if (!this.props.editable) return null;
+
+        const saveState = getSaveState(this.saveStateInputs);
+
+        return (
+            <Typography
+                id="job-save-state"
+                variant="caption"
+                color={saveState === "unsaved" ? "warning.main" : "text.secondary"}
+                sx={{ whiteSpace: "nowrap" }}
+            >
+                {getSaveStateLabel(saveState)}
+            </Typography>
+        );
+    }
+
     renderSubmitAction() {
         const job = this.state.entity;
         const { editable, materials, onSubmit } = this.props;
@@ -451,9 +528,7 @@ class Job extends mix(React.Component).with(
                         // persist the entity as it was on the very first render (e.g. the
                         // original auto-generated job, before any parent/workflow/materials
                         // selection or rename) — silently reverting all later edits on Save.
-                        this._resetStateEntityAndUpdateParents(this.state.entity, () =>
-                            this.props.onSave(...args),
-                        );
+                        this.saveJob((...saveArgs) => this.props.onSave(...saveArgs), ...args);
                     },
                 },
             ],
@@ -750,8 +825,9 @@ class Job extends mix(React.Component).with(
                             // on mount, so a captured entity would forever persist the very
                             // first render's state - see getSaveBtnProps for the full note.
                             onSave: (omitRedirect) =>
-                                this._resetStateEntityAndUpdateParents(this.state.entity, () =>
-                                    this.props.onSave(omitRedirect),
+                                this.saveJob(
+                                    (redirectFlag) => this.props.onSave(redirectFlag),
+                                    omitRedirect,
                                 ),
                         }}
                         dropdownProps={dropdownProps}
@@ -761,6 +837,7 @@ class Job extends mix(React.Component).with(
                         isDescriptionEditable={isDescriptionEditable}
                         onDescriptionUpdate={this.onDescriptionUpdate}
                     >
+                        {this.renderSaveStateIndicator()}
                         {this.renderSubmitAction()}
                         {headerChildren ?? null}
                     </InjectedEntityHeader>
@@ -780,6 +857,7 @@ class Job extends mix(React.Component).with(
                             empty menu. */}
                         {dropdownProps.isShown && <Dropdown {...dropdownProps} />}
                         {this.props.editable && <ButtonMultiSelect {...this.getSaveBtnProps()} />}
+                        {this.renderSaveStateIndicator()}
                         {this.renderSubmitAction()}
                         {headerChildren ?? null}
                     </EntityHeader>
