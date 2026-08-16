@@ -1,6 +1,9 @@
 #!/bin/sh
 . "$(dirname "$0")/_/husky.sh"
 
-npx lint-staged
+# dist/ is tracked and shipped ("files": ["/dist", "/src"]), so a src change
+# committed without it leaves consumers on the old code - and a brand-new module
+# is worse than stale, since its dist file is absent entirely and the emitted
+# code imports something that does not exist.
 npm run transpile
 git add dist/
