@@ -39,13 +39,19 @@ declare class Job {
         content: string;
         onClick: () => void;
         icon?: undefined;
-    } | {
-        isShown: boolean;
-        id: string;
-        content: string;
-        onClick: any;
-        icon?: undefined;
     })[];
+    openTerminateConfirmation: () => any;
+    closeTerminateConfirmation: () => any;
+    confirmTerminate: () => void;
+    /**
+     * Submit and Terminate as header buttons rather than dropdown items.
+     *
+     * A disabled Submit says what is missing instead of vanishing, which is what
+     * the dropdown did. Terminate asks first - it kills a running job, and it
+     * used to be a single unconfirmed click.
+     */
+    renderSubmitAction(): React.JSX.Element;
+    renderTerminateConfirmation(): React.JSX.Element;
     getSaveBtnProps(): {
         id: string;
         buttonConfigs: {
@@ -71,12 +77,6 @@ declare class Job {
             id: string;
             content: string;
             onClick: () => void;
-            icon?: undefined;
-        } | {
-            isShown: boolean;
-            id: string;
-            content: string;
-            onClick: any;
             icon?: undefined;
         })[];
         buttonContent: string;

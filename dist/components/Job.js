@@ -3,12 +3,21 @@ import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-run
 import IconByName from "@mat3ra/cove/dist/mui/components/icon/IconByName";
 import { showWarningAlert } from "@mat3ra/cove/dist/other/alerts";
 import Alert from "@mui/material/Alert";
+import AlertTitle from "@mui/material/AlertTitle";
 import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogContentText from "@mui/material/DialogContentText";
+import DialogTitle from "@mui/material/DialogTitle";
+import Tooltip from "@mui/material/Tooltip";
 import lodash from "lodash";
 import { mix } from "mixwith";
 import React from "react";
 import { ErrorBoundary } from "react-error-boundary";
 import { TAB_NAVIGATION_CONFIG } from "@mat3ra/jode";
+import { getSubmitBlockedReason } from "../jobSubmission";
 import { shouldPersistJobOnUpdate } from "../shouldPersistJobOnUpdate";
 import ComputeTab from "./ComputeTab";
 import DatasetTab from "./DatasetTab";
@@ -68,6 +77,27 @@ const getFileUtils = () => {
 const triggerChartsResize = () => { };
 const getConditionalTabs = (config, conditionalMap, key) => Object.values(config).filter((tab) => conditionalMap[tab[key]] !== false);
 const createMessageTextTAPi18n = (key) => key;
+/**
+ * Shown when the designer throws while rendering.
+ *
+ * The fallback used to be `<div />`: a render error produced a silently blank
+ * page, with nothing to report and no way back. Anything the reader can act on
+ * beats an empty screen, so this names what happened and offers a reload; the
+ * digest is there to be pasted into a bug report.
+ */
+function JobDesignerErrorCard({ error, resetErrorBoundary }) {
+    var _a;
+    return (_jsx(Box, { p: 3, children: _jsxs(Alert, { severity: "error", action: _jsx(Button, { color: "inherit", size: "small", onClick: resetErrorBoundary, children: "Reload designer" }), children: [_jsx(AlertTitle, { children: "This job could not be displayed" }), "Something in the designer failed to render. Your saved job is unaffected \u2014 reloading usually clears it. If it keeps happening, include this with a report:", _jsx(Box, { component: "code", sx: {
+                        display: "block",
+                        mt: 1,
+                        p: 1,
+                        borderRadius: 1,
+                        bgcolor: "action.hover",
+                        fontSize: "0.75rem",
+                        whiteSpace: "pre-wrap",
+                        wordBreak: "break-word",
+                    }, children: (_a = error === null || error === void 0 ? void 0 : error.message) !== null && _a !== void 0 ? _a : String(error) })] }) }));
+}
 // TODO: resolve the problem with unit output update and make job component deep-comparable again
 class Job extends mix(React.Component).with(StatePropsCompareOnUpdateForJobMIxin, StatefulEntityMixin, DescriptionUpdateMixin, ComputableEntityMixin) {
     constructor(props) {
@@ -130,24 +160,22 @@ class Job extends mix(React.Component).with(StatePropsCompareOnUpdateForJobMIxin
                     content: "Select dataset",
                     onClick: this.openDatasetUploadsDialog,
                 },
-                {
-                    isShown: Boolean(job.id && job.isInInitialStatus),
-                    id: "select-submit",
-                    content: "Submit",
-                    onClick: this.props.onSubmit,
-                },
-                {
-                    isShown: Boolean(job.id && job.isInRunningStatus),
-                    id: "select-terminate",
-                    content: "Terminate",
-                    onClick: this.props.onTerminate,
-                },
+                // Submit and Terminate deliberately do NOT live here any more: they are
+                // the two actions the whole screen exists to reach, and a menu item that
+                // silently disappears when the job is not ready tells the reader nothing.
+                // They are header buttons now - see renderSubmitAction().
             ];
             // renders divider if some actions should be shown
             if (actions.some((item) => item.isShown)) {
                 actions.push({ isDivider: true, id: "select-divider" });
             }
             return actions;
+        };
+        this.openTerminateConfirmation = () => this.setState({ isTerminateConfirmationOpen: true });
+        this.closeTerminateConfirmation = () => this.setState({ isTerminateConfirmationOpen: false });
+        this.confirmTerminate = () => {
+            this.closeTerminateConfirmation();
+            this.props.onTerminate();
         };
         this.onSelectParentJobSubmit = async (ids) => {
             // Entity DAO key is the string "Job"; do not use this React class's .name -
@@ -287,6 +315,7 @@ class Job extends mix(React.Component).with(StatePropsCompareOnUpdateForJobMIxin
             entity: this.props.job, // make a copy to avoid modifying original object `parentJob`
             currentTab: this.defaultTab,
             isWorkflowLoading: false,
+            isTerminateConfirmationOpen: false,
         };
         this.onEntityUpdate = this.props.onUpdate;
         this.onWorkflowUpdate = this.onWorkflowUpdate.bind(this);
@@ -371,12 +400,45 @@ class Job extends mix(React.Component).with(StatePropsCompareOnUpdateForJobMIxin
         return (this.shouldComponentUpdateForJob(nextProps, nextState) ||
             this.shouldComponentUpdateFromComputableEntityMixin(nextProps, nextState) ||
             this.state.currentTab !== nextState.currentTab ||
-            this.state.isWorkflowLoading !== nextState.isWorkflowLoading);
+            this.state.isWorkflowLoading !== nextState.isWorkflowLoading ||
+            // Without this the confirmation never appears: the mixins below only
+            // consider the job entity, so a state change this component owns is
+            // invisible to them and the render is skipped.
+            this.state.isTerminateConfirmationOpen !== nextState.isTerminateConfirmationOpen);
     }
     renderParentJob() {
         var _a, _b;
         const parentJob = (_b = (_a = this.state.entity).getParentJobClient) === null || _b === void 0 ? void 0 : _b.call(_a);
         return parentJob ? (_jsx(Alert, { severity: "info", onClose: this.props.editable ? this.onParentRemove : undefined, children: _jsxs("div", { className: "search-pill-selected", children: ["Parent job:", " ", _jsx("b", { children: _jsx("a", { href: "", onClick: parentJob.open, children: parentJob.name }) }), " ", "from\u00A0", _jsx("b", { children: parentJob._project.slug }), " project"] }) })) : null;
+    }
+    /**
+     * Submit and Terminate as header buttons rather than dropdown items.
+     *
+     * A disabled Submit says what is missing instead of vanishing, which is what
+     * the dropdown did. Terminate asks first - it kills a running job, and it
+     * used to be a single unconfirmed click.
+     */
+    renderSubmitAction() {
+        const job = this.state.entity;
+        const { editable, materials, onSubmit } = this.props;
+        if (!editable)
+            return null;
+        if (job.isInRunningStatus) {
+            return (_jsx(Button, { id: "job-terminate-button", variant: "outlined", color: "error", size: "small", onClick: this.openTerminateConfirmation, children: "Terminate" }));
+        }
+        if (!job.isInInitialStatus)
+            return null;
+        const blockerOptions = {
+            job,
+            materials: materials !== null && materials !== void 0 ? materials : [],
+            isUsingMaterials: this.isUsingMaterialsTab,
+        };
+        const blockedReason = getSubmitBlockedReason(blockerOptions);
+        return (_jsx(Tooltip, { title: blockedReason !== null && blockedReason !== void 0 ? blockedReason : "", children: _jsx("span", { children: _jsx(Button, { id: "job-submit-button", variant: "contained", size: "small", disabled: Boolean(blockedReason), onClick: onSubmit, children: "Submit" }) }) }));
+    }
+    renderTerminateConfirmation() {
+        const job = this.state.entity;
+        return (_jsxs(Dialog, { open: Boolean(this.state.isTerminateConfirmationOpen), onClose: this.closeTerminateConfirmation, children: [_jsx(DialogTitle, { children: "Terminate this job?" }), _jsx(DialogContent, { children: _jsxs(DialogContentText, { children: [_jsx("b", { children: job.name }), " is still running. Terminating stops it where it is; results produced so far are kept, but the run cannot be resumed."] }) }), _jsxs(DialogActions, { children: [_jsx(Button, { onClick: this.closeTerminateConfirmation, children: "Keep running" }), _jsx(Button, { color: "error", variant: "contained", onClick: this.confirmTerminate, children: "Terminate" })] })] }));
     }
     getSaveBtnProps() {
         const isDesignerLoading = this.props.isLoading || this.state.isWorkflowLoading;
@@ -468,7 +530,7 @@ class Job extends mix(React.Component).with(StatePropsCompareOnUpdateForJobMIxin
         // Save & Exit split button) for production parity; standalone falls back to a
         // minimal header built on cove's EntityHeader below.
         const InjectedEntityHeader = getInjectedDeps().EntityHeaderComponent;
-        return (_jsxs(ErrorBoundary, { fallback: _jsx("div", {}), children: [InjectedEntityHeader ? (_jsx(InjectedEntityHeader, { name: job.name, editable: this.props.editable, onNameUpdate: this.onNameUpdate, isLoading: isDesignerLoading, subtitle: (project === null || project === void 0 ? void 0 : project.name) ? { project: project.name } : undefined, description: job.description, icon: "entities.job", iconCls: `text-${job.statusCls}`, id: "job-designer-header", saveBtnProps: {
+        return (_jsxs(ErrorBoundary, { FallbackComponent: JobDesignerErrorCard, children: [InjectedEntityHeader ? (_jsxs(InjectedEntityHeader, { name: job.name, editable: this.props.editable, onNameUpdate: this.onNameUpdate, isLoading: isDesignerLoading, subtitle: (project === null || project === void 0 ? void 0 : project.name) ? { project: project.name } : undefined, description: job.description, icon: "entities.job", iconCls: `text-${job.statusCls}`, id: "job-designer-header", saveBtnProps: {
                         isShown: Boolean(this.props.editable),
                         isLoading: isDesignerLoading,
                         // Read `this.state.entity` at call time (not a render-time `job`
@@ -476,7 +538,7 @@ class Job extends mix(React.Component).with(StatePropsCompareOnUpdateForJobMIxin
                         // on mount, so a captured entity would forever persist the very
                         // first render's state - see getSaveBtnProps for the full note.
                         onSave: (omitRedirect) => this._resetStateEntityAndUpdateParents(this.state.entity, () => this.props.onSave(omitRedirect)),
-                    }, dropdownProps: dropdownProps, descriptionEditorTitle: "Job Description", isDescriptionEditorHidden: hideDescription, item: job, isDescriptionEditable: isDescriptionEditable, onDescriptionUpdate: this.onDescriptionUpdate, children: headerChildren !== null && headerChildren !== void 0 ? headerChildren : null })) : (_jsxs(EntityHeader, { name: job.name, editable: this.props.editable, onNameUpdate: this.onNameUpdate, isLoading: isDesignerLoading, subtitle: (project === null || project === void 0 ? void 0 : project.name) ? { project: project.name } : undefined, icon: "entities.job", id: "job-designer-header", children: [dropdownProps.isShown && _jsx(Dropdown, { ...dropdownProps }), this.props.editable && _jsx(ButtonMultiSelect, { ...this.getSaveBtnProps() }), headerChildren !== null && headerChildren !== void 0 ? headerChildren : null] })), this.renderParentJob(), this.renderErrors(), this.renderWarnings(), _jsx(TabsMenu, { tabs: tabs, activeTabIndex: activeTabIndex, variant: "fullWidth", centered: true }), _jsx(Box, { children: _jsx("div", { className: "tab-content", children: this.state.isWorkflowLoading ? (_jsx(LoadingIndicator, { included: true })) : (_jsxs(_Fragment, { children: [isCurrentTabMaterial && (_jsx(MaterialTab, { className: isCurrentTabMaterial ? "active" : null, id: TAB_NAVIGATION_CONFIG.material.id, publicAccount: publicAccount, profile: profile, role: "tabpanel", material: material, index: index, length: length, onUpdateIndex: onUpdateIndex, onMaterialRemove: onMaterialRemove, addRemoveAllowed: !job.id, openAddMaterialsDialog: this.openAddMaterialsDialog, MaterialViewerComponent: MaterialViewerComponent })), isCurrentTabDataset && (_jsx(DatasetTab, { className: isCurrentTabDataset ? "active" : null, id: TAB_NAVIGATION_CONFIG.dataset.id, profile: profile, role: "tabpanel", datasetConfig: datasetConfig, datagridHeaderText: "DataFrame", datagridPopoverText: "Training Model Data" })), isCurrentTabWorkflow && (_jsx(WorkflowTab, { className: isCurrentTabWorkflow ? "active" : null, workflowRenderGeneration: renderGeneration, id: TAB_NAVIGATION_CONFIG.workflow.id, role: "tabpanel", workflow: job.workflow, onJobRender: this.persistJob, jobHasParent: Boolean((_a = job.getParentJobClient) === null || _a === void 0 ? void 0 : _a.call(job)), profile: profile, publicAccount: publicAccount, allowedWorkflows: allowedWorkflows, onWorkflowSelect: onWorkflowSelect, materials: materials, materialsSet: materialsSet, materialsIndex: index, onIsMultiMaterialChanged: onIsMultiMaterialChanged, onMaterialSwitch: onMaterialSwitch, onWorkflowUpdate: this.onWorkflowUpdate, adjustable: job.isInInitialStatus, iconCls: `text-${job.statusCls}`, metaProperties: metaProperties, onOutputUpdateRequest: onOutputUpdateRequest, accountUsers: accountUsers, accountUsersIsLoading: accountUsersIsLoading, dialogs: workflowDialogs, templates: templates, createMetaProperty: createMetaProperty, jobProperties: jobProperties, isDescriptionEditable: isDescriptionEditable })), isCurrentTabCompute && (_jsx(ComputeTab, { className: isCurrentTabCompute ? "active" : null, id: TAB_NAVIGATION_CONFIG.compute.id, role: "tabpanel", compute: job.compute, job: job, onUpdate: this.onComputeUpdate, editable: editable, clusters: clusters, showAdvancedOptions: showAdvancedCompute, accountUsers: accountUsers, accountUsersIsLoading: accountUsersIsLoading, currentUser: currentUser, currentAccount: currentAccount })), isCurrentTabResults && (_jsx(ResultsTab, { className: `jobs-view ${isActive(isCurrentTabResults)}`, id: TAB_NAVIGATION_CONFIG.results.id, role: "tabpanel", job: job, material: material, publicAccount: publicAccount, profile: profile, resultsProperties: resultsProperties, jobProperties: jobProperties, fetchMaterials: fetchMaterials, MaterialComponent: MaterialViewerComponent, fileUtils: getFileUtils(), DataGridComponent: getInjectedDeps().DataGridComponent })), isCurrentTabFiles && (_jsx(FilesTab, { className: `jobs-view ${isActive(isCurrentTabFiles)}`, id: TAB_NAVIGATION_CONFIG.files.id, role: "tabpanel", job: job }))] })) }) })] }));
+                    }, dropdownProps: dropdownProps, descriptionEditorTitle: "Job Description", isDescriptionEditorHidden: hideDescription, item: job, isDescriptionEditable: isDescriptionEditable, onDescriptionUpdate: this.onDescriptionUpdate, children: [this.renderSubmitAction(), headerChildren !== null && headerChildren !== void 0 ? headerChildren : null] })) : (_jsxs(EntityHeader, { name: job.name, editable: this.props.editable, onNameUpdate: this.onNameUpdate, isLoading: isDesignerLoading, subtitle: (project === null || project === void 0 ? void 0 : project.name) ? { project: project.name } : undefined, icon: "entities.job", id: "job-designer-header", children: [dropdownProps.isShown && _jsx(Dropdown, { ...dropdownProps }), this.props.editable && _jsx(ButtonMultiSelect, { ...this.getSaveBtnProps() }), this.renderSubmitAction(), headerChildren !== null && headerChildren !== void 0 ? headerChildren : null] })), this.renderTerminateConfirmation(), this.renderParentJob(), this.renderErrors(), this.renderWarnings(), _jsx(TabsMenu, { tabs: tabs, activeTabIndex: activeTabIndex, variant: "fullWidth", centered: true }), _jsx(Box, { children: _jsx("div", { className: "tab-content", children: this.state.isWorkflowLoading ? (_jsx(LoadingIndicator, { included: true })) : (_jsxs(_Fragment, { children: [isCurrentTabMaterial && (_jsx(MaterialTab, { className: isCurrentTabMaterial ? "active" : null, id: TAB_NAVIGATION_CONFIG.material.id, publicAccount: publicAccount, profile: profile, role: "tabpanel", material: material, index: index, length: length, onUpdateIndex: onUpdateIndex, onMaterialRemove: onMaterialRemove, addRemoveAllowed: !job.id, openAddMaterialsDialog: this.openAddMaterialsDialog, MaterialViewerComponent: MaterialViewerComponent })), isCurrentTabDataset && (_jsx(DatasetTab, { className: isCurrentTabDataset ? "active" : null, id: TAB_NAVIGATION_CONFIG.dataset.id, profile: profile, role: "tabpanel", datasetConfig: datasetConfig, datagridHeaderText: "DataFrame", datagridPopoverText: "Training Model Data" })), isCurrentTabWorkflow && (_jsx(WorkflowTab, { className: isCurrentTabWorkflow ? "active" : null, workflowRenderGeneration: renderGeneration, id: TAB_NAVIGATION_CONFIG.workflow.id, role: "tabpanel", workflow: job.workflow, onJobRender: this.persistJob, jobHasParent: Boolean((_a = job.getParentJobClient) === null || _a === void 0 ? void 0 : _a.call(job)), profile: profile, publicAccount: publicAccount, allowedWorkflows: allowedWorkflows, onWorkflowSelect: onWorkflowSelect, materials: materials, materialsSet: materialsSet, materialsIndex: index, onIsMultiMaterialChanged: onIsMultiMaterialChanged, onMaterialSwitch: onMaterialSwitch, onWorkflowUpdate: this.onWorkflowUpdate, adjustable: job.isInInitialStatus, iconCls: `text-${job.statusCls}`, metaProperties: metaProperties, onOutputUpdateRequest: onOutputUpdateRequest, accountUsers: accountUsers, accountUsersIsLoading: accountUsersIsLoading, dialogs: workflowDialogs, templates: templates, createMetaProperty: createMetaProperty, jobProperties: jobProperties, isDescriptionEditable: isDescriptionEditable })), isCurrentTabCompute && (_jsx(ComputeTab, { className: isCurrentTabCompute ? "active" : null, id: TAB_NAVIGATION_CONFIG.compute.id, role: "tabpanel", compute: job.compute, job: job, onUpdate: this.onComputeUpdate, editable: editable, clusters: clusters, showAdvancedOptions: showAdvancedCompute, accountUsers: accountUsers, accountUsersIsLoading: accountUsersIsLoading, currentUser: currentUser, currentAccount: currentAccount })), isCurrentTabResults && (_jsx(ResultsTab, { className: `jobs-view ${isActive(isCurrentTabResults)}`, id: TAB_NAVIGATION_CONFIG.results.id, role: "tabpanel", job: job, material: material, publicAccount: publicAccount, profile: profile, resultsProperties: resultsProperties, jobProperties: jobProperties, fetchMaterials: fetchMaterials, MaterialComponent: MaterialViewerComponent, fileUtils: getFileUtils(), DataGridComponent: getInjectedDeps().DataGridComponent })), isCurrentTabFiles && (_jsx(FilesTab, { className: `jobs-view ${isActive(isCurrentTabFiles)}`, id: TAB_NAVIGATION_CONFIG.files.id, role: "tabpanel", job: job }))] })) }) })] }));
     }
 }
 export default Job;
