@@ -2,12 +2,21 @@
 import IconByName from "@mat3ra/cove/dist/mui/components/icon/IconByName";
 import { showWarningAlert } from "@mat3ra/cove/dist/other/alerts";
 import Alert from "@mui/material/Alert";
+import AlertTitle from "@mui/material/AlertTitle";
 import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogContentText from "@mui/material/DialogContentText";
+import DialogTitle from "@mui/material/DialogTitle";
+import Tooltip from "@mui/material/Tooltip";
 import lodash from "lodash";
 import { mix } from "mixwith";
 import React from "react";
 import { ErrorBoundary } from "react-error-boundary";
 import { TAB_NAVIGATION_CONFIG } from "@mat3ra/jode";
+import { getSubmitBlockedReason } from "../jobSubmission";
 import { shouldPersistJobOnUpdate } from "../shouldPersistJobOnUpdate";
 import ComputeTab from "./ComputeTab";
 import DatasetTab from "./DatasetTab";
@@ -74,6 +83,48 @@ const getConditionalTabs = (config, conditionalMap, key) =>
     Object.values(config).filter((tab) => conditionalMap[tab[key]] !== false);
 const createMessageTextTAPi18n = (key) => key;
 
+/**
+ * Shown when the designer throws while rendering.
+ *
+ * The fallback used to be `<div />`: a render error produced a silently blank
+ * page, with nothing to report and no way back. Anything the reader can act on
+ * beats an empty screen, so this names what happened and offers a reload; the
+ * digest is there to be pasted into a bug report.
+ */
+function JobDesignerErrorCard({ error, resetErrorBoundary }) {
+    return (
+        <Box p={3}>
+            <Alert
+                severity="error"
+                action={
+                    <Button color="inherit" size="small" onClick={resetErrorBoundary}>
+                        Reload designer
+                    </Button>
+                }
+            >
+                <AlertTitle>This job could not be displayed</AlertTitle>
+                Something in the designer failed to render. Your saved job is unaffected — reloading
+                usually clears it. If it keeps happening, include this with a report:
+                <Box
+                    component="code"
+                    sx={{
+                        display: "block",
+                        mt: 1,
+                        p: 1,
+                        borderRadius: 1,
+                        bgcolor: "action.hover",
+                        fontSize: "0.75rem",
+                        whiteSpace: "pre-wrap",
+                        wordBreak: "break-word",
+                    }}
+                >
+                    {error?.message ?? String(error)}
+                </Box>
+            </Alert>
+        </Box>
+    );
+}
+
 // TODO: resolve the problem with unit output update and make job component deep-comparable again
 class Job extends mix(React.Component).with(
     StatePropsCompareOnUpdateForJobMIxin,
@@ -88,6 +139,7 @@ class Job extends mix(React.Component).with(
             entity: this.props.job, // make a copy to avoid modifying original object `parentJob`
             currentTab: this.defaultTab,
             isWorkflowLoading: false,
+            isTerminateConfirmationOpen: false,
         };
         this.onEntityUpdate = this.props.onUpdate;
         this.onWorkflowUpdate = this.onWorkflowUpdate.bind(this);
@@ -182,7 +234,11 @@ class Job extends mix(React.Component).with(
             this.shouldComponentUpdateForJob(nextProps, nextState) ||
             this.shouldComponentUpdateFromComputableEntityMixin(nextProps, nextState) ||
             this.state.currentTab !== nextState.currentTab ||
-            this.state.isWorkflowLoading !== nextState.isWorkflowLoading
+            this.state.isWorkflowLoading !== nextState.isWorkflowLoading ||
+            // Without this the confirmation never appears: the mixins below only
+            // consider the job entity, so a state change this component owns is
+            // invisible to them and the render is skipped.
+            this.state.isTerminateConfirmationOpen !== nextState.isTerminateConfirmationOpen
         );
     }
 
@@ -272,18 +328,10 @@ class Job extends mix(React.Component).with(
                 content: "Select dataset",
                 onClick: this.openDatasetUploadsDialog,
             },
-            {
-                isShown: Boolean(job.id && job.isInInitialStatus),
-                id: "select-submit",
-                content: "Submit",
-                onClick: this.props.onSubmit,
-            },
-            {
-                isShown: Boolean(job.id && job.isInRunningStatus),
-                id: "select-terminate",
-                content: "Terminate",
-                onClick: this.props.onTerminate,
-            },
+            // Submit and Terminate deliberately do NOT live here any more: they are
+            // the two actions the whole screen exists to reach, and a menu item that
+            // silently disappears when the job is not ready tells the reader nothing.
+            // They are header buttons now - see renderSubmitAction().
         ];
 
         // renders divider if some actions should be shown
@@ -293,6 +341,94 @@ class Job extends mix(React.Component).with(
 
         return actions;
     };
+
+    openTerminateConfirmation = () => this.setState({ isTerminateConfirmationOpen: true });
+
+    closeTerminateConfirmation = () => this.setState({ isTerminateConfirmationOpen: false });
+
+    confirmTerminate = () => {
+        this.closeTerminateConfirmation();
+        this.props.onTerminate();
+    };
+
+    /**
+     * Submit and Terminate as header buttons rather than dropdown items.
+     *
+     * A disabled Submit says what is missing instead of vanishing, which is what
+     * the dropdown did. Terminate asks first - it kills a running job, and it
+     * used to be a single unconfirmed click.
+     */
+    renderSubmitAction() {
+        const job = this.state.entity;
+        const { editable, materials, onSubmit } = this.props;
+
+        if (!editable) return null;
+
+        if (job.isInRunningStatus) {
+            return (
+                <Button
+                    id="job-terminate-button"
+                    variant="outlined"
+                    color="error"
+                    size="small"
+                    onClick={this.openTerminateConfirmation}
+                >
+                    Terminate
+                </Button>
+            );
+        }
+
+        if (!job.isInInitialStatus) return null;
+
+        const blockerOptions = {
+            job,
+            materials: materials ?? [],
+            isUsingMaterials: this.isUsingMaterialsTab,
+        };
+        const blockedReason = getSubmitBlockedReason(blockerOptions);
+
+        return (
+            <Tooltip title={blockedReason ?? ""}>
+                {/* span: MUI needs a non-disabled wrapper for the tooltip to fire. */}
+                <span>
+                    <Button
+                        id="job-submit-button"
+                        variant="contained"
+                        size="small"
+                        disabled={Boolean(blockedReason)}
+                        onClick={onSubmit}
+                    >
+                        Submit
+                    </Button>
+                </span>
+            </Tooltip>
+        );
+    }
+
+    renderTerminateConfirmation() {
+        const job = this.state.entity;
+
+        return (
+            <Dialog
+                open={Boolean(this.state.isTerminateConfirmationOpen)}
+                onClose={this.closeTerminateConfirmation}
+            >
+                <DialogTitle>Terminate this job?</DialogTitle>
+                <DialogContent>
+                    <DialogContentText>
+                        <b>{job.name}</b> is still running. Terminating stops it where it is;
+                        results produced so far are kept, but the run cannot be resumed.
+                    </DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={this.closeTerminateConfirmation}>Keep running</Button>
+                    <Button color="error" variant="contained" onClick={this.confirmTerminate}>
+                        Terminate
+                    </Button>
+                </DialogActions>
+            </Dialog>
+        );
+    }
 
     getSaveBtnProps() {
         const isDesignerLoading = this.props.isLoading || this.state.isWorkflowLoading;
@@ -594,7 +730,7 @@ class Job extends mix(React.Component).with(
         const InjectedEntityHeader = getInjectedDeps().EntityHeaderComponent;
 
         return (
-            <ErrorBoundary fallback={<div />}>
+            <ErrorBoundary FallbackComponent={JobDesignerErrorCard}>
                 {InjectedEntityHeader ? (
                     <InjectedEntityHeader
                         name={job.name}
@@ -625,6 +761,7 @@ class Job extends mix(React.Component).with(
                         isDescriptionEditable={isDescriptionEditable}
                         onDescriptionUpdate={this.onDescriptionUpdate}
                     >
+                        {this.renderSubmitAction()}
                         {headerChildren ?? null}
                     </InjectedEntityHeader>
                 ) : (
@@ -643,9 +780,11 @@ class Job extends mix(React.Component).with(
                             empty menu. */}
                         {dropdownProps.isShown && <Dropdown {...dropdownProps} />}
                         {this.props.editable && <ButtonMultiSelect {...this.getSaveBtnProps()} />}
+                        {this.renderSubmitAction()}
                         {headerChildren ?? null}
                     </EntityHeader>
                 )}
+                {this.renderTerminateConfirmation()}
                 {this.renderParentJob()}
                 {this.renderErrors()}
                 {this.renderWarnings()}

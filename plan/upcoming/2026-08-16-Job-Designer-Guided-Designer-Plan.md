@@ -146,12 +146,20 @@ revertable.
 - Acceptance: Workflow tab shows exactly one place named "Compute" across the whole designer.
   Size: S.
 
-### 1.3 Humane metadata (D2) — `@mat3ra/workflow-designer` + job-designer
+### 1.3 Humane metadata (D2) — `@mat3ra/wove` + job-designer
 
-- UUIDs on subworkflow cards and flowchart nodes move behind a copy-id icon with tooltip;
-  status chips ("idle") render only when the job has been submitted (`job.isInInitialStatus`
-  gates them — job-designer passes the flag; the workflow pane already receives
-  `adjustable={job.isInInitialStatus}` so thread one more boolean, e.g. `showUnitStatus`).
+> **Correction (2026-08-16, during implementation):** this was scoped to
+> `@mat3ra/workflow-designer`. It is not there. The UUIDs and "idle" chips render in
+> **`@mat3ra/wove`** — `components/common/CardHeader`, `components/units/UnitCard`,
+> `components/workflows/WorkflowUnitCard` — which draws the subworkflow cards and flowchart
+> nodes as MUI `Card`s with the id as `CardHeader` subheader and the status as a `Chip` in the
+> title. Found by tracing the rendered DOM in the running job-designer demo.
+
+- UUIDs on subworkflow cards and flowchart nodes move behind cove's `CopyId`; status chips
+  render only when the job has been submitted (job-designer passes the flag; the workflow pane
+  already receives `adjustable={job.isInInitialStatus}`, so thread one more boolean, e.g.
+  `showUnitStatus`, through `workflow-designer` into wove).
+- **Blocked on** the cove release (1.5) — `CopyId` and `StatusChip` must be published first.
 - Acceptance: a draft job shows no status chips and no raw UUID text; copy-id copies the id.
   Size: M.
 

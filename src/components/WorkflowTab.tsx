@@ -131,6 +131,9 @@ export default function WorkflowTab({
                 workflowRenderGeneration={workflowRenderGeneration}
                 isDescriptionEditable={isDescriptionEditable}
                 jobProperties={jobProperties}
+                // The job has its own Compute tab; without this the same screen
+                // offers two of them and the reader has to guess which one runs.
+                hideComputeSubTab
             />
         </div>
     );
