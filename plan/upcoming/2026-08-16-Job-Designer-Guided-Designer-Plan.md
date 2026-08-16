@@ -7,6 +7,14 @@ the interactive mockups in [`mockups/`](../../mockups/).
 **Branch of record for the brainstorm:** `claude/jd-ui-ux-improvements-99w9fg`.
 **Prior art:** SOF-7978 extracted the designer into standalone packages; SOF-7991 tracks the
 dependency-injection cleanup this plan must not regress.
+**Parallel effort:** [SOF-8024](https://mat3ra.atlassian.net/browse/SOF-8024) is the same
+exercise for the *workflow* designer ([workflow-designer#12](https://github.com/mat3ra/workflow-designer/pull/12),
+six portion documents in that repo's `plan/`). The two overlap in three places, so treat its
+documents as authoritative for those: its **portion 2** covers the cove design language this
+plan's §"Design language" opens (cove#97 implements the semantic and dark-palette half); its
+**portion 1 items 1.1/1.5** are this plan's item 1.3; and its **portion 3** covers the
+`@mat3ra/ive` compute form that phase 2.3 below rebuilds. Coordinate before starting any of
+those.
 
 ## Summary
 
@@ -62,7 +70,11 @@ The platform design language lives in `@mat3ra/cove` (`dist/theme`, `dist/mui`,
 ### Defects to fix first (cove PRs; prerequisites for the phases below)
 
 - **`paletteDark` is skeletal**: only `primary`, `secondary`, and the four status colors — no
-  `background`, `text`, `action`, `border`, `icon`, or `unitTypes` slots. Anything reading
+  `background`, `text`, `action`, `border`, `icon`, or `unitTypes` slots. (Worth stating
+  precisely, because the parallel SOF-8024 audit records it as "light and dark are identical":
+  they are not. MUI backfills its own standard slots, so dark *looks* like stock-MUI dark, but
+  the custom slots resolve to `undefined` — which is exactly why wove cannot read
+  `unitTypes.*` in dark mode.) Anything reading
   `theme.palette.border.main` or `unitTypes.*` in dark mode gets `undefined`. This is the root
   of the light-flowchart-in-dark-shell problem (D4) and the reason the standalone demo rolls
   its own `createTheme` (`src/standalone/index.tsx` `demoTheme`).
@@ -124,84 +136,14 @@ The platform design language lives in `@mat3ra/cove` (`dist/theme`, `dist/mui`,
   design-language section) rather than introducing a new one; the mockups' exact palette is
   illustrative.
 
-## Phase 1 — De-noise (proposals B4, D1, D2, A3)
+## Phase 1 — De-noise (moved)
 
-Low-risk changes inside the current layout. Ship as one PR train; each item independently
-revertable.
+Built and in review. Its items, what actually shipped, and the divergences from this plan
+are recorded in
+[`../review/2026-08-16-Job-Designer-Phase-1-De-noise.md`](../review/2026-08-16-Job-Designer-Phase-1-De-noise.md).
 
-### 1.1 Progressive validation in the compute form (B4) — `@mat3ra/ive`
-
-- `Compute` renders required-field errors only for touched fields (track touched state per
-  field) or after an explicit validate call (used by preflight later, exposed as an imperative
-  `validate()` ref or a `showAllErrors` prop).
-- Acceptance: opening the Compute tab of a fresh job shows zero red errors; leaving a required
-  field empty after focusing it shows exactly one; `showAllErrors` restores today's behavior.
-  Size: S–M.
-
-### 1.2 Remove the duplicated Compute sub-tab (D1) — `@mat3ra/workflow-designer`
-
-- The workflow pane's internal tab strip (Overview / Important settings / Detailed view /
-  Compute) drops the Compute entry when the host renders its own compute surface. Add a
-  `hideComputeSubTab` (default false for backward compatibility) prop; job-designer passes true.
-- Acceptance: Workflow tab shows exactly one place named "Compute" across the whole designer.
-  Size: S.
-
-### 1.3 Humane metadata (D2) — `@mat3ra/wove` + job-designer
-
-> **Correction (2026-08-16, during implementation):** this was scoped to
-> `@mat3ra/workflow-designer`. It is not there. The UUIDs and "idle" chips render in
-> **`@mat3ra/wove`** — `components/common/CardHeader`, `components/units/UnitCard`,
-> `components/workflows/WorkflowUnitCard` — which draws the subworkflow cards and flowchart
-> nodes as MUI `Card`s with the id as `CardHeader` subheader and the status as a `Chip` in the
-> title. Found by tracing the rendered DOM in the running job-designer demo.
-
-- UUIDs on subworkflow cards and flowchart nodes move behind cove's `CopyId`; status chips
-  render only when the job has been submitted (job-designer passes the flag; the workflow pane
-  already receives `adjustable={job.isInInitialStatus}`, so thread one more boolean, e.g.
-  `showUnitStatus`, through `workflow-designer` into wove).
-- **Blocked on** the cove release (1.5) — `CopyId` and `StatusChip` must be published first.
-- Acceptance: a draft job shows no status chips and no raw UUID text; copy-id copies the id.
-  Size: M.
-
-### 1.4 First-class Submit in the header (A3) — job-designer + `@mat3ra/cove`
-
-- Submit leaves `getDefaultActions()` and becomes a primary header button next to Save
-  (rendered in both header paths: the injected `EntityHeaderComponent` and the standalone
-  `EntityHeader` fallback). Disabled state carries a reason string ("compute not configured");
-  Terminate replaces it in running states. The dropdown keeps only select-parent and
-  import-style power actions.
-- Mind the known cove `ButtonMultiSelect` mount-snapshot behavior (see the long note in
-  `Job.jsx#getSaveBtnProps`): read state at click time, never capture the entity at render.
-- Terminate is destructive: it gets a confirm step (job name + elapsed time in the dialog),
-  unlike today's straight dropdown action.
-- Acceptance: a draft job with material+workflow+compute set can be submitted in one click from
-  any tab; the disabled button explains what is missing; Terminate asks before killing a run;
-  webapp header parity is preserved. Size: M.
-
-### 1.5 Design-language groundwork (cove)
-
-- Fix the status palette (contrast + soft variants) and ship `StatusChip` and `CopyId`;
-  complete the missing `paletteDark` slots (`background`, `text`, `action`, `border`, `icon`,
-  `unitTypes`).
-- Export the job-status semantic mapping (draft / queued / running / finished / error /
-  terminated → color + icon) from cove; items 1.3 and 1.4 consume it instead of
-  `text-${job.statusCls}` classes.
-- Fix `ButtonMultiSelect` config resync; delete the click-time-read workaround note in
-  `Job.jsx` once the fixed version is consumed.
-- Switch the standalone demo to cove's `DarkMaterialUITheme` (delete `demoTheme` in
-  `src/standalone/index.tsx`) so the completed dark palette is exercised continuously.
-- Acceptance: chips and header render legibly in both themes (visual check in the cove
-  gallery, cove#92); the demo runs without a private theme; no consumer reads an undefined
-  dark-palette slot. Size: M–L.
-
-### 1.6 Visible error state (new; not in the original proposals)
-
-- `Job.jsx` wraps the designer in `ErrorBoundary` with `fallback={<div />}` — a render crash
-  currently produces a silently blank page. Replace with a visible error card (what failed, a
-  reload affordance, and a copyable error digest); the webapp can inject its reporting hook
-  through the seam.
-- Acceptance: a thrown render error shows the error card in both webapp and standalone; the
-  fallback never renders an empty page. Size: S.
+Phases are split across documents so each can move through `plan/` independently, as the
+folder's own convention asks — this overview moves last.
 
 ## Phase 2 — Guided designer (proposals A1, A2, B1–B3, C1, E1, E2)
 
