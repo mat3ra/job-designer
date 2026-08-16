@@ -71,6 +71,22 @@ function getCreationSteps({ job, materials, isUsingMaterials, datasetConfig, par
     });
     return steps;
 }
+function getReviewState({ editable, isSubmittable, }) {
+    // A read-only draft is somebody else's to submit; saying "ready" would invite
+    // an action this reader cannot take.
+    if (!editable)
+        return "unavailable";
+    return isSubmittable ? "complete" : "empty";
+}
+function getReviewSummary({ editable, isSubmittable, blockingReasons, }) {
+    if (!editable)
+        return "View only";
+    if (isSubmittable)
+        return "Ready to submit";
+    return blockingReasons.length === 1
+        ? "1 step remaining"
+        : `${blockingReasons.length} steps remaining`;
+}
 export function getJobReadiness({ job, materials = [], isUsingMaterials = true, datasetConfig = null, editable = true, }) {
     const parentJobName = (() => {
         var _a, _b, _c;
@@ -107,19 +123,8 @@ export function getJobReadiness({ job, materials = [], isUsingMaterials = true, 
     steps.push({
         id: REVIEW_STEP_ID,
         label: "Review & submit",
-        // A read-only draft is somebody else's to submit; saying "ready" would
-        // invite an action this reader cannot take.
-        state: !editable ? "unavailable" : isSubmittable ? "complete" : "empty",
+        state: getReviewState({ editable, isSubmittable }),
         summary: getReviewSummary({ editable, isSubmittable, blockingReasons }),
     });
     return { steps, isSubmittable, blockingReasons, isRunOrFinished };
-}
-function getReviewSummary({ editable, isSubmittable, blockingReasons, }) {
-    if (!editable)
-        return "View only";
-    if (isSubmittable)
-        return "Ready to submit";
-    return blockingReasons.length === 1
-        ? "1 step remaining"
-        : `${blockingReasons.length} steps remaining`;
 }

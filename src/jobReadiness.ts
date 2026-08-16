@@ -152,6 +152,37 @@ function getCreationSteps({
     return steps;
 }
 
+function getReviewState({
+    editable,
+    isSubmittable,
+}: {
+    editable: boolean;
+    isSubmittable: boolean;
+}): ReadinessState {
+    // A read-only draft is somebody else's to submit; saying "ready" would invite
+    // an action this reader cannot take.
+    if (!editable) return "unavailable";
+
+    return isSubmittable ? "complete" : "empty";
+}
+
+function getReviewSummary({
+    editable,
+    isSubmittable,
+    blockingReasons,
+}: {
+    editable: boolean;
+    isSubmittable: boolean;
+    blockingReasons: string[];
+}): string {
+    if (!editable) return "View only";
+    if (isSubmittable) return "Ready to submit";
+
+    return blockingReasons.length === 1
+        ? "1 step remaining"
+        : `${blockingReasons.length} steps remaining`;
+}
+
 export function getJobReadiness({
     job,
     materials = [],
@@ -198,28 +229,9 @@ export function getJobReadiness({
     steps.push({
         id: REVIEW_STEP_ID,
         label: "Review & submit",
-        // A read-only draft is somebody else's to submit; saying "ready" would
-        // invite an action this reader cannot take.
-        state: !editable ? "unavailable" : isSubmittable ? "complete" : "empty",
+        state: getReviewState({ editable, isSubmittable }),
         summary: getReviewSummary({ editable, isSubmittable, blockingReasons }),
     });
 
     return { steps, isSubmittable, blockingReasons, isRunOrFinished };
-}
-
-function getReviewSummary({
-    editable,
-    isSubmittable,
-    blockingReasons,
-}: {
-    editable: boolean;
-    isSubmittable: boolean;
-    blockingReasons: string[];
-}): string {
-    if (!editable) return "View only";
-    if (isSubmittable) return "Ready to submit";
-
-    return blockingReasons.length === 1
-        ? "1 step remaining"
-        : `${blockingReasons.length} steps remaining`;
 }
