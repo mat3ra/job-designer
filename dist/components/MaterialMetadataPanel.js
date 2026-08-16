@@ -31,11 +31,19 @@ function MetadataRow({ label, children }) {
  * atom count and provenance — the things worth checking before spending
  * core-hours on a run — could only be found by leaving the designer.
  */
+/** The source id, linked out when the model knows where it came from. */
+function SourceValue({ source }) {
+    if (!source)
+        return null;
+    if (!source.url)
+        return _jsx("span", { children: source.id });
+    return (_jsx(Link, { href: source.url, target: "_blank", rel: "noopener noreferrer", children: source.id }));
+}
 export default function MaterialMetadataPanel({ material }) {
     const summary = getMaterialSummary(material);
     // Nothing legible to report: better to show no panel than an empty frame.
     const hasAnything = Boolean(summary.formula || summary.latticeType || summary.atomCount || summary.source);
     if (!hasAnything)
         return null;
-    return (_jsxs(Paper, { variant: "outlined", id: "job-material-metadata", sx: { overflow: "hidden" }, children: [_jsx(MetadataRow, { label: "Formula", children: summary.formula }), _jsx(MetadataRow, { label: "Lattice", children: summary.latticeType }), _jsx(MetadataRow, { label: "Parameters", children: summary.latticeParameters }), _jsx(MetadataRow, { label: "Angles", children: summary.latticeAngles }), _jsx(MetadataRow, { label: "Space group", children: summary.spaceGroup }), _jsx(MetadataRow, { label: "Atoms in cell", children: summary.atomCount }), _jsx(MetadataRow, { label: "Source", children: summary.source ? (summary.source.url ? (_jsx(Link, { href: summary.source.url, target: "_blank", rel: "noopener noreferrer", children: summary.source.id })) : (summary.source.id)) : undefined })] }));
+    return (_jsxs(Paper, { variant: "outlined", id: "job-material-metadata", sx: { overflow: "hidden" }, children: [_jsx(MetadataRow, { label: "Formula", children: summary.formula }), _jsx(MetadataRow, { label: "Lattice", children: summary.latticeType }), _jsx(MetadataRow, { label: "Parameters", children: summary.latticeParameters }), _jsx(MetadataRow, { label: "Angles", children: summary.latticeAngles }), _jsx(MetadataRow, { label: "Space group", children: summary.spaceGroup }), _jsx(MetadataRow, { label: "Atoms in cell", children: summary.atomCount }), _jsx(MetadataRow, { label: "Source", children: summary.source ? _jsx(SourceValue, { source: summary.source }) : undefined })] }));
 }

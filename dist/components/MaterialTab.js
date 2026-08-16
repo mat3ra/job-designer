@@ -11,7 +11,12 @@ function MaterialNameFallback({ material }) {
     return (_jsxs("div", { style: { padding: "16px" }, children: [_jsx("strong", { children: "Material:" }), " ", name] }));
 }
 function MaterialTab({ className, id, role, material, index, length, publicAccount, profile, addRemoveAllowed, onUpdateIndex, onMaterialRemove, openAddMaterialsDialog, materials, MaterialViewerComponent, }) {
-    const trayMaterials = (materials === null || materials === void 0 ? void 0 : materials.length) ? materials : material ? [material] : [];
+    // Hosts that pass only the active material still get a one-chip tray.
+    let trayMaterials = [];
+    if (materials === null || materials === void 0 ? void 0 : materials.length)
+        trayMaterials = materials;
+    else if (material)
+        trayMaterials = [material];
     return (_jsxs("div", { className: setClass(className), id: id, role: role, style: { height: "100%" }, children: [_jsx(MaterialsTray, { materials: trayMaterials, activeIndex: index, onSelect: onUpdateIndex, onRemove: onMaterialRemove, onAdd: openAddMaterialsDialog, editable: Boolean(addRemoveAllowed) }), _jsxs(Box, { sx: {
                     display: "grid",
                     gridTemplateColumns: { xs: "1fr", md: "minmax(0, 1fr) minmax(240px, 300px)" },

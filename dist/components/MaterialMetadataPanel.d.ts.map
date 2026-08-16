@@ -1,1 +1,1 @@
-{"version":3,"file":"MaterialMetadataPanel.d.ts","sourceRoot":"","sources":["../../src/components/MaterialMetadataPanel.tsx"],"names":[],"mappings":"AAIA,OAAO,KAAK,MAAM,OAAO,CAAC;AAuC1B;;;;;;GAMG;AACH,MAAM,CAAC,OAAO,UAAU,qBAAqB,CAAC,EAAE,QAAQ,EAAE,EAAE;IAAE,QAAQ,EAAE,GAAG,CAAA;CAAE,qBA8B5E"}
+{"version":3,"file":"MaterialMetadataPanel.d.ts","sourceRoot":"","sources":["../../src/components/MaterialMetadataPanel.tsx"],"names":[],"mappings":"AAIA,OAAO,KAAK,MAAM,OAAO,CAAC;AA0D1B,MAAM,CAAC,OAAO,UAAU,qBAAqB,CAAC,EAAE,QAAQ,EAAE,EAAE;IAAE,QAAQ,EAAE,GAAG,CAAA;CAAE,qBAsB5E"}

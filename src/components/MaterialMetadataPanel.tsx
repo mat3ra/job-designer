@@ -48,6 +48,18 @@ function MetadataRow({ label, children }: { label: string; children?: React.Reac
  * atom count and provenance — the things worth checking before spending
  * core-hours on a run — could only be found by leaving the designer.
  */
+/** The source id, linked out when the model knows where it came from. */
+function SourceValue({ source }: { source?: { id: string; url?: string } }) {
+    if (!source) return null;
+    if (!source.url) return <span>{source.id}</span>;
+
+    return (
+        <Link href={source.url} target="_blank" rel="noopener noreferrer">
+            {source.id}
+        </Link>
+    );
+}
+
 export default function MaterialMetadataPanel({ material }: { material: any }) {
     const summary = getMaterialSummary(material);
 
@@ -66,15 +78,7 @@ export default function MaterialMetadataPanel({ material }: { material: any }) {
             <MetadataRow label="Space group">{summary.spaceGroup}</MetadataRow>
             <MetadataRow label="Atoms in cell">{summary.atomCount}</MetadataRow>
             <MetadataRow label="Source">
-                {summary.source ? (
-                    summary.source.url ? (
-                        <Link href={summary.source.url} target="_blank" rel="noopener noreferrer">
-                            {summary.source.id}
-                        </Link>
-                    ) : (
-                        summary.source.id
-                    )
-                ) : undefined}
+                {summary.source ? <SourceValue source={summary.source} /> : undefined}
             </MetadataRow>
         </Paper>
     );

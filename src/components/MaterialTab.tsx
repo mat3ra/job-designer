@@ -78,7 +78,10 @@ function MaterialTab({
     materials,
     MaterialViewerComponent,
 }: MaterialTabProps) {
-    const trayMaterials = materials?.length ? materials : material ? [material] : [];
+    // Hosts that pass only the active material still get a one-chip tray.
+    let trayMaterials: any[] = [];
+    if (materials?.length) trayMaterials = materials;
+    else if (material) trayMaterials = [material];
 
     return (
         <div className={setClass(className)} id={id} role={role} style={{ height: "100%" }}>
