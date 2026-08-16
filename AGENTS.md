@@ -227,6 +227,8 @@ it is part of doing the work — not bookkeeping to be done later:
 
 Never edit a document in `implemented/` to match the code — rewriting history loses the reason a
 decision was made, which is the only thing the document is still good for; correct it with a
-`## Status` note instead. Name documents `<TICKET>-<Short-Title>.md`, e.g.
-`SOF-8010-Containerized-Venv-Plan.md`. The canonical `plan/README.md` to copy when introducing
+`## Status` note instead. Name documents `<YYYY-MM-DD>-<Short-Title>.md`, e.g.
+`2026-08-16-Containerized-Venv-Plan.md` — dated, with the tracker ticket referenced inside the
+document text (a `**Ticket:**` line at the top), not in the file name: repositories are public
+while the tracker is private. The canonical `plan/README.md` to copy when introducing
 the folder to a repository lives in `mat3ra/agents` under `templates/plan/README.md`.

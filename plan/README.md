@@ -38,5 +38,8 @@ say so in the commit message.
 
 ## Naming
 
-`<TICKET>-<Short-Title>.md`, e.g. `SOF-8010-Containerized-Venv-Plan.md`. One ticket can have
-several documents; keep them in the same folder only while they share a status.
+`<YYYY-MM-DD>-<Short-Title>.md`, e.g. `2026-08-16-Containerized-Venv-Plan.md` — dated by when
+the document was started. The tracker ticket goes inside the document (a `**Ticket:**` line at
+the top), not in the file name: these repositories are public, while ticket keys point at a
+private tracker that readers outside the organization cannot open. One ticket can have several
+documents; keep them in the same folder only while they share a status.
