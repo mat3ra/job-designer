@@ -89,6 +89,39 @@ Use linting for autoformatting the codebase. Consider language-specific tools an
 
 Use pre-commit to run linters and formatters automatically.
 
+### 1.7.1. Committed build output (`dist/`) — TypeScript packages
+
+The `@mat3ra/*` TypeScript packages **track `dist/` in git** and ship it (`"files": ["/dist",
+"/src"]`, `"main": "dist/exports.js"`). Committing a `src/` change without the matching
+`dist/` leaves the repository — and any consumer installing from it — running the old code.
+A brand-new module is the dangerous case: its `dist/` file is absent entirely, so the
+emitted code imports something that does not exist, and the package throws at runtime
+rather than merely behaving as the old version.
+
+The husky `pre-commit` hook already handles this:
+
+```sh
+npm run transpile
+git add dist/
+```
+
+**It only fires once hooks are installed.** Repos whose `package.json` has no
+`"prepare": "husky install"` (most of them — `cove` is an exception) leave a fresh clone
+with no active hooks, so `npm install` alone does not arm it and commits go out with a
+stale `dist/`. Do not rely on `prepublishOnly` to cover it either: some packages have no
+such script, and the tracked `dist/` goes stale regardless.
+
+So, before committing in any package that tracks `dist/`:
+
+```sh
+npm run transpile   # or: npm run build
+git add dist/
+```
+
+Verify rather than assume — `git ls-tree -r origin/main --name-only | grep -c '^dist/'`
+says whether the repo tracks build output, and `git status --short` after transpiling says
+whether your change reached it.
+
 ### 1.8. GitHub Actions
 
 Use GitHub Actions to run tests and linters automatically.
