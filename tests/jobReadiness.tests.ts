@@ -119,6 +119,58 @@ describe("getJobReadiness — lifecycle", () => {
     });
 });
 
+describe("getJobReadiness — cluster limits", () => {
+    const clusterMetadata = [
+        {
+            fqdn: "cluster-1.mat3ra.com",
+            limits: { maxNodes: 4, maxPpn: 32, maxWalltimeHours: 12 },
+        },
+    ];
+
+    it("flags a walltime over the queue cap on the compute step", () => {
+        // Otherwise the rail shows Compute complete while the preflight refuses
+        // to submit, and the reader only finds out at the last click.
+        const job = { ...readyJob, compute: { ...readyJob.compute, timeLimit: "24:00:00" } };
+        const readiness = getJobReadiness({ job, materials: [{}], clusterMetadata });
+        assert.equal(stepById(readiness, "compute")?.state, "attention");
+        assert.equal(stepById(readiness, "compute")?.summary, "over the 12 h queue limit");
+        assert.equal(readiness.isSubmittable, false);
+        assert.ok(readiness.blockingReasons.includes("Bring compute within the cluster's limits"));
+    });
+
+    it("lists every limit it breaks, not just the first", () => {
+        const job = {
+            ...readyJob,
+            compute: { ...readyJob.compute, nodes: 8, ppn: 64, timeLimit: "24:00:00" },
+        };
+        const readiness = getJobReadiness({ job, materials: [{}], clusterMetadata });
+        assert.equal(
+            stepById(readiness, "compute")?.summary,
+            "over the 4-node limit · over 32 cores per node · over the 12 h queue limit",
+        );
+    });
+
+    it("does not invent limits the host never published", () => {
+        const job = { ...readyJob, compute: { ...readyJob.compute, nodes: 999 } };
+        const readiness = getJobReadiness({ job, materials: [{}] });
+        assert.equal(stepById(readiness, "compute")?.state, "complete");
+        assert.equal(readiness.isSubmittable, true);
+    });
+
+    it("keeps the limit blocker ahead of Save, which is fixed without leaving", () => {
+        const job = {
+            ...readyJob,
+            id: undefined,
+            compute: { ...readyJob.compute, timeLimit: "24:00:00" },
+        };
+        const readiness = getJobReadiness({ job, materials: [{}], clusterMetadata });
+        assert.deepEqual(readiness.blockingReasons, [
+            "Bring compute within the cluster's limits",
+            "Save the job",
+        ]);
+    });
+});
+
 describe("getJobReadiness — robustness", () => {
     it("survives a parent lookup that throws", () => {
         const job = {

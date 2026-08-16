@@ -11,6 +11,12 @@ export interface JobContextStripProps {
     /** Parent job, when this job derives from one. Removable while editable. */
     parentJob?: { name?: string; projectSlug?: string } | null;
     onParentRemove?: () => void;
+    /**
+     * Pre-formatted core-hours and cost from `estimateComputeUsage`. Absent when
+     * the compute configuration is incomplete or the host published no pricing —
+     * the chip is then left out rather than shown empty or as zero.
+     */
+    estimateLabel?: string;
 }
 
 /** Steps whose selections are worth carrying on every screen. */
@@ -32,6 +38,7 @@ export default function JobContextStrip({
     onSelect,
     parentJob,
     onParentRemove,
+    estimateLabel,
 }: JobContextStripProps) {
     const contextSteps = steps.filter((step) => CONTEXT_STEP_IDS.has(step.id));
     if (!contextSteps.length && !parentJob) return null;
@@ -74,6 +81,29 @@ export default function JobContextStrip({
                     />
                 );
             })}
+
+            {estimateLabel ? (
+                <Chip
+                    id="job-context-estimate"
+                    size="small"
+                    variant="outlined"
+                    onClick={() => onSelect("compute")}
+                    label={
+                        <Stack direction="row" spacing={0.75} alignItems="baseline">
+                            <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                sx={{ textTransform: "uppercase", letterSpacing: ".06em" }}
+                            >
+                                Estimate
+                            </Typography>
+                            <Typography variant="caption" fontWeight={600}>
+                                {estimateLabel}
+                            </Typography>
+                        </Stack>
+                    }
+                />
+            ) : null}
 
             {parentJob ? (
                 <Chip

@@ -1,3 +1,4 @@
+import { type ClusterMetadata } from "./computeEstimate";
 import { type SubmittableJob } from "./jobSubmission";
 /**
  * What the job still needs, as a sequence of steps.
@@ -57,6 +58,11 @@ export interface JobReadinessOptions {
     } | null;
     /** False for shared or finished jobs: the rail renders view-only. */
     editable?: boolean;
+    /**
+     * Per-cluster limits, injected by the host. Absent, the compute step judges
+     * only whether a cluster was chosen — it does not invent limits to enforce.
+     */
+    clusterMetadata?: ClusterMetadata[];
 }
-export declare function getJobReadiness({ job, materials, isUsingMaterials, datasetConfig, editable, }: JobReadinessOptions): JobReadiness;
+export declare function getJobReadiness({ job, materials, isUsingMaterials, datasetConfig, editable, clusterMetadata, }: JobReadinessOptions): JobReadiness;
 //# sourceMappingURL=jobReadiness.d.ts.map

@@ -9,6 +9,12 @@ export interface JobContextStripProps {
         projectSlug?: string;
     } | null;
     onParentRemove?: () => void;
+    /**
+     * Pre-formatted core-hours and cost from `estimateComputeUsage`. Absent when
+     * the compute configuration is incomplete or the host published no pricing —
+     * the chip is then left out rather than shown empty or as zero.
+     */
+    estimateLabel?: string;
 }
 /**
  * The job's selections, visible from every step.
@@ -21,5 +27,5 @@ export interface JobContextStripProps {
  * above the tabs, which is a lot of screen for one fact and put a destructive
  * "unset parent" behind an X that reads as "hide this message".
  */
-export default function JobContextStrip({ steps, onSelect, parentJob, onParentRemove, }: JobContextStripProps): React.JSX.Element;
+export default function JobContextStrip({ steps, onSelect, parentJob, onParentRemove, estimateLabel, }: JobContextStripProps): React.JSX.Element;
 //# sourceMappingURL=JobContextStrip.d.ts.map

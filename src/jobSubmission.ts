@@ -73,12 +73,21 @@ export function isJobSubmittable(options: SubmitBlockersOptions): boolean {
  * One line for a disabled Submit button. Names the first thing to fix and how
  * much else is waiting, rather than listing everything in a tooltip nobody
  * reads to the end.
+ *
+ * Takes the list rather than the job so the button can be driven by
+ * `getJobReadiness`, which knows about blockers this module cannot see — cluster
+ * limits come from host-injected metadata, and a Submit button that stayed
+ * enabled over a preflight that refuses would be the designer contradicting
+ * itself.
  */
-export function getSubmitBlockedReason(options: SubmitBlockersOptions): string | null {
-    const blockers = getSubmitBlockers(options);
-
+export function formatBlockedReason(blockers: string[]): string | null {
     if (blockers.length === 0) return null;
     if (blockers.length === 1) return blockers[0];
 
     return `${blockers[0]} (+${blockers.length - 1} more)`;
+}
+
+/** The same line, for callers holding a job rather than a readiness report. */
+export function getSubmitBlockedReason(options: SubmitBlockersOptions): string | null {
+    return formatBlockedReason(getSubmitBlockers(options));
 }

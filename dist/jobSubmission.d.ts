@@ -44,6 +44,14 @@ export declare function isJobSubmittable(options: SubmitBlockersOptions): boolea
  * One line for a disabled Submit button. Names the first thing to fix and how
  * much else is waiting, rather than listing everything in a tooltip nobody
  * reads to the end.
+ *
+ * Takes the list rather than the job so the button can be driven by
+ * `getJobReadiness`, which knows about blockers this module cannot see — cluster
+ * limits come from host-injected metadata, and a Submit button that stayed
+ * enabled over a preflight that refuses would be the designer contradicting
+ * itself.
  */
+export declare function formatBlockedReason(blockers: string[]): string | null;
+/** The same line, for callers holding a job rather than a readiness report. */
 export declare function getSubmitBlockedReason(options: SubmitBlockersOptions): string | null;
 //# sourceMappingURL=jobSubmission.d.ts.map

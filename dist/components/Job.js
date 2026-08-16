@@ -18,13 +18,15 @@ import { mix } from "mixwith";
 import React from "react";
 import { ErrorBoundary } from "react-error-boundary";
 import { TAB_NAVIGATION_CONFIG } from "@mat3ra/jode";
-import { getSubmitBlockedReason } from "../jobSubmission";
+import { estimateComputeUsage, formatEstimate } from "../computeEstimate";
+import { formatBlockedReason } from "../jobSubmission";
 import { getJobReadiness } from "../jobReadiness";
 import { getSaveState, getSaveStateLabel, shouldWarnBeforeLeaving } from "../saveState";
 import { shouldPersistJobOnUpdate } from "../shouldPersistJobOnUpdate";
 import ComputeTab from "./ComputeTab";
 import JobContextStrip from "./JobContextStrip";
 import JobReadinessRail from "./JobReadinessRail";
+import PreflightDialog from "./PreflightDialog";
 import DatasetTab from "./DatasetTab";
 import FilesTab from "./FilesTab";
 import MaterialTab from "./MaterialTab";
@@ -121,6 +123,31 @@ class Job extends mix(React.Component).with(StatePropsCompareOnUpdateForJobMIxin
         /** The rail's Review step has no tab of its own; it lands on Compute. */
         this.onReadinessStepSelect = (stepId) => {
             this.setCurrentTab(stepId === "review" ? TAB_NAVIGATION_CONFIG.compute.id : stepId);
+        };
+        this.openPreflight = () => this.setState({ isPreflightOpen: true });
+        this.closePreflight = () => this.setState({ isPreflightOpen: false });
+        /**
+         * Read at the moment the checks run rather than captured at render time: the
+         * job entity is mutated in place, and the checks must judge what would
+         * actually be submitted.
+         */
+        this.getPreflightContext = () => {
+            var _a, _b, _c;
+            return ({
+                job: this.state.entity,
+                materials: (_a = this.props.materials) !== null && _a !== void 0 ? _a : [],
+                isUsingMaterials: this.isUsingMaterialsTab,
+                // Pricing, limits and quota are not in the job document — the host injects
+                // them. Absent, the cost and limit checks report that they cannot judge
+                // rather than passing on no evidence.
+                clusterMetadata: (_b = getInjectedDeps().clusterMetadata) !== null && _b !== void 0 ? _b : this.props.clusterMetadata,
+                quota: (_c = getInjectedDeps().computeQuota) !== null && _c !== void 0 ? _c : this.props.computeQuota,
+            });
+        };
+        this.confirmPreflightSubmit = () => {
+            var _a, _b;
+            this.setState({ isPreflightOpen: false });
+            (_b = (_a = this.props).onSubmit) === null || _b === void 0 ? void 0 : _b.call(_a);
         };
         this.onComputeUpdate = (compute) => {
             const job = this.state.entity;
@@ -341,6 +368,7 @@ class Job extends mix(React.Component).with(StatePropsCompareOnUpdateForJobMIxin
             isWorkflowLoading: false,
             isTerminateConfirmationOpen: false,
             hasUnsavedChanges: false,
+            isPreflightOpen: false,
         };
         this.onEntityUpdate = this.props.onUpdate;
         this.onWorkflowUpdate = this.onWorkflowUpdate.bind(this);
@@ -437,7 +465,20 @@ class Job extends mix(React.Component).with(StatePropsCompareOnUpdateForJobMIxin
             isUsingMaterials: this.isUsingMaterialsTab,
             datasetConfig: this.props.datasetConfig,
             editable: Boolean(this.props.editable),
+            clusterMetadata: this.getPreflightContext().clusterMetadata,
         });
+    }
+    /**
+     * Core-hours the job will consume, and what they cost where the host told us
+     * the price. Undefined until nodes, cores and a walltime are all set — the
+     * chip is then left out rather than showing a zero the reader would read as
+     * "free".
+     */
+    get estimateLabel() {
+        var _a, _b;
+        const { clusterMetadata } = this.getPreflightContext();
+        const runs = this.isUsingMaterialsTab ? (_b = (_a = this.props.materials) === null || _a === void 0 ? void 0 : _a.length) !== null && _b !== void 0 ? _b : 0 : 1;
+        return formatEstimate(estimateComputeUsage(this.state.entity.compute, clusterMetadata, runs));
     }
     get saveStateInputs() {
         return {
@@ -467,7 +508,8 @@ class Job extends mix(React.Component).with(StatePropsCompareOnUpdateForJobMIxin
             // consider the job entity, so a state change this component owns is
             // invisible to them and the render is skipped.
             this.state.isTerminateConfirmationOpen !== nextState.isTerminateConfirmationOpen ||
-            this.state.hasUnsavedChanges !== nextState.hasUnsavedChanges);
+            this.state.hasUnsavedChanges !== nextState.hasUnsavedChanges ||
+            this.state.isPreflightOpen !== nextState.isPreflightOpen);
     }
     renderParentJob() {
         var _a, _b;
@@ -510,7 +552,7 @@ class Job extends mix(React.Component).with(StatePropsCompareOnUpdateForJobMIxin
     }
     renderSubmitAction() {
         const job = this.state.entity;
-        const { editable, materials, onSubmit } = this.props;
+        const { editable, onSubmit } = this.props;
         if (!editable)
             return null;
         if (job.isInRunningStatus) {
@@ -518,13 +560,21 @@ class Job extends mix(React.Component).with(StatePropsCompareOnUpdateForJobMIxin
         }
         if (!job.isInInitialStatus)
             return null;
-        const blockerOptions = {
-            job,
-            materials: materials !== null && materials !== void 0 ? materials : [],
-            isUsingMaterials: this.isUsingMaterialsTab,
-        };
-        const blockedReason = getSubmitBlockedReason(blockerOptions);
-        return (_jsx(Tooltip, { title: blockedReason !== null && blockedReason !== void 0 ? blockedReason : "", children: _jsx("span", { children: _jsx(Button, { id: "job-submit-button", variant: "contained", size: "small", disabled: Boolean(blockedReason), onClick: onSubmit, children: "Submit" }) }) }));
+        // Read from the readiness selector, not from `getSubmitBlockers` directly:
+        // it is the one that knows about host-published cluster limits, and a
+        // Submit button that stayed enabled over a preflight that refuses would be
+        // the designer contradicting itself.
+        const blockedReason = formatBlockedReason(this.jobReadiness.blockingReasons);
+        // Under the guided designer Submit opens the preflight, which is where the
+        // job is actually submitted from. Hosts still on the legacy layout keep
+        // today's one-click submit rather than silently gaining a second step.
+        const usePreflight = Boolean(this.props.useGuidedDesigner);
+        return (_jsx(Tooltip, { title: blockedReason !== null && blockedReason !== void 0 ? blockedReason : "", children: _jsx("span", { children: _jsx(Button, { id: "job-submit-button", variant: "contained", size: "small", disabled: Boolean(blockedReason), onClick: usePreflight ? this.openPreflight : onSubmit, children: "Submit" }) }) }));
+    }
+    renderPreflightDialog() {
+        if (!this.props.useGuidedDesigner)
+            return null;
+        return (_jsx(PreflightDialog, { open: Boolean(this.state.isPreflightOpen), onClose: this.closePreflight, getContext: this.getPreflightContext, onSubmit: this.confirmPreflightSubmit, onGoToStep: this.onReadinessStepSelect }));
     }
     renderTerminateConfirmation() {
         const job = this.state.entity;
@@ -636,7 +686,7 @@ class Job extends mix(React.Component).with(StatePropsCompareOnUpdateForJobMIxin
                         // on mount, so a captured entity would forever persist the very
                         // first render's state - see getSaveBtnProps for the full note.
                         onSave: (omitRedirect) => this.saveJob((redirectFlag) => this.props.onSave(redirectFlag), omitRedirect),
-                    }, dropdownProps: dropdownProps, descriptionEditorTitle: "Job Description", isDescriptionEditorHidden: hideDescription, item: job, isDescriptionEditable: isDescriptionEditable, onDescriptionUpdate: this.onDescriptionUpdate, children: [this.renderSaveStateIndicator(), this.renderSubmitAction(), headerChildren !== null && headerChildren !== void 0 ? headerChildren : null] })) : (_jsxs(EntityHeader, { name: job.name, editable: this.props.editable, onNameUpdate: this.onNameUpdate, isLoading: isDesignerLoading, subtitle: (project === null || project === void 0 ? void 0 : project.name) ? { project: project.name } : undefined, icon: "entities.job", id: "job-designer-header", children: [dropdownProps.isShown && _jsx(Dropdown, { ...dropdownProps }), this.props.editable && _jsx(ButtonMultiSelect, { ...this.getSaveBtnProps() }), this.renderSaveStateIndicator(), this.renderSubmitAction(), headerChildren !== null && headerChildren !== void 0 ? headerChildren : null] })), this.renderTerminateConfirmation(), this.renderParentJob(), this.renderErrors(), this.renderWarnings(), useGuidedDesigner ? (_jsx(JobContextStrip, { steps: readiness.steps, onSelect: this.onReadinessStepSelect, parentJob: parentJobForStrip, onParentRemove: editable ? this.onParentRemove : undefined })) : null, useGuidedDesigner ? null : (_jsx(TabsMenu, { tabs: tabs, activeTabIndex: activeTabIndex, variant: "fullWidth", centered: true })), _jsxs(Box, { sx: useGuidedDesigner
+                    }, dropdownProps: dropdownProps, descriptionEditorTitle: "Job Description", isDescriptionEditorHidden: hideDescription, item: job, isDescriptionEditable: isDescriptionEditable, onDescriptionUpdate: this.onDescriptionUpdate, children: [this.renderSaveStateIndicator(), this.renderSubmitAction(), headerChildren !== null && headerChildren !== void 0 ? headerChildren : null] })) : (_jsxs(EntityHeader, { name: job.name, editable: this.props.editable, onNameUpdate: this.onNameUpdate, isLoading: isDesignerLoading, subtitle: (project === null || project === void 0 ? void 0 : project.name) ? { project: project.name } : undefined, icon: "entities.job", id: "job-designer-header", children: [dropdownProps.isShown && _jsx(Dropdown, { ...dropdownProps }), this.props.editable && _jsx(ButtonMultiSelect, { ...this.getSaveBtnProps() }), this.renderSaveStateIndicator(), this.renderSubmitAction(), headerChildren !== null && headerChildren !== void 0 ? headerChildren : null] })), this.renderTerminateConfirmation(), this.renderPreflightDialog(), this.renderParentJob(), this.renderErrors(), this.renderWarnings(), useGuidedDesigner ? (_jsx(JobContextStrip, { steps: readiness.steps, onSelect: this.onReadinessStepSelect, parentJob: parentJobForStrip, onParentRemove: editable ? this.onParentRemove : undefined, estimateLabel: this.estimateLabel })) : null, useGuidedDesigner ? null : (_jsx(TabsMenu, { tabs: tabs, activeTabIndex: activeTabIndex, variant: "fullWidth", centered: true })), _jsxs(Box, { sx: useGuidedDesigner
                         ? {
                             display: "grid",
                             gridTemplateColumns: { xs: "1fr", md: "auto minmax(0, 1fr)" },

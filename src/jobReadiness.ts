@@ -1,3 +1,4 @@
+import { type ClusterMetadata, findClusterMetadata, parseWalltimeHours } from "./computeEstimate";
 import { getSubmitBlockers, type SubmittableJob } from "./jobSubmission";
 
 /**
@@ -58,6 +59,11 @@ export interface JobReadinessOptions {
     datasetConfig?: { name?: string } | null;
     /** False for shared or finished jobs: the rail renders view-only. */
     editable?: boolean;
+    /**
+     * Per-cluster limits, injected by the host. Absent, the compute step judges
+     * only whether a cluster was chosen — it does not invent limits to enforce.
+     */
+    clusterMetadata?: ClusterMetadata[];
 }
 
 const REVIEW_STEP_ID = "review";
@@ -98,6 +104,38 @@ function describeCompute(compute: any): string {
 }
 
 /**
+ * Which published limits this configuration breaks. Empty when it breaks none,
+ * or when the host published none to check against.
+ *
+ * The rail has to know this, not just the preflight: a green Compute step over a
+ * preflight that refuses to submit is the designer contradicting itself, and the
+ * reader would only find out at the last click.
+ */
+function getComputeLimitViolations(compute: any, clusterMetadata: ClusterMetadata[]): string[] {
+    const limits = findClusterMetadata(compute, clusterMetadata)?.limits;
+    if (!limits) return [];
+
+    const walltimeHours = parseWalltimeHours(compute?.timeLimit);
+    const violations: string[] = [];
+
+    if (limits.maxNodes !== undefined && (compute?.nodes ?? 0) > limits.maxNodes) {
+        violations.push(`over the ${limits.maxNodes}-node limit`);
+    }
+    if (limits.maxPpn !== undefined && (compute?.ppn ?? 0) > limits.maxPpn) {
+        violations.push(`over ${limits.maxPpn} cores per node`);
+    }
+    if (
+        limits.maxWalltimeHours !== undefined &&
+        walltimeHours !== undefined &&
+        walltimeHours > limits.maxWalltimeHours
+    ) {
+        violations.push(`over the ${limits.maxWalltimeHours} h queue limit`);
+    }
+
+    return violations;
+}
+
+/**
  * Steps for creating the job. After submission these stay in the rail but stop
  * being things to do — they become the record of what was run.
  */
@@ -107,12 +145,14 @@ function getCreationSteps({
     isUsingMaterials,
     datasetConfig,
     parentJobName,
+    clusterMetadata,
 }: {
     job: JobReadinessOptions["job"];
     materials: any[];
     isUsingMaterials: boolean;
     datasetConfig?: { name?: string } | null;
     parentJobName?: string;
+    clusterMetadata: ClusterMetadata[];
 }): ReadinessStep[] {
     const steps: ReadinessStep[] = [];
 
@@ -142,14 +182,36 @@ function getCreationSteps({
     });
 
     const hasCompute = Boolean(job.compute?.cluster?.fqdn);
+    const violations = hasCompute ? getComputeLimitViolations(job.compute, clusterMetadata) : [];
     steps.push({
         id: "compute",
         label: "Compute",
-        state: hasCompute ? "complete" : "attention",
-        summary: describeCompute(job.compute),
+        state: hasCompute && !violations.length ? "complete" : "attention",
+        summary: violations.length ? violations.join(" · ") : describeCompute(job.compute),
     });
 
     return steps;
+}
+
+/**
+ * A configuration the cluster will reject is a blocker too, and the reader
+ * should learn that from the Submit button rather than from the preflight after
+ * they have decided they are done. Sits with the other compute blocker, ahead of
+ * "Save the job", which is the one fixed without leaving the header.
+ */
+function withLimitBlocker(
+    blockers: string[],
+    steps: ReadinessStep[],
+    hasCluster: boolean,
+): string[] {
+    const computeStep = steps.find((step) => step.id === "compute");
+    if (!hasCluster || computeStep?.state !== "attention") return blockers;
+
+    const limitBlocker = "Bring compute within the cluster's limits";
+    const saveIndex = blockers.indexOf("Save the job");
+    if (saveIndex === -1) return [...blockers, limitBlocker];
+
+    return [...blockers.slice(0, saveIndex), limitBlocker, ...blockers.slice(saveIndex)];
 }
 
 function getReviewState({
@@ -189,6 +251,7 @@ export function getJobReadiness({
     isUsingMaterials = true,
     datasetConfig = null,
     editable = true,
+    clusterMetadata = [],
 }: JobReadinessOptions): JobReadiness {
     const parentJobName = (() => {
         try {
@@ -198,7 +261,6 @@ export function getJobReadiness({
         }
     })();
 
-    const blockingReasons = getSubmitBlockers({ job, materials, isUsingMaterials });
     const isDraft = Boolean(job.isInInitialStatus);
     const isRunOrFinished = !isDraft;
 
@@ -208,7 +270,14 @@ export function getJobReadiness({
         isUsingMaterials,
         datasetConfig,
         parentJobName,
+        clusterMetadata,
     });
+
+    const blockingReasons = withLimitBlocker(
+        getSubmitBlockers({ job, materials, isUsingMaterials }),
+        steps,
+        Boolean(job.compute?.cluster?.fqdn),
+    );
 
     if (isRunOrFinished) {
         // The job is out of the reader's hands: the creation steps are now a record

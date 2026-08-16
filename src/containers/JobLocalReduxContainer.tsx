@@ -9,6 +9,7 @@ import { applyMiddleware, createStore } from "redux";
 import logger from "redux-logger";
 
 import { setMaterials, syncJobWorkflow, updateJob } from "../actions";
+import type { ClusterMetadata, ComputeQuota } from "../computeEstimate";
 import { useJobDesignerDeps } from "../JobDesignerContext";
 import { createJobDesignerReducer } from "../reducers";
 import JobContainer from "./JobContainer";
@@ -110,6 +111,15 @@ interface JobStoreLocalReduxContainerProps {
      * the legacy path stays until parity is verified.
      */
     useGuidedDesigner?: boolean;
+    /**
+     * Per-cluster pricing, limits and queue waits. Not part of the job document —
+     * the host supplies it here or through `setDependencies({ clusterMetadata })`.
+     * Without it the estimate and the preflight's limit check report that they
+     * cannot judge, rather than passing on no evidence.
+     */
+    clusterMetadata?: ClusterMetadata[];
+    /** Remaining allowance for the account paying for the job, when the host tracks one. */
+    computeQuota?: ComputeQuota | null;
 }
 
 type JobStoreLocalReduxContainerInnerProps = JobStoreLocalReduxContainerProps & {
@@ -154,6 +164,8 @@ function JobStoreLocalReduxContainer({
     headerChildren,
     editable,
     useGuidedDesigner,
+    clusterMetadata,
+    computeQuota,
 }: JobStoreLocalReduxContainerInnerProps) {
     const dispatch = useJobDesignerDispatch();
     const stateMaterials = useJobDesignerSelector((state: State) => state.materials);
@@ -316,6 +328,8 @@ function JobStoreLocalReduxContainer({
             headerChildren={headerChildren}
             editable={editable}
             useGuidedDesigner={useGuidedDesigner}
+            clusterMetadata={clusterMetadata}
+            computeQuota={computeQuota}
         />
     );
 }

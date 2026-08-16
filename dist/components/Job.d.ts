@@ -40,6 +40,28 @@ declare class Job {
     get jobReadiness(): import("../jobReadiness").JobReadiness;
     /** The rail's Review step has no tab of its own; it lands on Compute. */
     onReadinessStepSelect: (stepId: any) => void;
+    /**
+     * Core-hours the job will consume, and what they cost where the host told us
+     * the price. Undefined until nodes, cores and a walltime are all set — the
+     * chip is then left out rather than showing a zero the reader would read as
+     * "free".
+     */
+    get estimateLabel(): string;
+    openPreflight: () => any;
+    closePreflight: () => any;
+    /**
+     * Read at the moment the checks run rather than captured at render time: the
+     * job entity is mutated in place, and the checks must judge what would
+     * actually be submitted.
+     */
+    getPreflightContext: () => {
+        job: any;
+        materials: any;
+        isUsingMaterials: boolean;
+        clusterMetadata: any;
+        quota: any;
+    };
+    confirmPreflightSubmit: () => void;
     get saveStateInputs(): {
         hasUnsavedChanges: any;
         editable: boolean;
@@ -92,6 +114,7 @@ declare class Job {
      */
     renderSaveStateIndicator(): React.JSX.Element;
     renderSubmitAction(): React.JSX.Element;
+    renderPreflightDialog(): React.JSX.Element;
     renderTerminateConfirmation(): React.JSX.Element;
     getSaveBtnProps(): {
         id: string;

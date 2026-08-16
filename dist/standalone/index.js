@@ -58,6 +58,99 @@ function downloadJson(data, filename) {
     anchor.click();
     URL.revokeObjectURL(url);
 }
+/**
+ * A queue as `ive`'s QueuesTable expects it: the webapp passes model instances,
+ * so the table reads `maxAvailableNodect`, `capacity`, `load` and calls
+ * `getETAClient()`. Plain objects without those crash the queue picker.
+ */
+function demoQueue({ name, displayName, maxAvailableNodect, load, etaMinutes, }) {
+    return {
+        name,
+        displayName,
+        maxAvailableNodect,
+        nodeLimit: maxAvailableNodect,
+        capacity: String(maxAvailableNodect),
+        load,
+        getETAClient: () => ({ display: `~${etaMinutes} min` }),
+    };
+}
+/**
+ * Clusters for the demo. The webapp fetches these; standalone had an empty list,
+ * which left the compute step unfillable and the estimate and preflight with
+ * nothing to judge — so the two states most worth reviewing could never be seen.
+ */
+const DEMO_CLUSTERS = [
+    {
+        hostname: "cluster-007.exabyte.io",
+        name: "cluster-007",
+        displayName: "cluster-007",
+        isDefault: true,
+        queues: [
+            demoQueue({
+                name: "OR",
+                displayName: "on-demand regular",
+                maxAvailableNodect: 4,
+                load: 40,
+                etaMinutes: 8,
+            }),
+            demoQueue({
+                name: "OF",
+                displayName: "on-demand fast",
+                maxAvailableNodect: 2,
+                load: 75,
+                etaMinutes: 2,
+            }),
+            demoQueue({
+                name: "SR",
+                displayName: "spot regular",
+                maxAvailableNodect: 8,
+                load: 20,
+                etaMinutes: 45,
+            }),
+        ],
+    },
+    {
+        hostname: "master-production-20160630-cluster-001.exabyte.io",
+        name: "cluster-001",
+        displayName: "cluster-001",
+        queues: [
+            demoQueue({
+                name: "OR",
+                displayName: "on-demand regular",
+                maxAvailableNodect: 2,
+                load: 60,
+                etaMinutes: 25,
+            }),
+            demoQueue({
+                name: "D",
+                displayName: "debug",
+                maxAvailableNodect: 1,
+                load: 10,
+                etaMinutes: 1,
+            }),
+        ],
+    },
+];
+/** Pricing, limits and queue waits the host would inject. Not part of the job. */
+const DEMO_CLUSTER_METADATA = [
+    {
+        fqdn: "cluster-007.exabyte.io",
+        name: "cluster-007",
+        pricePerCoreHour: 0.08,
+        currency: "USD",
+        limits: { maxNodes: 4, maxPpn: 32, maxWalltimeHours: 12 },
+        queueWaitMinutes: 8,
+    },
+    {
+        fqdn: "master-production-20160630-cluster-001.exabyte.io",
+        name: "cluster-001",
+        pricePerCoreHour: 0.05,
+        currency: "USD",
+        limits: { maxNodes: 2, maxPpn: 16, maxWalltimeHours: 6 },
+        queueWaitMinutes: 25,
+    },
+];
+const DEMO_QUOTA = { remainingCoreHours: 500, totalCoreHours: 1000, currency: "USD" };
 function App() {
     const allWorkflowJsons = useMemo(() => { var _a; return (_a = new WorkflowStandata().getAll()) !== null && _a !== void 0 ? _a : []; }, []);
     const [workflowIndex, setWorkflowIndex] = useState(0);
@@ -90,7 +183,13 @@ function App() {
             // pre-submission status makes the header editable (name input + Save button),
             // matching how the webapp shows a new job - without it the demo header hides
             // the exact controls the designer is meant to demo.
-            const newJob = new Job({ name, status: "pre-submission" });
+            //
+            // The `_id` stands in for a job the webapp would have persisted: the demo
+            // has no server, so `createOrUpdate` is a no-op and the job would never
+            // acquire one - leaving Submit permanently blocked on "Save the job" and
+            // the preflight unreachable. The save-state indicator is unaffected; it
+            // tracks edits, not identity.
+            const newJob = new Job({ _id: "standalone-job-1", name, status: "pre-submission" });
             newJob.setWorkflow(wodeWorkflow);
             newJob.setMaterial(selectedMaterial);
             // job-designer's own reducers (inherited from the webapp's original Job
@@ -151,7 +250,7 @@ function App() {
                         user: { entity: { id: "1" } },
                         account: { entity: { id: "1" } },
                         personalAccount: { entity: { id: "1" } },
-                    }, publicAccount: { entity: { id: "public" } }, clusters: [], refreshMetaProperties: () => { }, jobDialogs: {
+                    }, publicAccount: { entity: { id: "public" } }, clusters: DEMO_CLUSTERS, refreshMetaProperties: () => { }, jobDialogs: {
                         selectMaterialsReduxDialog: {
                             isOpen: false,
                             open: () => { },
@@ -175,7 +274,7 @@ function App() {
                     }, workflowDialogs: {
                         pseudoUploadReduxDialog: [() => { }, () => { }],
                         unitTypeReduxDialog: [() => { }, () => { }],
-                    }, templates: [], resultsProperties: [], jobProperties: [], createMetaProperty: async () => undefined, fetchMaterials: async () => [], loadWorkflowEntityById: async () => undefined, MaterialViewerComponent: StandaloneMaterialViewer, useGuidedDesigner: useGuidedDesigner }, designerKey) })] }));
+                    }, templates: [], resultsProperties: [], jobProperties: [], createMetaProperty: async () => undefined, fetchMaterials: async () => [], loadWorkflowEntityById: async () => undefined, MaterialViewerComponent: StandaloneMaterialViewer, useGuidedDesigner: useGuidedDesigner, clusterMetadata: DEMO_CLUSTER_METADATA, computeQuota: DEMO_QUOTA }, designerKey) })] }));
 }
 const rootElement = document.getElementById("root");
 if (!rootElement)
