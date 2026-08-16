@@ -147,6 +147,14 @@ folder's own convention asks — this overview moves last.
 
 ## Phase 2 — Guided designer (proposals A1, A2, B1–B3, C1, E1, E2)
 
+> **Progress (2026-08-16):** 2.5 and 2.6 are **built and in review** on
+> [job-designer#19](https://github.com/mat3ra/job-designer/pull/19) — they are job-designer-local
+> and needed no new cove primitives, so they were taken out of order. 2.1–2.4 remain gated:
+> the readiness rail and context strip consume `StatusChip` from
+> [cove#97](https://github.com/mat3ra/cove/pull/97), and the estimator half of 2.3 is blocked on
+> open question 1 (where pricing and quota live). The limits/validation half of 2.3 can proceed
+> without that answer.
+
 The layout change. Mockups: `01-guided-designer.html`, `02-compute-cost.html`,
 `03-preflight-submit.html`.
 
@@ -241,6 +249,12 @@ The layout change. Mockups: `01-guided-designer.html`, `02-compute-cost.html`,
   `Material` model next to the injected viewer; the viewer component API is unchanged.
 - Acceptance: adding a second material updates the tray, the batch copy, and the context strip;
   removing the active material selects a sane neighbor. Size: M.
+- **Built** — [job-designer#19](https://github.com/mat3ra/job-designer/pull/19). Divergence:
+  the metadata is read through a defensive `getMaterialSummary()` that omits any field it
+  cannot read, because `MaterialTab` already renders a fallback for hosts passing a plain
+  config and made's model getters throw on partial data. Space group is shown only when the
+  model actually carries a `symmetry` derived property — standata materials generally do not,
+  so the row is usually absent rather than guessed from the name.
 
 ### 2.6 Save-state honesty (new; relates to UX-498)
 
@@ -254,6 +268,10 @@ The layout change. Mockups: `01-guided-designer.html`, `02-compute-cost.html`,
 - Acceptance: editing any field flips the indicator to dirty; Save flips it back; closing the
   tab with a dirty draft warns; the indicator never claims "Saved" while in-memory state
   differs from the persisted entity. Size: S–M.
+- **Built** — [job-designer#19](https://github.com/mat3ra/job-designer/pull/19). Dirty state is
+  marked in the mutating handlers rather than in `persistJob()`, which also runs on mount and
+  on entering the Workflow tab; and both save paths were routed through a single `saveJob()`
+  so the flag cannot be cleared by one header and missed by the other.
 
 ## Phase 3 — The living job (proposals F1, F2, C2, D3, D4)
 
