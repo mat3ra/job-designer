@@ -85,6 +85,8 @@ function App() {
             })),
         [],
     );
+    // Phase 2 layout, opt-in: the demo is where it gets reviewed before any host flips it on.
+    const [useGuidedDesigner, setUseGuidedDesigner] = useState(true);
     const [materialIndex, setMaterialIndex] = useState(() => {
         const idx = allMaterialJsons.findIndex((m: any) => /silicon|^si\b/i.test(m.name ?? ""));
         return idx >= 0 ? idx : 0;
@@ -223,6 +225,15 @@ function App() {
                     <Button
                         variant="outlined"
                         size="small"
+                        onClick={() => setUseGuidedDesigner((isOn) => !isOn)}
+                        sx={{ mr: 1 }}
+                    >
+                        {useGuidedDesigner ? "Guided layout: on" : "Guided layout: off"}
+                    </Button>
+
+                    <Button
+                        variant="outlined"
+                        size="small"
                         startIcon={<DownloadIcon />}
                         onClick={handleExportJson}
                         sx={{
@@ -293,6 +304,7 @@ function App() {
                     fetchMaterials={async () => []}
                     loadWorkflowEntityById={async () => undefined}
                     MaterialViewerComponent={StandaloneMaterialViewer as any}
+                    useGuidedDesigner={useGuidedDesigner}
                 />
             </JobDesignerProvider>
         </Box>

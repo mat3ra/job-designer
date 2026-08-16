@@ -87,6 +87,12 @@ interface JobStoreLocalReduxContainerProps {
     headerChildren?: React.ReactNode;
     /** Whether the job is editable. */
     editable?: boolean;
+    /**
+     * Opt into the guided layout (readiness rail + context strip) instead of the
+     * numbered tab strip. Off by default so hosts flip it when they are ready;
+     * the legacy path stays until parity is verified.
+     */
+    useGuidedDesigner?: boolean;
 }
 type JobLocalReduxContainerProps = JobStoreLocalReduxContainerProps & {
     jobMaterials: any[];

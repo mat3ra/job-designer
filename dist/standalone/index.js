@@ -72,6 +72,8 @@ function App() {
             ...m,
         }));
     }, []);
+    // Phase 2 layout, opt-in: the demo is where it gets reviewed before any host flips it on.
+    const [useGuidedDesigner, setUseGuidedDesigner] = useState(true);
     const [materialIndex, setMaterialIndex] = useState(() => {
         const idx = allMaterialJsons.findIndex((m) => { var _a; return /silicon|^si\b/i.test((_a = m.name) !== null && _a !== void 0 ? _a : ""); });
         return idx >= 0 ? idx : 0;
@@ -138,7 +140,7 @@ function App() {
                                             }) })] })] }), _jsxs(Stack, { direction: "row", spacing: 1, alignItems: "center", children: [_jsx(ScienceIcon, { fontSize: "small", sx: { color: "secondary.main", flexShrink: 0 } }), _jsxs(FormControl, { size: "small", sx: { minWidth: 240 }, children: [_jsx(InputLabel, { id: "material-select-label", children: "Material" }), _jsx(Select, { labelId: "material-select-label", value: materialIndex, label: "Material", onChange: (e) => setMaterialIndex(Number(e.target.value)), children: allMaterialJsons.map((mat, i) => {
                                                 var _a, _b;
                                                 return (_jsx(MenuItem, { value: i, children: (_b = (_a = mat === null || mat === void 0 ? void 0 : mat.name) !== null && _a !== void 0 ? _a : mat === null || mat === void 0 ? void 0 : mat.formula) !== null && _b !== void 0 ? _b : `Material ${i + 1}` }, i));
-                                            }) })] })] }), _jsx(Divider, { orientation: "vertical", flexItem: true }), _jsx(Tooltip, { title: `${allWorkflowJsons.length} workflows · ${allMaterialJsons.length} materials from standata`, children: _jsx(Chip, { label: "standata", size: "small", variant: "outlined", color: "secondary" }) }), _jsx(Box, { sx: { flexGrow: 1 } }), _jsx(Button, { variant: "outlined", size: "small", startIcon: _jsx(DownloadIcon, {}), onClick: handleExportJson, sx: {
+                                            }) })] })] }), _jsx(Divider, { orientation: "vertical", flexItem: true }), _jsx(Tooltip, { title: `${allWorkflowJsons.length} workflows · ${allMaterialJsons.length} materials from standata`, children: _jsx(Chip, { label: "standata", size: "small", variant: "outlined", color: "secondary" }) }), _jsx(Box, { sx: { flexGrow: 1 } }), _jsx(Button, { variant: "outlined", size: "small", onClick: () => setUseGuidedDesigner((isOn) => !isOn), sx: { mr: 1 }, children: useGuidedDesigner ? "Guided layout: on" : "Guided layout: off" }), _jsx(Button, { variant: "outlined", size: "small", startIcon: _jsx(DownloadIcon, {}), onClick: handleExportJson, sx: {
                                 borderColor: "rgba(124,77,255,0.5)",
                                 color: "primary.main",
                                 "&:hover": {
@@ -173,7 +175,7 @@ function App() {
                     }, workflowDialogs: {
                         pseudoUploadReduxDialog: [() => { }, () => { }],
                         unitTypeReduxDialog: [() => { }, () => { }],
-                    }, templates: [], resultsProperties: [], jobProperties: [], createMetaProperty: async () => undefined, fetchMaterials: async () => [], loadWorkflowEntityById: async () => undefined, MaterialViewerComponent: StandaloneMaterialViewer }, designerKey) })] }));
+                    }, templates: [], resultsProperties: [], jobProperties: [], createMetaProperty: async () => undefined, fetchMaterials: async () => [], loadWorkflowEntityById: async () => undefined, MaterialViewerComponent: StandaloneMaterialViewer, useGuidedDesigner: useGuidedDesigner }, designerKey) })] }));
 }
 const rootElement = document.getElementById("root");
 if (!rootElement)

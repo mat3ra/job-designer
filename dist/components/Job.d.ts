@@ -30,6 +30,16 @@ declare class Job {
      * returnValue is what makes the prompt appear at all.
      */
     warnIfLeavingWithUnsavedChanges: (event: any) => string;
+    /**
+     * Pure derivation - no entity mutation, and in particular no `job.render()`.
+     * Recomputed per render rather than memoised: it walks a handful of arrays,
+     * whereas caching it would mean tracking invalidation across the same
+     * in-place model mutations that already make this component hard to reason
+     * about.
+     */
+    get jobReadiness(): import("../jobReadiness").JobReadiness;
+    /** The rail's Review step has no tab of its own; it lands on Compute. */
+    onReadinessStepSelect: (stepId: any) => void;
     get saveStateInputs(): {
         hasUnsavedChanges: any;
         editable: boolean;

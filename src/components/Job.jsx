@@ -18,9 +18,12 @@ import React from "react";
 import { ErrorBoundary } from "react-error-boundary";
 import { TAB_NAVIGATION_CONFIG } from "@mat3ra/jode";
 import { getSubmitBlockedReason } from "../jobSubmission";
+import { getJobReadiness } from "../jobReadiness";
 import { getSaveState, getSaveStateLabel, shouldWarnBeforeLeaving } from "../saveState";
 import { shouldPersistJobOnUpdate } from "../shouldPersistJobOnUpdate";
 import ComputeTab from "./ComputeTab";
+import JobContextStrip from "./JobContextStrip";
+import JobReadinessRail from "./JobReadinessRail";
 import DatasetTab from "./DatasetTab";
 import FilesTab from "./FilesTab";
 import MaterialTab from "./MaterialTab";
@@ -243,6 +246,28 @@ class Job extends mix(React.Component).with(
         return "";
     };
 
+    /**
+     * Pure derivation - no entity mutation, and in particular no `job.render()`.
+     * Recomputed per render rather than memoised: it walks a handful of arrays,
+     * whereas caching it would mean tracking invalidation across the same
+     * in-place model mutations that already make this component hard to reason
+     * about.
+     */
+    get jobReadiness() {
+        return getJobReadiness({
+            job: this.state.entity,
+            materials: this.props.materials ?? [],
+            isUsingMaterials: this.isUsingMaterialsTab,
+            datasetConfig: this.props.datasetConfig,
+            editable: Boolean(this.props.editable),
+        });
+    }
+
+    /** The rail's Review step has no tab of its own; it lands on Compute. */
+    onReadinessStepSelect = (stepId) => {
+        this.setCurrentTab(stepId === "review" ? TAB_NAVIGATION_CONFIG.compute.id : stepId);
+    };
+
     get saveStateInputs() {
         return {
             hasUnsavedChanges: this.state.hasUnsavedChanges,
@@ -321,6 +346,9 @@ class Job extends mix(React.Component).with(
     };
 
     renderParentJob() {
+        // The context strip carries the parent as a chip; two of them is one too many.
+        if (this.props.useGuidedDesigner) return null;
+
         const parentJob = this.state.entity.getParentJobClient?.();
         return parentJob ? (
             <Alert severity="info" onClose={this.props.editable ? this.onParentRemove : undefined}>
@@ -793,6 +821,15 @@ class Job extends mix(React.Component).with(
 
         const activeTabIndex = tabsToRender.findIndex((item) => item.id === this.state.currentTab);
 
+        // Phase 2 layout is opt-in per host so the webapp and the demo can flip
+        // independently; the legacy tab strip stays until parity is verified.
+        const useGuidedDesigner = Boolean(this.props.useGuidedDesigner);
+        const readiness = this.jobReadiness;
+        const parentJobClient = job.getParentJobClient?.();
+        const parentJobForStrip = parentJobClient
+            ? { name: parentJobClient.name, projectSlug: parentJobClient._project?.slug }
+            : null;
+
         const isDescriptionEditable = this.isDescriptionEditable(job);
         const isDesignerLoading = isLoading || this.state.isWorkflowLoading;
         const dropdownProps = this.getDropdownProps();
@@ -866,13 +903,45 @@ class Job extends mix(React.Component).with(
                 {this.renderParentJob()}
                 {this.renderErrors()}
                 {this.renderWarnings()}
-                <TabsMenu
-                    tabs={tabs}
-                    activeTabIndex={activeTabIndex}
-                    variant="fullWidth"
-                    centered
-                />
-                <Box>
+                {useGuidedDesigner ? (
+                    <JobContextStrip
+                        steps={readiness.steps}
+                        onSelect={this.onReadinessStepSelect}
+                        parentJob={parentJobForStrip}
+                        onParentRemove={editable ? this.onParentRemove : undefined}
+                    />
+                ) : null}
+                {useGuidedDesigner ? null : (
+                    <TabsMenu
+                        tabs={tabs}
+                        activeTabIndex={activeTabIndex}
+                        variant="fullWidth"
+                        centered
+                    />
+                )}
+                <Box
+                    sx={
+                        useGuidedDesigner
+                            ? {
+                                  display: "grid",
+                                  gridTemplateColumns: { xs: "1fr", md: "auto minmax(0, 1fr)" },
+                                  alignItems: "start",
+                              }
+                            : undefined
+                    }
+                >
+                    {useGuidedDesigner ? (
+                        <JobReadinessRail
+                            steps={readiness.steps}
+                            activeStepId={
+                                this.state.currentTab === TAB_NAVIGATION_CONFIG.compute.id &&
+                                readiness.isSubmittable
+                                    ? TAB_NAVIGATION_CONFIG.compute.id
+                                    : this.state.currentTab
+                            }
+                            onSelect={this.onReadinessStepSelect}
+                        />
+                    ) : null}
                     <div className="tab-content">
                         {this.state.isWorkflowLoading ? (
                             <LoadingIndicator included />

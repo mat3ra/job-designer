@@ -19,9 +19,12 @@ import React from "react";
 import { ErrorBoundary } from "react-error-boundary";
 import { TAB_NAVIGATION_CONFIG } from "@mat3ra/jode";
 import { getSubmitBlockedReason } from "../jobSubmission";
+import { getJobReadiness } from "../jobReadiness";
 import { getSaveState, getSaveStateLabel, shouldWarnBeforeLeaving } from "../saveState";
 import { shouldPersistJobOnUpdate } from "../shouldPersistJobOnUpdate";
 import ComputeTab from "./ComputeTab";
+import JobContextStrip from "./JobContextStrip";
+import JobReadinessRail from "./JobReadinessRail";
 import DatasetTab from "./DatasetTab";
 import FilesTab from "./FilesTab";
 import MaterialTab from "./MaterialTab";
@@ -114,6 +117,10 @@ class Job extends mix(React.Component).with(StatePropsCompareOnUpdateForJobMIxin
             event.preventDefault();
             event.returnValue = "";
             return "";
+        };
+        /** The rail's Review step has no tab of its own; it lands on Compute. */
+        this.onReadinessStepSelect = (stepId) => {
+            this.setCurrentTab(stepId === "review" ? TAB_NAVIGATION_CONFIG.compute.id : stepId);
         };
         this.onComputeUpdate = (compute) => {
             const job = this.state.entity;
@@ -415,6 +422,23 @@ class Job extends mix(React.Component).with(StatePropsCompareOnUpdateForJobMIxin
         this.persistJob();
         window.addEventListener("beforeunload", this.warnIfLeavingWithUnsavedChanges);
     }
+    /**
+     * Pure derivation - no entity mutation, and in particular no `job.render()`.
+     * Recomputed per render rather than memoised: it walks a handful of arrays,
+     * whereas caching it would mean tracking invalidation across the same
+     * in-place model mutations that already make this component hard to reason
+     * about.
+     */
+    get jobReadiness() {
+        var _a;
+        return getJobReadiness({
+            job: this.state.entity,
+            materials: (_a = this.props.materials) !== null && _a !== void 0 ? _a : [],
+            isUsingMaterials: this.isUsingMaterialsTab,
+            datasetConfig: this.props.datasetConfig,
+            editable: Boolean(this.props.editable),
+        });
+    }
     get saveStateInputs() {
         return {
             hasUnsavedChanges: this.state.hasUnsavedChanges,
@@ -447,6 +471,9 @@ class Job extends mix(React.Component).with(StatePropsCompareOnUpdateForJobMIxin
     }
     renderParentJob() {
         var _a, _b;
+        // The context strip carries the parent as a chip; two of them is one too many.
+        if (this.props.useGuidedDesigner)
+            return null;
         const parentJob = (_b = (_a = this.state.entity).getParentJobClient) === null || _b === void 0 ? void 0 : _b.call(_a);
         return parentJob ? (_jsx(Alert, { severity: "info", onClose: this.props.editable ? this.onParentRemove : undefined, children: _jsxs("div", { className: "search-pill-selected", children: ["Parent job:", " ", _jsx("b", { children: _jsx("a", { href: "", onClick: parentJob.open, children: parentJob.name }) }), " ", "from\u00A0", _jsx("b", { children: parentJob._project.slug }), " project"] }) })) : null;
     }
@@ -552,7 +579,7 @@ class Job extends mix(React.Component).with(StatePropsCompareOnUpdateForJobMIxin
         closeSelectParentJobDialog();
     }
     render() {
-        var _a;
+        var _a, _b, _c;
         const { editable, isLoading, hideDescription, material, index, length, onUpdateIndex, onMaterialRemove, datasetConfig, allowedWorkflows, onWorkflowSelect, materials, materialsSet, metaProperties, onIsMultiMaterialChanged, onMaterialSwitch, onOutputUpdateRequest, clusters, profile, accountUsers, accountUsersIsLoading, workflowDialogs, publicAccount, project, templates, resultsProperties, jobProperties, createMetaProperty, fetchMaterials, renderGeneration, MaterialViewerComponent, 
         /** Optional children rendered in the right side of the EntityHeader (selectors, export button, etc.). */
         headerChildren, } = this.props;
@@ -585,6 +612,14 @@ class Job extends mix(React.Component).with(StatePropsCompareOnUpdateForJobMIxin
             };
         });
         const activeTabIndex = tabsToRender.findIndex((item) => item.id === this.state.currentTab);
+        // Phase 2 layout is opt-in per host so the webapp and the demo can flip
+        // independently; the legacy tab strip stays until parity is verified.
+        const useGuidedDesigner = Boolean(this.props.useGuidedDesigner);
+        const readiness = this.jobReadiness;
+        const parentJobClient = (_a = job.getParentJobClient) === null || _a === void 0 ? void 0 : _a.call(job);
+        const parentJobForStrip = parentJobClient
+            ? { name: parentJobClient.name, projectSlug: (_b = parentJobClient._project) === null || _b === void 0 ? void 0 : _b.slug }
+            : null;
         const isDescriptionEditable = this.isDescriptionEditable(job);
         const isDesignerLoading = isLoading || this.state.isWorkflowLoading;
         const dropdownProps = this.getDropdownProps();
@@ -601,7 +636,16 @@ class Job extends mix(React.Component).with(StatePropsCompareOnUpdateForJobMIxin
                         // on mount, so a captured entity would forever persist the very
                         // first render's state - see getSaveBtnProps for the full note.
                         onSave: (omitRedirect) => this.saveJob((redirectFlag) => this.props.onSave(redirectFlag), omitRedirect),
-                    }, dropdownProps: dropdownProps, descriptionEditorTitle: "Job Description", isDescriptionEditorHidden: hideDescription, item: job, isDescriptionEditable: isDescriptionEditable, onDescriptionUpdate: this.onDescriptionUpdate, children: [this.renderSaveStateIndicator(), this.renderSubmitAction(), headerChildren !== null && headerChildren !== void 0 ? headerChildren : null] })) : (_jsxs(EntityHeader, { name: job.name, editable: this.props.editable, onNameUpdate: this.onNameUpdate, isLoading: isDesignerLoading, subtitle: (project === null || project === void 0 ? void 0 : project.name) ? { project: project.name } : undefined, icon: "entities.job", id: "job-designer-header", children: [dropdownProps.isShown && _jsx(Dropdown, { ...dropdownProps }), this.props.editable && _jsx(ButtonMultiSelect, { ...this.getSaveBtnProps() }), this.renderSaveStateIndicator(), this.renderSubmitAction(), headerChildren !== null && headerChildren !== void 0 ? headerChildren : null] })), this.renderTerminateConfirmation(), this.renderParentJob(), this.renderErrors(), this.renderWarnings(), _jsx(TabsMenu, { tabs: tabs, activeTabIndex: activeTabIndex, variant: "fullWidth", centered: true }), _jsx(Box, { children: _jsx("div", { className: "tab-content", children: this.state.isWorkflowLoading ? (_jsx(LoadingIndicator, { included: true })) : (_jsxs(_Fragment, { children: [isCurrentTabMaterial && (_jsx(MaterialTab, { className: isCurrentTabMaterial ? "active" : null, id: TAB_NAVIGATION_CONFIG.material.id, publicAccount: publicAccount, profile: profile, role: "tabpanel", material: material, index: index, length: length, onUpdateIndex: onUpdateIndex, materials: materials, onMaterialRemove: onMaterialRemove, addRemoveAllowed: !job.id, openAddMaterialsDialog: this.openAddMaterialsDialog, MaterialViewerComponent: MaterialViewerComponent })), isCurrentTabDataset && (_jsx(DatasetTab, { className: isCurrentTabDataset ? "active" : null, id: TAB_NAVIGATION_CONFIG.dataset.id, profile: profile, role: "tabpanel", datasetConfig: datasetConfig, datagridHeaderText: "DataFrame", datagridPopoverText: "Training Model Data" })), isCurrentTabWorkflow && (_jsx(WorkflowTab, { className: isCurrentTabWorkflow ? "active" : null, workflowRenderGeneration: renderGeneration, id: TAB_NAVIGATION_CONFIG.workflow.id, role: "tabpanel", workflow: job.workflow, onJobRender: this.persistJob, jobHasParent: Boolean((_a = job.getParentJobClient) === null || _a === void 0 ? void 0 : _a.call(job)), profile: profile, publicAccount: publicAccount, allowedWorkflows: allowedWorkflows, onWorkflowSelect: onWorkflowSelect, materials: materials, materialsSet: materialsSet, materialsIndex: index, onIsMultiMaterialChanged: onIsMultiMaterialChanged, onMaterialSwitch: onMaterialSwitch, onWorkflowUpdate: this.onWorkflowUpdate, adjustable: job.isInInitialStatus, iconCls: `text-${job.statusCls}`, metaProperties: metaProperties, onOutputUpdateRequest: onOutputUpdateRequest, accountUsers: accountUsers, accountUsersIsLoading: accountUsersIsLoading, dialogs: workflowDialogs, templates: templates, createMetaProperty: createMetaProperty, jobProperties: jobProperties, isDescriptionEditable: isDescriptionEditable })), isCurrentTabCompute && (_jsx(ComputeTab, { className: isCurrentTabCompute ? "active" : null, id: TAB_NAVIGATION_CONFIG.compute.id, role: "tabpanel", compute: job.compute, job: job, onUpdate: this.onComputeUpdate, editable: editable, clusters: clusters, showAdvancedOptions: showAdvancedCompute, accountUsers: accountUsers, accountUsersIsLoading: accountUsersIsLoading, currentUser: currentUser, currentAccount: currentAccount })), isCurrentTabResults && (_jsx(ResultsTab, { className: `jobs-view ${isActive(isCurrentTabResults)}`, id: TAB_NAVIGATION_CONFIG.results.id, role: "tabpanel", job: job, material: material, publicAccount: publicAccount, profile: profile, resultsProperties: resultsProperties, jobProperties: jobProperties, fetchMaterials: fetchMaterials, MaterialComponent: MaterialViewerComponent, fileUtils: getFileUtils(), DataGridComponent: getInjectedDeps().DataGridComponent })), isCurrentTabFiles && (_jsx(FilesTab, { className: `jobs-view ${isActive(isCurrentTabFiles)}`, id: TAB_NAVIGATION_CONFIG.files.id, role: "tabpanel", job: job }))] })) }) })] }));
+                    }, dropdownProps: dropdownProps, descriptionEditorTitle: "Job Description", isDescriptionEditorHidden: hideDescription, item: job, isDescriptionEditable: isDescriptionEditable, onDescriptionUpdate: this.onDescriptionUpdate, children: [this.renderSaveStateIndicator(), this.renderSubmitAction(), headerChildren !== null && headerChildren !== void 0 ? headerChildren : null] })) : (_jsxs(EntityHeader, { name: job.name, editable: this.props.editable, onNameUpdate: this.onNameUpdate, isLoading: isDesignerLoading, subtitle: (project === null || project === void 0 ? void 0 : project.name) ? { project: project.name } : undefined, icon: "entities.job", id: "job-designer-header", children: [dropdownProps.isShown && _jsx(Dropdown, { ...dropdownProps }), this.props.editable && _jsx(ButtonMultiSelect, { ...this.getSaveBtnProps() }), this.renderSaveStateIndicator(), this.renderSubmitAction(), headerChildren !== null && headerChildren !== void 0 ? headerChildren : null] })), this.renderTerminateConfirmation(), this.renderParentJob(), this.renderErrors(), this.renderWarnings(), useGuidedDesigner ? (_jsx(JobContextStrip, { steps: readiness.steps, onSelect: this.onReadinessStepSelect, parentJob: parentJobForStrip, onParentRemove: editable ? this.onParentRemove : undefined })) : null, useGuidedDesigner ? null : (_jsx(TabsMenu, { tabs: tabs, activeTabIndex: activeTabIndex, variant: "fullWidth", centered: true })), _jsxs(Box, { sx: useGuidedDesigner
+                        ? {
+                            display: "grid",
+                            gridTemplateColumns: { xs: "1fr", md: "auto minmax(0, 1fr)" },
+                            alignItems: "start",
+                        }
+                        : undefined, children: [useGuidedDesigner ? (_jsx(JobReadinessRail, { steps: readiness.steps, activeStepId: this.state.currentTab === TAB_NAVIGATION_CONFIG.compute.id &&
+                                readiness.isSubmittable
+                                ? TAB_NAVIGATION_CONFIG.compute.id
+                                : this.state.currentTab, onSelect: this.onReadinessStepSelect })) : null, _jsx("div", { className: "tab-content", children: this.state.isWorkflowLoading ? (_jsx(LoadingIndicator, { included: true })) : (_jsxs(_Fragment, { children: [isCurrentTabMaterial && (_jsx(MaterialTab, { className: isCurrentTabMaterial ? "active" : null, id: TAB_NAVIGATION_CONFIG.material.id, publicAccount: publicAccount, profile: profile, role: "tabpanel", material: material, index: index, length: length, onUpdateIndex: onUpdateIndex, materials: materials, onMaterialRemove: onMaterialRemove, addRemoveAllowed: !job.id, openAddMaterialsDialog: this.openAddMaterialsDialog, MaterialViewerComponent: MaterialViewerComponent })), isCurrentTabDataset && (_jsx(DatasetTab, { className: isCurrentTabDataset ? "active" : null, id: TAB_NAVIGATION_CONFIG.dataset.id, profile: profile, role: "tabpanel", datasetConfig: datasetConfig, datagridHeaderText: "DataFrame", datagridPopoverText: "Training Model Data" })), isCurrentTabWorkflow && (_jsx(WorkflowTab, { className: isCurrentTabWorkflow ? "active" : null, workflowRenderGeneration: renderGeneration, id: TAB_NAVIGATION_CONFIG.workflow.id, role: "tabpanel", workflow: job.workflow, onJobRender: this.persistJob, jobHasParent: Boolean((_c = job.getParentJobClient) === null || _c === void 0 ? void 0 : _c.call(job)), profile: profile, publicAccount: publicAccount, allowedWorkflows: allowedWorkflows, onWorkflowSelect: onWorkflowSelect, materials: materials, materialsSet: materialsSet, materialsIndex: index, onIsMultiMaterialChanged: onIsMultiMaterialChanged, onMaterialSwitch: onMaterialSwitch, onWorkflowUpdate: this.onWorkflowUpdate, adjustable: job.isInInitialStatus, iconCls: `text-${job.statusCls}`, metaProperties: metaProperties, onOutputUpdateRequest: onOutputUpdateRequest, accountUsers: accountUsers, accountUsersIsLoading: accountUsersIsLoading, dialogs: workflowDialogs, templates: templates, createMetaProperty: createMetaProperty, jobProperties: jobProperties, isDescriptionEditable: isDescriptionEditable })), isCurrentTabCompute && (_jsx(ComputeTab, { className: isCurrentTabCompute ? "active" : null, id: TAB_NAVIGATION_CONFIG.compute.id, role: "tabpanel", compute: job.compute, job: job, onUpdate: this.onComputeUpdate, editable: editable, clusters: clusters, showAdvancedOptions: showAdvancedCompute, accountUsers: accountUsers, accountUsersIsLoading: accountUsersIsLoading, currentUser: currentUser, currentAccount: currentAccount })), isCurrentTabResults && (_jsx(ResultsTab, { className: `jobs-view ${isActive(isCurrentTabResults)}`, id: TAB_NAVIGATION_CONFIG.results.id, role: "tabpanel", job: job, material: material, publicAccount: publicAccount, profile: profile, resultsProperties: resultsProperties, jobProperties: jobProperties, fetchMaterials: fetchMaterials, MaterialComponent: MaterialViewerComponent, fileUtils: getFileUtils(), DataGridComponent: getInjectedDeps().DataGridComponent })), isCurrentTabFiles && (_jsx(FilesTab, { className: `jobs-view ${isActive(isCurrentTabFiles)}`, id: TAB_NAVIGATION_CONFIG.files.id, role: "tabpanel", job: job }))] })) })] })] }));
     }
 }
 export default Job;
