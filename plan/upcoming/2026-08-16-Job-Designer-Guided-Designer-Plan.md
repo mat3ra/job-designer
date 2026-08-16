@@ -136,6 +136,7 @@ revertable.
   `validate()` ref or a `showAllErrors` prop).
 - Acceptance: opening the Compute tab of a fresh job shows zero red errors; leaving a required
   field empty after focusing it shows exactly one; `showAllErrors` restores today's behavior.
+  Size: S–M.
 
 ### 1.2 Remove the duplicated Compute sub-tab (D1) — `@mat3ra/workflow-designer`
 
@@ -143,6 +144,7 @@ revertable.
   Compute) drops the Compute entry when the host renders its own compute surface. Add a
   `hideComputeSubTab` (default false for backward compatibility) prop; job-designer passes true.
 - Acceptance: Workflow tab shows exactly one place named "Compute" across the whole designer.
+  Size: S.
 
 ### 1.3 Humane metadata (D2) — `@mat3ra/workflow-designer` + job-designer
 
@@ -151,6 +153,7 @@ revertable.
   gates them — job-designer passes the flag; the workflow pane already receives
   `adjustable={job.isInInitialStatus}` so thread one more boolean, e.g. `showUnitStatus`).
 - Acceptance: a draft job shows no status chips and no raw UUID text; copy-id copies the id.
+  Size: M.
 
 ### 1.4 First-class Submit in the header (A3) — job-designer + `@mat3ra/cove`
 
@@ -161,8 +164,11 @@ revertable.
   import-style power actions.
 - Mind the known cove `ButtonMultiSelect` mount-snapshot behavior (see the long note in
   `Job.jsx#getSaveBtnProps`): read state at click time, never capture the entity at render.
+- Terminate is destructive: it gets a confirm step (job name + elapsed time in the dialog),
+  unlike today's straight dropdown action.
 - Acceptance: a draft job with material+workflow+compute set can be submitted in one click from
-  any tab; the disabled button explains what is missing; webapp header parity is preserved.
+  any tab; the disabled button explains what is missing; Terminate asks before killing a run;
+  webapp header parity is preserved. Size: M.
 
 ### 1.5 Design-language groundwork (cove)
 
@@ -178,7 +184,16 @@ revertable.
   `src/standalone/index.tsx`) so the completed dark palette is exercised continuously.
 - Acceptance: chips and header render legibly in both themes (visual check in the cove
   gallery, cove#92); the demo runs without a private theme; no consumer reads an undefined
-  dark-palette slot.
+  dark-palette slot. Size: M–L.
+
+### 1.6 Visible error state (new; not in the original proposals)
+
+- `Job.jsx` wraps the designer in `ErrorBoundary` with `fallback={<div />}` — a render crash
+  currently produces a silently blank page. Replace with a visible error card (what failed, a
+  reload affordance, and a copyable error digest); the webapp can inject its reporting hook
+  through the seam.
+- Acceptance: a thrown render error shows the error card in both webapp and standalone; the
+  fallback never renders an empty page. Size: S.
 
 ## Phase 2 — Guided designer (proposals A1, A2, B1–B3, C1, E1, E2)
 
@@ -195,7 +210,14 @@ The layout change. Mockups: `01-guided-designer.html`, `02-compute-cost.html`,
 - Step state derives from a new pure selector module (proposed `src/jobReadiness.ts`):
   `getJobReadiness(job, materials) → { steps: [{ id, state, summary }], isSubmittable,
   blockingReasons }`. Unit-test this module heavily; it also drives the Submit button and
-  preflight.
+  preflight. It must cover all creation shapes: material jobs, dataset jobs
+  (`workflow.isUsingDataset`), multi-material sets (`materialsSet` / `isMultiMaterial`), and
+  parent-derived jobs (parent supplies the material — the Material step reads "from parent
+  job", not "missing").
+- **The rail spans the whole lifecycle, not just creation.** After submission the creation
+  steps collapse into read-only summaries and Monitor (later Results, Files) become the active
+  steps — this replaces today's `defaultTab` status-jumping logic. With `editable={false}`
+  (shared/public jobs) the rail renders view-only: no "Change" affordances, no Submit.
 - `TAB_NAVIGATION_CONFIG` (`@mat3ra/jode`) grows optional per-tab step metadata (order, label)
   so webapp and standalone agree on the sequence.
 - The three "Select …" dialogs stay as they are, but open from "Change" affordances on their
@@ -205,7 +227,9 @@ The layout change. Mockups: `01-guided-designer.html`, `02-compute-cost.html`,
   renders with cove `StatusChip` colors from the job-status mapping (1.5). Keep the DOM of tab
   panels unchanged where possible so Cypress selectors survive.
 - Acceptance: a new user can create and submit a job without opening any dropdown; deep links
-  via `getRouteQueryTab` still land on the right step.
+  via `getRouteQueryTab` still land on the right step; a finished job opens on Monitor/Results
+  with creation steps summarized; the rail is keyboard-navigable (arrow keys between steps,
+  visible focus, `aria-current` on the active step). Size: L.
 
 ### 2.2 Context strip (A2) — job-designer
 
@@ -213,7 +237,12 @@ The layout change. Mockups: `01-guided-designer.html`, `02-compute-cost.html`,
   (name · subworkflow/unit counts), compute (cluster · nodes×cores · walltime), estimate
   (core-hours ≈ cost). Chips navigate to their step; incomplete chips render in the attention
   style. Data comes from the same `getJobReadiness` selector plus the estimate helper (2.3).
-- Acceptance: on every step, the other selections stay visible; clicking a chip switches step.
+- The parent job moves here too: today it renders as a dismissable `Alert` above the tabs
+  (`Job.jsx#renderParentJob`); it becomes a context chip (parent name · project) with the
+  remove affordance in its popover — same `setParent` / `unsetParent` model calls (the flow
+  fixed in SOF-7962).
+- Acceptance: on every step, the other selections stay visible; clicking a chip switches step;
+  a parent-derived job shows the parent chip and no orphaned Alert. Size: S–M.
 
 ### 2.3 Compute redesign: cluster cards, presets, live estimate (B1–B3) — `@mat3ra/ive`
 
@@ -230,9 +259,12 @@ The layout change. Mockups: `01-guided-designer.html`, `02-compute-cost.html`,
   `onUpdate(compute)` path so undo/save semantics are untouched.
 - Validation limits (max nodes, cores per node, queue walltime caps) come from
   `clusterMetadata`; violations render inline (not red-on-first-paint — 1.1's touched logic).
+- The advanced-options section (`showAdvancedComputeOptions`, gated today by the applications'
+  `hasAdvancedComputeOptions` in `Job.jsx`) is preserved as a collapsed "Advanced" group below
+  the cards — redesign must not drop the espresso-class options.
 - Acceptance: changing any field updates the estimate synchronously; exceeding a limit flags
-  the field and the estimate panel; presets fill the form in one click; webapp data path and
-  standalone fallback both render.
+  the field and the estimate panel; presets fill the form in one click; advanced options remain
+  reachable; webapp data path and standalone fallback both render. Size: L.
 
 ### 2.4 Preflight at submit (C1) — job-designer (+ webapp data)
 
@@ -246,6 +278,7 @@ The layout change. Mockups: `01-guided-designer.html`, `02-compute-cost.html`,
   the webapp can add checks (e.g. balance) via `setDependencies()`.
 - Acceptance: submitting an incomplete job is impossible through the UI; every fail row's
   action lands on the field that fixes it; checks are unit-tested including the warn/ack flow.
+  Size: M–L.
 
 ### 2.5 Materials tray and metadata (E1, E2) — job-designer (+ viewer package)
 
@@ -257,7 +290,20 @@ The layout change. Mockups: `01-guided-designer.html`, `02-compute-cost.html`,
 - Metadata side panel (formula, lattice, space group, atom count, source id) rendered from the
   `Material` model next to the injected viewer; the viewer component API is unchanged.
 - Acceptance: adding a second material updates the tray, the batch copy, and the context strip;
-  removing the active material selects a sane neighbor.
+  removing the active material selects a sane neighbor. Size: M.
+
+### 2.6 Save-state honesty (new; relates to UX-498)
+
+- The header states the truth about persistence: "Saved" only after the entity actually
+  persisted through `onSave` / the `shouldPersistJobOnUpdate` pipeline, "Unsaved changes"
+  otherwise, and a leave-guard (browser `beforeunload` + router guard injected via the seam)
+  when a dirty draft is about to be abandoned. The mockups' "All changes saved" copy is the
+  target state; showing it without it being true would be worse than today.
+- Explicit non-goal here: no new autosave backend — this item only surfaces existing state
+  honestly. If product wants real autosave (UX-498 direction), that is a separate ticket.
+- Acceptance: editing any field flips the indicator to dirty; Save flips it back; closing the
+  tab with a dirty draft warns; the indicator never claims "Saved" while in-memory state
+  differs from the persisted entity. Size: S–M.
 
 ## Phase 3 — The living job (proposals F1, F2, C2, D3, D4)
 
@@ -268,7 +314,7 @@ Mockup: `04-run-monitor.html`. Mostly lands in dependency packages; job-designer
 - Replace the status-colored icon (`iconCls: text-${job.statusCls}`) with cove's
   `LifecycleTimeline` (Draft → Queued → Running → Finished/Error, timestamps on hover),
   colored by the job-status mapping from 1.5. Rendered by the header; state derives from
-  existing job status fields.
+  existing job status fields. Size: S–M.
 
 ### 3.2 Run monitor (F1, C2) — `@mat3ra/jove` + webapp
 
@@ -281,6 +327,7 @@ Mockup: `04-run-monitor.html`. Mostly lands in dependency packages; job-designer
   staying on the editing view (C2).
 - Data contract needs webapp work (log tail endpoint or polling adapter injected via
   `setDependencies()`); standalone ships a simulated feed for the demo, mirroring the mockup.
+  Size: L–XL (the largest single item; the webapp data adapter is half of it).
 
 ### 3.3 Unit inspector drawer (D3) and theme parity (D4) — `@mat3ra/workflow-designer`
 
@@ -291,6 +338,7 @@ Mockup: `04-run-monitor.html`. Mostly lands in dependency packages; job-designer
 - Flowchart pane colors move to the CSS custom properties exported by cove's `ThemeProvider`
   (design-language section) so the dark shell stops framing a white canvas; `unitTypes.*`
   colors come from the completed dark palette.
+- Size: M–L.
 
 ## Cross-cutting
 
@@ -309,6 +357,51 @@ Mockup: `04-run-monitor.html`. Mostly lands in dependency packages; job-designer
   `ComputeEstimatePanel`, `runPreflightChecks`), PascalCase components, no abbreviations.
 - **Standalone demo as testbed:** every phase must be demonstrable in `npm run dev` with
   standata content and stub metadata; the demo is the review surface for design sign-off.
+- **Performance guardrail:** `Job.jsx` has delicate update machinery — `shouldComponentUpdate`
+  mixins, `renderGeneration`, and `persistJob()` runs `job.render()` (template rendering) on
+  workflow-tab entry. Readiness and estimate recomputation must be memoized pure derivation
+  that never calls `persistJob` or bumps `renderGeneration`; a compute keystroke must not
+  trigger a workflow re-render. Add a regression test that counts `job.render()` calls during
+  compute edits.
+- **Accessibility:** rail and dialogs are keyboard-operable (focus trap in `PreflightDialog`,
+  `aria-current` on the active step, visible focus states); status is never conveyed by color
+  alone (icons + labels on every `StatusChip`); the palette work in 1.5 fixes the contrast
+  side.
+- **Localization:** the webapp localizes via TAPi18n (stubbed as `createMessageTextTAPi18n` in
+  `Job.jsx`); new user-facing strings (readiness summaries, preflight messages, save-state
+  copy) go through an injectable message resolver on the seam with English fallbacks — no
+  hard-coded strings scattered through components.
+- **Shared with the Materials Designer effort:** the cove primitives and palette repairs in
+  1.5 serve the parallel materials-designer UX update too — keep primitive APIs generic (no
+  job-specific props) and land cove work first so both designers consume the same release.
+
+### Release sequencing
+
+Additive props with safe defaults everywhere, so no lockstep release is required. Order:
+
+1. `cove` (1.5, palette + primitives) — everything else consumes it.
+2. `ive` (1.1, 2.3), `workflow-designer` (1.2, 1.3, 3.3), `jove` (3.2) — in parallel, each
+   behind default-off props.
+3. `jode` (2.1 step metadata).
+4. `job-designer` — version bumps + the shell work (1.4, 1.6, 2.1, 2.2, 2.4, 2.5, 2.6),
+   verified in the standalone demo.
+5. `web-app` — pin bumps, seam wiring (`registerDependencies`), flag flip after the Cypress
+   suite is green.
+
+## Success metrics
+
+Instrument before flipping the `useGuidedDesigner` flag so there is a baseline. Events go
+through an analytics hook injected via the seam (no-op in standalone):
+
+- **Time to first submit** for a new job (open designer → successful submit) — the headline
+  number the redesign should move.
+- **Preflight outcomes**: fail/warn rates per check, and how often a deep-link fix is used —
+  high fail rates identify which step's affordances still fail users.
+- **Abandonment**: drafts opened vs. submitted, and the step where users leave.
+- **Terminate-after-submit within N minutes** — a proxy for "submitted with wrong settings",
+  which the estimate + preflight should reduce.
+- **Monitor engagement** (phase 3): share of running jobs whose owners watch the monitor vs.
+  navigate away.
 
 ## Testing
 
@@ -343,3 +436,8 @@ Mockup: `04-run-monitor.html`. Mostly lands in dependency packages; job-designer
    is acceptable for v1.
 4. File per-phase SOF tickets under SOF-8023 — one per phase, or one per proposal group?
    (Suggest one per phase.)
+5. Which analytics channel should the success-metrics events use — the webapp's existing
+   telemetry, or is this the moment to add a product-analytics hook to the seam? (Gates the
+   baseline capture, not the UI work.)
+6. Localization: is English-only acceptable for the new strings at launch (matching the
+   packages' current state), with the message-resolver seam making them translatable later?
