@@ -811,6 +811,7 @@ class Job extends mix(React.Component).with(
                                         index={index}
                                         length={length}
                                         onUpdateIndex={onUpdateIndex}
+                                        materials={materials}
                                         onMaterialRemove={onMaterialRemove}
                                         addRemoveAllowed={!job.id}
                                         openAddMaterialsDialog={this.openAddMaterialsDialog}
