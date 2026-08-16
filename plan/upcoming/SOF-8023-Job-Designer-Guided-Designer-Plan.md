@@ -1,8 +1,7 @@
-# UX-574 — Job Designer: Guided Designer Implementation Plan
+# SOF-8023 — Job Designer: Guided Designer Implementation Plan
 
-**Ticket:** [UX-574](https://mat3ra.atlassian.net/browse/UX-574) (UI/UX Platform Review — August
-2026) is the umbrella; each phase below should get its own SOF implementation ticket when picked
-up (numbers to be filed).
+**Ticket:** [SOF-8023](https://mat3ra.atlassian.net/browse/SOF-8023) — Job Designer UX update:
+guided designer flow. Per-phase implementation tickets can be filed under it when work starts.
 **Source proposals:** [`UIUX_IMPROVEMENTS.md`](../../UIUX_IMPROVEMENTS.md) (proposals A1–F2) and
 the interactive mockups in [`mockups/`](../../mockups/).
 **Branch of record for the brainstorm:** `claude/jd-ui-ux-improvements-99w9fg`.
@@ -246,5 +245,5 @@ Mockup: `04-run-monitor.html`. Mostly lands in dependency packages; job-designer
    stay host-injected only? Package-native heuristics risk false alarms.
 3. Does the monitor (3.2) poll job properties or can the webapp provide a push channel? Polling
    is acceptable for v1.
-4. File SOF tickets per phase under the UX-574 umbrella — one per phase, or one per proposal
-   group? (Suggest one per phase.)
+4. File per-phase SOF tickets under SOF-8023 — one per phase, or one per proposal group?
+   (Suggest one per phase.)
