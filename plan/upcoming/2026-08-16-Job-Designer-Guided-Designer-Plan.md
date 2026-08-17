@@ -23,6 +23,11 @@ check at submit, and a live monitor after it. Work is split into three phases so
 ships inside the current layout with no design sign-off, phase 2 introduces the new layout, and
 phase 3 closes the post-submission loop.
 
+**All three phases are built and in review** (see the per-phase documents in `plan/review/`).
+What remains in this document is the material that outlives them: the grounding, the cove
+audit, the cross-cutting rules, the release order and the open questions — this overview moves
+last, once the phases it summarises have shipped.
+
 ## Current state (grounding)
 
 The designer shell is `src/components/Job.jsx` (class component, mixins from `mixwith`):
@@ -148,41 +153,11 @@ folder's own convention asks — this overview moves last.
 Built and in review. Its items, what actually shipped, and the divergences from this plan
 are recorded in
 [`../review/2026-08-17-Job-Designer-Phase-2-Guided-Designer.md`](../review/2026-08-17-Job-Designer-Phase-2-Guided-Designer.md).
+## Phase 3 — The living job (moved)
 
-## Phase 3 — The living job (proposals F1, F2, C2, D3, D4)
-
-Mockup: `04-run-monitor.html`. Mostly lands in dependency packages; job-designer wires props.
-
-### 3.1 Lifecycle header (F2) — `@mat3ra/cove` + job-designer
-
-- Replace the status-colored icon (`iconCls: text-${job.statusCls}`) with cove's
-  `LifecycleTimeline` (Draft → Queued → Running → Finished/Error, timestamps on hover),
-  colored by the job-status mapping from 1.5. Rendered by the header; state derives from
-  existing job status fields. Size: S–M.
-
-### 3.2 Run monitor (F1, C2) — `@mat3ra/jove` + webapp
-
-- `ResultsTab` grows a monitor mode while the job is active: per-unit list with `StatusChip`
-  states, durations, and progress; a cove `LogViewer` tail; convergence chart streaming from
-  the existing property update channel (`onOutputUpdateRequest` / job properties refresh),
-  drawn with cove tokens (single series, recessive grid, emphasized endpoint). On finish it
-  settles into today's results view with a `MetricTile` summary strip.
-- After a successful preflight submit (2.4), the designer navigates to the monitor instead of
-  staying on the editing view (C2).
-- Data contract needs webapp work (log tail endpoint or polling adapter injected via
-  `setDependencies()`); standalone ships a simulated feed for the demo, mirroring the mockup.
-  Size: L–XL (the largest single item; the webapp data adapter is half of it).
-
-### 3.3 Unit inspector drawer (D3) and theme parity (D4) — `@mat3ra/workflow-designer`
-
-- Clicking a flowchart node opens a right-side drawer — built on cove's existing
-  `ResizableDrawer` — with that unit's important settings (replacing the Overview / Important
-  settings / Detailed view bounce). Keep the old sub-tabs behind a prop until the webapp
-  migrates.
-- Flowchart pane colors move to the CSS custom properties exported by cove's `ThemeProvider`
-  (design-language section) so the dark shell stops framing a white canvas; `unitTypes.*`
-  colors come from the completed dark palette.
-- Size: M–L.
+Built and in review. Its items, what actually shipped, and the divergences from this plan
+are recorded in
+[`../review/2026-08-17-Job-Designer-Phase-3-Living-Job.md`](../review/2026-08-17-Job-Designer-Phase-3-Living-Job.md).
 
 ## Cross-cutting
 
@@ -224,14 +199,17 @@ Mockup: `04-run-monitor.html`. Mostly lands in dependency packages; job-designer
 Additive props with safe defaults everywhere, so no lockstep release is required. Order:
 
 1. `cove` (1.5, palette + primitives) — everything else consumes it.
-2. `ive` (1.1, 2.3), `workflow-designer` (1.2, 1.3, 3.3), `jove` (3.2) — in parallel, each
-   behind default-off props.
-3. ~~`jode` (2.1 step metadata)~~ — not needed; the rail derives its sequence from the
+2. `wove` (1.3, 3.3 flowchart theming) — consumed by `workflow-designer`.
+3. `ive` (1.1, 2.3), `workflow-designer` (1.2, 1.3, 3.3), `jove` (3.1 consumer, 3.2) — in
+   parallel, each behind default-off props. All three now import cove primitives that do not
+   exist in the published package, so step 1 is a hard prerequisite, not a preference.
+4. ~~`jode` (2.1 step metadata)~~ — not needed; the rail derives its sequence from the
    readiness selector and reuses the existing tab ids. jode is untouched.
-4. `job-designer` — version bumps + the shell work (1.4, 1.6, 2.1, 2.2, 2.4, 2.5, 2.6),
-   verified in the standalone demo. Its `src/computeEstimate.ts` is a stand-in for ive's
-   canonical estimator and is deleted at this step, once ive ships one.
-5. `web-app` — pin bumps, seam wiring (`registerDependencies`), flag flip after the Cypress
+5. `job-designer` — version bumps + the shell work (1.4, 1.6, 2.1, 2.2, 2.4, 2.5, 2.6),
+   verified in the standalone demo, plus the phase-3 wiring (3.1, 3.2, 3.3). Its
+   `src/computeEstimate.ts` is a stand-in for ive's canonical estimator and is deleted at
+   this step, once ive ships one.
+6. `web-app` — pin bumps, seam wiring (`registerDependencies`), flag flip after the Cypress
    suite is green.
 
 ## Success metrics

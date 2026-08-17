@@ -85,8 +85,9 @@ acknowledged, then releases it.
   It needs the reader's previous job, which is host data job-designer does not hold; it
   wants an injected `getLastComputeConfiguration()` and is not built.
 - **Release ordering.** ive's new components import cove's new primitives, and
-  job-designer's compute wiring is inert until ive ships. Publish order is cove → ive →
-  job-designer.
+  job-designer's compute wiring is inert until ive ships. Phase 3 extended the train to
+  cove → wove → ive / workflow-designer / jove → job-designer; see
+  [`2026-08-17-Job-Designer-Phase-3-Living-Job.md`](2026-08-17-Job-Designer-Phase-3-Living-Job.md).
 - **Webapp-side data.** `clusterMetadata` and `computeQuota` are injected props with demo
   values only; nothing in the webapp publishes pricing, limits or quota yet. Until it does,
   the estimate shows core-hours alone and the limit and budget checks report *skip*.
