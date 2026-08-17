@@ -181,7 +181,9 @@ are recorded in
   workflow-tab entry. Readiness and estimate recomputation must be memoized pure derivation
   that never calls `persistJob` or bumps `renderGeneration`; a compute keystroke must not
   trigger a workflow re-render. Add a regression test that counts `job.render()` calls during
-  compute edits.
+  compute edits. **Done** — `tests/renderGuardrail.tests.ts` counts the calls:
+  readiness, the estimate and the submit blockers stay at zero across a burst of
+  walltime keystrokes, and a whole preflight report renders exactly once.
 - **Accessibility:** rail and dialogs are keyboard-operable (focus trap in `PreflightDialog`,
   `aria-current` on the active step, visible focus states); status is never conveyed by color
   alone (icons + labels on every `StatusChip`); the palette work in 1.5 fixes the contrast
@@ -189,7 +191,12 @@ are recorded in
 - **Localization:** the webapp localizes via TAPi18n (stubbed as `createMessageTextTAPi18n` in
   `Job.jsx`); new user-facing strings (readiness summaries, preflight messages, save-state
   copy) go through an injectable message resolver on the seam with English fallbacks — no
-  hard-coded strings scattered through components.
+  hard-coded strings scattered through components. **Done** — `src/messages.ts` holds ~70
+  keys with English defaults and named interpolation; hosts inject
+  `setDependencies({ translate })`, and fallback is per key so a partial translation still
+  reads as sentences. Component *chrome* outside the phase 2–3 surfaces (legacy tab labels,
+  the error card, dropdown actions) is not migrated — those are static strings a scanner can
+  lift, where the derived prose here could not have been.
 - **Shared with the Materials Designer effort:** the cove primitives and palette repairs in
   1.5 serve the parallel materials-designer UX update too — keep primitive APIs generic (no
   job-specific props) and land cove work first so both designers consume the same release.
@@ -215,7 +222,12 @@ Additive props with safe defaults everywhere, so no lockstep release is required
 ## Success metrics
 
 Instrument before flipping the `useGuidedDesigner` flag so there is a baseline. Events go
-through an analytics hook injected via the seam (no-op in standalone):
+through an analytics hook injected via the seam (no-op in standalone).
+
+**Built** — `src/analytics.ts` declares the event set and the designer emits it; a host
+supplies `setDependencies({ trackEvent })`. A recorder that throws is swallowed: analytics
+must never be what stops somebody submitting a job. What is still needed is the webapp's
+recorder and a dashboard — the events exist, nothing is collecting them yet.
 
 - **Time to first submit** for a new job (open designer → successful submit) — the headline
   number the redesign should move.
@@ -233,7 +245,10 @@ through an analytics hook injected via the seam (no-op in standalone):
   `runPreflightChecks`, preset application, touched-state validation reducer.
 - Component/e2e (Cypress, `tests/e2e`): create-job happy path through the rail; submit blocked
   by a failing preflight then fixed; context-strip navigation; multi-material tray; monitor
-  simulation smoke test.
+  simulation smoke test. **Written** — `guided_designer.feature` covers all of it. The suite
+  it replaces tested a placeholder app that no longer exists and pointed at
+  workflow-designer's port. Cypress is not installed in the authoring environment, so the run
+  itself is unverified; all 30 selectors were resolved against the live demo instead.
 - Regression: webapp integration run (`web-app` Cypress UI suite) before flipping the flag,
   since the webapp injects its own header/dialogs through the seam this plan touches.
 
@@ -242,7 +257,7 @@ through an analytics hook injected via the seam (no-op in standalone):
 | Risk | Mitigation |
 |------|------------|
 | Cluster pricing/limits/queue data may not exist as a clean API | Estimate panel degrades: hide cost/ETA rows when metadata is absent; limits fall back to none |
-| `ButtonMultiSelect` mount-snapshot bug class (stale closures in header buttons) | Read `this.state.entity` at click time (pattern already documented in `Job.jsx`); add a regression test |
+| `ButtonMultiSelect` mount-snapshot bug class (stale closures in header buttons) | **Done** — fixed in cove (tracks the selected *id*, resolves against the live prop) and pinned by `cove/tests/selectedOption.tests.ts`. `Job.jsx`'s read-at-click-time workaround can come out once cove ships |
 | Rail layout breaks webapp deep links (`getRouteQueryTab`) | Keep tab ids stable; rail maps ids 1:1 to today's `TAB_NAVIGATION_CONFIG` |
 | Cross-repo sequencing (ive / workflow-designer / cove / jove versions) | Land package changes behind additive props with safe defaults; bump versions in job-designer last |
 | Dataset-driven jobs (`isUsingDataset`) diverge from the material path | Rail renders a Dataset step in place of Material; readiness selector covers both branches |
