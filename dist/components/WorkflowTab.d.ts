@@ -15,6 +15,13 @@ export type WorkflowTabProps = Pick<WorkflowProps, "workflow" | "adjustable" | "
     accountUsers: any[];
     accountUsersIsLoading: boolean;
     isDescriptionEditable: boolean;
+    /**
+     * Phase 3.3 (@mat3ra/workflow-designer): clicking a unit opens its settings
+     * beside the flowchart, and the designer inherits this shell's theme instead
+     * of forcing a light one. Ignored by releases predating them.
+     */
+    useUnitInspector?: boolean;
+    useHostTheme?: boolean;
 };
-export default function WorkflowTab({ id, className, role, workflow, adjustable, materials, materialsSet, materialsIndex, onMaterialSwitch, onJobRender, onWorkflowUpdate, isLoading, iconCls, metaProperties, onOutputUpdateRequest, onIsMultiMaterialChanged, accountUsersIsLoading, accountUsers, dialogs, profile, publicAccount, templates, createMetaProperty, jobProperties, jobHasParent, isDescriptionEditable, workflowRenderGeneration, }: WorkflowTabProps): React.JSX.Element;
+export default function WorkflowTab({ id, className, role, workflow, adjustable, materials, materialsSet, materialsIndex, onMaterialSwitch, onJobRender, onWorkflowUpdate, isLoading, iconCls, metaProperties, onOutputUpdateRequest, onIsMultiMaterialChanged, accountUsersIsLoading, accountUsers, dialogs, profile, publicAccount, templates, createMetaProperty, jobProperties, jobHasParent, isDescriptionEditable, workflowRenderGeneration, useUnitInspector, useHostTheme, }: WorkflowTabProps): React.JSX.Element;
 //# sourceMappingURL=WorkflowTab.d.ts.map

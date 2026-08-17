@@ -1092,6 +1092,10 @@ class Job extends mix(React.Component).with(
                                         createMetaProperty={createMetaProperty}
                                         jobProperties={jobProperties}
                                         isDescriptionEditable={isDescriptionEditable}
+                                        // Phase 3.3 lives in @mat3ra/workflow-designer;
+                                        // inert until a release carrying it is installed.
+                                        useUnitInspector={useGuidedDesigner}
+                                        useHostTheme={useGuidedDesigner}
                                     />
                                 )}
                                 {isCurrentTabCompute && (
