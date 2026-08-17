@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mockup 03 — Preflight &amp; submit</title>
+<style>
+  /* Deliberately single-theme: mockup of the dark standalone shell. */
+  :root {
+    --bg: #0f1115; --surface: #161a21; --surface-2: #1c212a; --surface-3: #232936;
+    --border: #2a303c; --border-soft: #212734;
+    --text: #e8eaf0; --text-2: #9aa3b2; --text-3: #626c7d;
+    --accent: #8b6cf0; --accent-soft: rgba(139,108,240,.14); --accent-border: rgba(139,108,240,.45);
+    --ok: #4cc38a; --ok-soft: rgba(76,195,138,.13);
+    --warn: #e5a13d; --warn-soft: rgba(229,161,61,.13);
+    --err: #ef6a6a; --err-soft: rgba(239,106,106,.12);
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text); min-height: 100vh;
+    font: 13.5px/1.5 -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* dimmed designer behind the dialog */
+  .backdrop { filter: blur(1.5px) brightness(.55); pointer-events: none; user-select: none; }
+  .fake-bar { display: flex; gap: 12px; align-items: center; padding: 12px 20px; background: var(--surface); border-bottom: 1px solid var(--border); }
+  .fake-name { font-weight: 650; font-size: 15px; }
+  .fake-chip { font: 600 10.5px/1 var(--mono); color: var(--text-2); background: var(--surface-3); border-radius: 20px; padding: 5px 10px; }
+  .fake-cols { display: grid; grid-template-columns: 240px 1fr; gap: 14px; padding: 16px 20px; }
+  .fake-block { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; height: 120px; }
+  .fake-block.tall { height: 380px; }
+
+  /* dialog */
+  .scrim { position: fixed; inset: 0; display: grid; place-items: center; padding: 20px; background: rgba(5,6,9,.55); }
+  .dialog {
+    width: min(640px, 100%); background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; box-shadow: 0 26px 70px rgba(0,0,0,.6); overflow: hidden;
+  }
+  .dlg-head { padding: 16px 20px 12px; display: flex; align-items: baseline; gap: 12px; }
+  .dlg-head h1 { margin: 0; font-size: 16px; font-weight: 700; }
+  .dlg-head .sub { color: var(--text-3); font-size: 12px; }
+  .dlg-head .close { margin-left: auto; color: var(--text-3); font-size: 15px; }
+  .dlg-head .close:hover { color: var(--text); }
+
+  /* summary strip */
+  .sumline { display: flex; flex-wrap: wrap; gap: 7px; padding: 0 20px 14px; }
+  .sum-chip { font-size: 11.5px; color: var(--text-2); background: var(--surface-2); border: 1px solid var(--border-soft); border-radius: 7px; padding: 4px 9px; }
+  .sum-chip b { color: var(--text); font-weight: 600; }
+
+  /* checks */
+  .checks { border-top: 1px solid var(--border); }
+  .check { border-top: 1px solid var(--border-soft); padding: 11px 20px; opacity: 0; transform: translateY(4px); transition: opacity .3s, transform .3s; }
+  .check.in { opacity: 1; transform: none; }
+  .check:first-child { border-top: none; }
+  .check .row { display: flex; gap: 11px; align-items: baseline; }
+  .badge {
+    flex: none; width: 17px; height: 17px; border-radius: 50%; display: grid; place-items: center;
+    font: 700 10px/1 var(--mono); position: relative; top: 2px;
+  }
+  .check.pass .badge { background: var(--ok-soft); color: var(--ok); }
+  .check.warn .badge { background: var(--warn-soft); color: var(--warn); }
+  .check.fail .badge { background: var(--err-soft); color: var(--err); }
+  .check.running .badge { background: var(--surface-3); color: var(--text-3); }
+  .check .m { flex: 1; }
+  .check .m .t { font-weight: 600; font-size: 13px; }
+  .check .m .d { display: block; color: var(--text-3); font-size: 11.5px; margin-top: 1px; }
+  .check.warn .m .d, .check.fail .m .d { color: var(--text-2); }
+  .chk-act {
+    flex: none; font-size: 11.5px; font-weight: 640; border: 1px solid var(--border);
+    border-radius: 7px; padding: 4px 10px; color: var(--text-2);
+  }
+  .chk-act:hover { border-color: var(--accent-border); color: var(--text); }
+  .chk-act.fix { color: var(--err); border-color: rgba(239,106,106,.4); }
+  .chk-act.fix:hover { border-color: var(--err); }
+  .expand { margin: 9px 0 2px 28px; border-left: 2px solid var(--warn); padding: 6px 12px; font-size: 12px; color: var(--text-2); background: var(--warn-soft); border-radius: 0 8px 8px 0; }
+  .expand code { font-family: var(--mono); font-size: 11px; color: var(--text); }
+  [hidden] { display: none !important; }
+
+  /* footer */
+  .dlg-foot { display: flex; align-items: center; gap: 12px; padding: 14px 20px; border-top: 1px solid var(--border); background: var(--surface-2); }
+  .foot-note { font-size: 11.5px; color: var(--text-3); flex: 1; }
+  .foot-note.blocked { color: var(--err); }
+  .btn { border-radius: 8px; padding: 8px 15px; font-weight: 630; font-size: 13px; border: 1px solid var(--border); background: var(--surface-3); }
+  .btn:hover { border-color: var(--text-3); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.primary:hover { filter: brightness(1.1); }
+  .btn.primary:disabled { background: var(--surface-3); border-color: var(--border); color: var(--text-3); cursor: not-allowed; }
+
+  /* success state */
+  .success { text-align: center; padding: 34px 24px 30px; }
+  .success .ring {
+    width: 52px; height: 52px; margin: 0 auto 14px; border-radius: 50%;
+    background: var(--ok-soft); color: var(--ok); display: grid; place-items: center; font-size: 22px;
+  }
+  .success h2 { margin: 0 0 6px; font-size: 17px; }
+  .success p { margin: 0 0 4px; color: var(--text-2); font-size: 12.5px; }
+  .success .jid { font-family: var(--mono); font-size: 11.5px; color: var(--text-3); }
+  .success .acts { display: flex; gap: 10px; justify-content: center; margin-top: 18px; }
+  @media (prefers-reduced-motion: reduce) { .check { transition: none; } }
+</style>
+</head>
+<body>
+
+<div class="backdrop" aria-hidden="true">
+  <div class="fake-bar">
+    <div class="fake-name">Molecular Dynamics — Si, mp-149</div>
+    <span class="fake-chip">DRAFT</span>
+  </div>
+  <div class="fake-cols">
+    <div><div class="fake-block tall"></div></div>
+    <div style="display:grid; gap:14px">
+      <div class="fake-block"></div>
+      <div class="fake-block" style="height:246px"></div>
+    </div>
+  </div>
+</div>
+
+<div class="scrim" role="dialog" aria-modal="true" aria-labelledby="dlgTitle">
+  <div class="dialog">
+    <div id="checkView">
+      <div class="dlg-head">
+        <h1 id="dlgTitle">Preflight</h1>
+        <span class="sub" id="dlgSub">running checks…</span>
+        <button class="close" title="Back to designer">✕</button>
+      </div>
+      <div class="sumline">
+        <span class="sum-chip"><b>Si₂</b> · mp-149</span>
+        <span class="sum-chip"><b>MD — DeePMD</b> · 5 units</span>
+        <span class="sum-chip"><b>cluster-007</b> · 1×16 · queue OR</span>
+        <span class="sum-chip"><b>64 core·h</b> ≈ $5.12</span>
+      </div>
+
+      <div class="checks" id="checks">
+        <div class="check" data-state="pass">
+          <div class="row">
+            <span class="badge">·</span>
+            <span class="m"><span class="t">Material</span><span class="d" data-pass="Si₂ (mp-149) — structure valid, 2 atoms">…</span></span>
+          </div>
+        </div>
+        <div class="check" data-state="pass">
+          <div class="row">
+            <span class="badge">·</span>
+            <span class="m"><span class="t">Workflow renders</span><span class="d" data-pass="5 units · all input templates render without errors">…</span></span>
+          </div>
+        </div>
+        <div class="check" data-state="fail" id="chkWall">
+          <div class="row">
+            <span class="badge">·</span>
+            <span class="m"><span class="t">Compute within limits</span>
+              <span class="d" data-fail="Walltime 24 h exceeds queue OR limit (12 h)" data-pass="1×16 cores · walltime 12 h — fits cluster-007, queue OR">…</span></span>
+            <button class="chk-act fix" id="fixWall" hidden>Fix → set 12 h</button>
+          </div>
+        </div>
+        <div class="check" data-state="warn" id="chkKgrid">
+          <div class="row">
+            <span class="badge">·</span>
+            <span class="m"><span class="t">Convergence sanity</span>
+              <span class="d" data-warn="K-point grid 2×2×2 is coarse for a 2-atom cell">…</span></span>
+            <button class="chk-act" id="detailsKgrid" hidden aria-expanded="false">Details</button>
+            <button class="chk-act" id="ackKgrid" hidden>Acknowledge</button>
+          </div>
+          <div class="expand" id="expandKgrid" hidden>
+            Band energies may be under-converged. Recommended ≥ <code>6×6×6</code> for this cell —
+            edit in <b>Workflow → pw_scf → KPOINTS</b>, or acknowledge to submit as-is.
+          </div>
+        </div>
+        <div class="check" data-state="pass">
+          <div class="row">
+            <span class="badge">·</span>
+            <span class="m"><span class="t">Budget</span><span class="d" data-pass="64 core·h ≈ $5.12 — 294 of 500 core·h will remain this month">…</span></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="dlg-foot">
+        <span class="foot-note" id="footNote">Checks re-run automatically at submit.</span>
+        <button class="btn" id="rerun">Re-run checks</button>
+        <button class="btn primary" id="submitBtn" disabled>Submit job</button>
+      </div>
+    </div>
+
+    <div class="success" id="successView" hidden>
+      <div class="ring">✓</div>
+      <h2>Submitted</h2>
+      <p>Queued on <b>cluster-007</b> · position 2 · starts in ~2 min</p>
+      <p class="jid">job 68a1f3c2 · Demo Project</p>
+      <div class="acts">
+        <button class="btn primary">Follow live in monitor</button>
+        <button class="btn">Create another job</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); };
+  var checks = Array.prototype.slice.call(document.querySelectorAll(".check"));
+  var wallFixed = false, kAcked = false;
+
+  function paint(el) {
+    var st = el.dataset.state;
+    el.classList.remove("running", "pass", "warn", "fail");
+    el.classList.add(st);
+    var badge = el.querySelector(".badge");
+    badge.textContent = st === "pass" ? "✓" : st === "warn" ? "!" : st === "fail" ? "✕" : "·";
+    var d = el.querySelector(".d");
+    d.textContent = d.dataset[st] || d.textContent;
+  }
+
+  function refreshGate() {
+    var fails = checks.filter(function (c) { return c.dataset.state === "fail"; }).length;
+    var warns = checks.filter(function (c) { return c.dataset.state === "warn"; }).length;
+    var note = $("footNote"), btn = $("submitBtn");
+    if (fails) {
+      note.textContent = fails + " check failed — fix it to submit."; note.classList.add("blocked");
+      btn.disabled = true;
+    } else if (warns && !kAcked) {
+      note.textContent = "1 warning — acknowledge it (or fix in Workflow) to submit."; note.classList.remove("blocked");
+      btn.disabled = true;
+    } else {
+      note.textContent = "All checks passed · estimated $5.12."; note.classList.remove("blocked");
+      btn.disabled = false;
+    }
+    $("dlgSub").textContent = fails ? "1 blocking issue" : warns && !kAcked ? "1 warning" : "ready";
+  }
+
+  // staggered check run
+  function run() {
+    checks.forEach(function (c) {
+      c.classList.remove("in", "pass", "warn", "fail"); c.classList.add("running");
+      c.querySelector(".badge").textContent = "·";
+    });
+    $("dlgSub").textContent = "running checks…";
+    checks.forEach(function (c, i) {
+      setTimeout(function () {
+        c.classList.add("in");
+        paint(c);
+        if (c.id === "chkWall") $("fixWall").hidden = wallFixed || c.dataset.state !== "fail";
+        if (c.id === "chkKgrid") {
+          $("detailsKgrid").hidden = false;
+          $("ackKgrid").hidden = kAcked;
+        }
+        if (i === checks.length - 1) refreshGate();
+      }, 240 + i * 340);
+    });
+  }
+
+  $("fixWall").addEventListener("click", function () {
+    wallFixed = true;
+    var c = $("chkWall");
+    c.dataset.state = "pass"; paint(c);
+    this.hidden = true;
+    refreshGate();
+  });
+  $("detailsKgrid").addEventListener("click", function () {
+    var x = $("expandKgrid");
+    x.hidden = !x.hidden;
+    this.setAttribute("aria-expanded", String(!x.hidden));
+  });
+  $("ackKgrid").addEventListener("click", function () {
+    kAcked = true;
+    this.hidden = true;
+    $("expandKgrid").hidden = true;
+    var c = $("chkKgrid");
+    c.querySelector(".d").textContent = "Coarse k-grid acknowledged — submitting as-is";
+    refreshGate();
+  });
+  $("rerun").addEventListener("click", run);
+  $("submitBtn").addEventListener("click", function () {
+    $("checkView").hidden = true;
+    $("successView").hidden = false;
+  });
+
+  run();
+})();
+</script>
+</body>
+</html>

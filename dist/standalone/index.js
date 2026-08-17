@@ -58,6 +58,116 @@ function downloadJson(data, filename) {
     anchor.click();
     URL.revokeObjectURL(url);
 }
+/**
+ * A queue as `ive`'s QueuesTable expects it: the webapp passes model instances,
+ * so the table reads `maxAvailableNodect`, `capacity`, `load` and calls
+ * `getETAClient()`. Plain objects without those crash the queue picker.
+ */
+function demoQueue({ name, displayName, maxAvailableNodect, load, etaMinutes, }) {
+    return {
+        name,
+        displayName,
+        maxAvailableNodect,
+        nodeLimit: maxAvailableNodect,
+        capacity: String(maxAvailableNodect),
+        load,
+        getETAClient: () => ({ display: `~${etaMinutes} min` }),
+    };
+}
+/**
+ * Clusters for the demo. The webapp fetches these; standalone had an empty list,
+ * which left the compute step unfillable and the estimate and preflight with
+ * nothing to judge — so the two states most worth reviewing could never be seen.
+ */
+const DEMO_CLUSTERS = [
+    {
+        hostname: "cluster-007.exabyte.io",
+        name: "cluster-007",
+        displayName: "cluster-007",
+        isDefault: true,
+        queues: [
+            demoQueue({
+                name: "OR",
+                displayName: "on-demand regular",
+                maxAvailableNodect: 4,
+                load: 40,
+                etaMinutes: 8,
+            }),
+            demoQueue({
+                name: "OF",
+                displayName: "on-demand fast",
+                maxAvailableNodect: 2,
+                load: 75,
+                etaMinutes: 2,
+            }),
+            demoQueue({
+                name: "SR",
+                displayName: "spot regular",
+                maxAvailableNodect: 8,
+                load: 20,
+                etaMinutes: 45,
+            }),
+        ],
+    },
+    {
+        hostname: "master-production-20160630-cluster-001.exabyte.io",
+        name: "cluster-001",
+        displayName: "cluster-001",
+        queues: [
+            demoQueue({
+                name: "OR",
+                displayName: "on-demand regular",
+                maxAvailableNodect: 2,
+                load: 60,
+                etaMinutes: 25,
+            }),
+            demoQueue({
+                name: "D",
+                displayName: "debug",
+                maxAvailableNodect: 1,
+                load: 10,
+                etaMinutes: 1,
+            }),
+        ],
+    },
+];
+/** Pricing, limits and queue waits the host would inject. Not part of the job. */
+const DEMO_CLUSTER_METADATA = [
+    {
+        fqdn: "cluster-007.exabyte.io",
+        name: "cluster-007",
+        pricePerCoreHour: 0.08,
+        currency: "USD",
+        limits: { maxNodes: 4, maxPpn: 32, maxWalltimeHours: 12 },
+        queueWaitMinutes: 8,
+    },
+    {
+        fqdn: "master-production-20160630-cluster-001.exabyte.io",
+        name: "cluster-001",
+        pricePerCoreHour: 0.05,
+        currency: "USD",
+        limits: { maxNodes: 2, maxPpn: 16, maxWalltimeHours: 6 },
+        queueWaitMinutes: 25,
+    },
+];
+/** Fixed unix seconds so the simulated run reads the same on every reload. */
+const SIMULATED_START = 1755000000;
+/**
+ * A dialog handle in the tuple shape the webapp passes. The demo has no entity
+ * explorer to open, so it says which dialog would have opened rather than
+ * silently doing nothing — otherwise a broken wiring looks exactly like a
+ * working one.
+ */
+function demoDialog(name) {
+    return [
+        () => {
+            // eslint-disable-next-line no-alert
+            window.alert(`${name} — the webapp opens its entity explorer here.`);
+        },
+        () => { },
+    ];
+}
+const DEMO_QUOTA = { remainingCoreHours: 500, totalCoreHours: 1000, currency: "USD" };
 function App() {
     const allWorkflowJsons = useMemo(() => { var _a; return (_a = new WorkflowStandata().getAll()) !== null && _a !== void 0 ? _a : []; }, []);
     const [workflowIndex, setWorkflowIndex] = useState(0);
@@ -72,11 +182,27 @@ function App() {
             ...m,
         }));
     }, []);
+    // Phase 2 layout, opt-in: the demo is where it gets reviewed before any host flips it on.
+    const [useGuidedDesigner, setUseGuidedDesigner] = useState(true);
+    // A submitted job cannot be reached in the demo — its submit API is a stub —
+    // so the monitor, the lifecycle timeline past Draft, and the rail's Monitor
+    // step would never be reviewable. This starts the job already running.
+    const [isRunSimulated, setIsRunSimulated] = useState(false);
+    // The batch multiplier is the thing the plan says surprises readers most —
+    // "3 materials, the workflow runs 3 times" — and with a single material the
+    // tray copy, the rail summary and the ×3 estimate could never be reviewed.
+    const [isBatch, setIsBatch] = useState(false);
     const [materialIndex, setMaterialIndex] = useState(() => {
         const idx = allMaterialJsons.findIndex((m) => { var _a; return /silicon|^si\b/i.test((_a = m.name) !== null && _a !== void 0 ? _a : ""); });
         return idx >= 0 ? idx : 0;
     });
     const selectedMaterial = useMemo(() => new Material(allMaterialJsons[materialIndex]), [materialIndex, allMaterialJsons]);
+    /** One material, or that one plus its two neighbours as a batch. */
+    const selectedMaterials = useMemo(() => {
+        if (!isBatch)
+            return [selectedMaterial];
+        return [0, 1, 2].map((offset) => new Material(allMaterialJsons[(materialIndex + offset) % allMaterialJsons.length]));
+    }, [isBatch, selectedMaterial, materialIndex, allMaterialJsons]);
     const jobRef = useRef(null);
     const job = useMemo(() => {
         var _a, _b, _c, _d;
@@ -88,7 +214,24 @@ function App() {
             // pre-submission status makes the header editable (name input + Save button),
             // matching how the webapp shows a new job - without it the demo header hides
             // the exact controls the designer is meant to demo.
-            const newJob = new Job({ name, status: "pre-submission" });
+            //
+            // The `_id` stands in for a job the webapp would have persisted: the demo
+            // has no server, so `createOrUpdate` is a no-op and the job would never
+            // acquire one - leaving Submit permanently blocked on "Save the job" and
+            // the preflight unreachable. The save-state indicator is unaffected; it
+            // tracks edits, not identity.
+            const newJob = new Job({
+                _id: "standalone-job-1",
+                name,
+                status: isRunSimulated ? "active" : "pre-submission",
+                statusTrack: isRunSimulated
+                    ? [
+                        { status: "pre-submission", trackedAt: SIMULATED_START },
+                        { status: "submitted", trackedAt: SIMULATED_START + 60 },
+                        { status: "active", trackedAt: SIMULATED_START + 180 },
+                    ]
+                    : [],
+            });
             newJob.setWorkflow(wodeWorkflow);
             newJob.setMaterial(selectedMaterial);
             // job-designer's own reducers (inherited from the webapp's original Job
@@ -107,7 +250,7 @@ function App() {
             return null;
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [wodeWorkflow, selectedMaterial]);
+    }, [wodeWorkflow, selectedMaterial, isRunSimulated]);
     if (job)
         jobRef.current = job;
     const handleExportJson = () => {
@@ -122,7 +265,9 @@ function App() {
             .toLowerCase()}-${Date.now()}.json`;
         downloadJson(raw, safeFilename);
     };
-    const designerKey = `${workflowIndex}-${materialIndex}`;
+    // Remount on a simulated-run flip too: the container builds its redux store from
+    // the job it is first given, so a new Job instance alone would not be picked up.
+    const designerKey = `${workflowIndex}-${materialIndex}-${isRunSimulated}-${isBatch}`;
     if (!wodeWorkflow || !selectedMaterial || !job) {
         return (_jsx(Box, { p: 4, children: _jsx(Typography, { children: "Loading..." }) }));
     }
@@ -138,42 +283,30 @@ function App() {
                                             }) })] })] }), _jsxs(Stack, { direction: "row", spacing: 1, alignItems: "center", children: [_jsx(ScienceIcon, { fontSize: "small", sx: { color: "secondary.main", flexShrink: 0 } }), _jsxs(FormControl, { size: "small", sx: { minWidth: 240 }, children: [_jsx(InputLabel, { id: "material-select-label", children: "Material" }), _jsx(Select, { labelId: "material-select-label", value: materialIndex, label: "Material", onChange: (e) => setMaterialIndex(Number(e.target.value)), children: allMaterialJsons.map((mat, i) => {
                                                 var _a, _b;
                                                 return (_jsx(MenuItem, { value: i, children: (_b = (_a = mat === null || mat === void 0 ? void 0 : mat.name) !== null && _a !== void 0 ? _a : mat === null || mat === void 0 ? void 0 : mat.formula) !== null && _b !== void 0 ? _b : `Material ${i + 1}` }, i));
-                                            }) })] })] }), _jsx(Divider, { orientation: "vertical", flexItem: true }), _jsx(Tooltip, { title: `${allWorkflowJsons.length} workflows · ${allMaterialJsons.length} materials from standata`, children: _jsx(Chip, { label: "standata", size: "small", variant: "outlined", color: "secondary" }) }), _jsx(Box, { sx: { flexGrow: 1 } }), _jsx(Button, { variant: "outlined", size: "small", startIcon: _jsx(DownloadIcon, {}), onClick: handleExportJson, sx: {
+                                            }) })] })] }), _jsx(Divider, { orientation: "vertical", flexItem: true }), _jsx(Tooltip, { title: `${allWorkflowJsons.length} workflows · ${allMaterialJsons.length} materials from standata`, children: _jsx(Chip, { label: "standata", size: "small", variant: "outlined", color: "secondary" }) }), _jsx(Box, { sx: { flexGrow: 1 } }), _jsx(Button, { variant: "outlined", size: "small", onClick: () => setUseGuidedDesigner((isOn) => !isOn), sx: { mr: 1 }, children: useGuidedDesigner ? "Guided layout: on" : "Guided layout: off" }), _jsx(Button, { size: "small", variant: isRunSimulated ? "contained" : "outlined", onClick: () => setIsRunSimulated((on) => !on), "data-tid": "simulate-run-toggle", children: isRunSimulated ? "Job: running" : "Job: draft" }), _jsx(Button, { size: "small", variant: isBatch ? "contained" : "outlined", onClick: () => setIsBatch((on) => !on), "data-tid": "batch-toggle", children: isBatch ? "Materials: 3" : "Materials: 1" }), _jsx(Button, { variant: "outlined", size: "small", startIcon: _jsx(DownloadIcon, {}), onClick: handleExportJson, sx: {
                                 borderColor: "rgba(124,77,255,0.5)",
                                 color: "primary.main",
                                 "&:hover": {
                                     borderColor: "primary.main",
                                     bgcolor: "rgba(124,77,255,0.08)",
                                 },
-                            }, children: "Export JSON" })] }) }), _jsx(JobDesignerProvider, { deps: { getRouteQueryTab: () => "workflow" }, children: _jsx(JobLocalReduxContainer, { job: job, jobMaterials: [selectedMaterial], materials: [selectedMaterial], project: { name: "Demo Project", _id: "standalone-project" }, metaProperties: [], accountUsers: [], accountUsersIsLoading: false, profile: {
+                            }, children: "Export JSON" })] }) }), _jsx(JobDesignerProvider, { deps: { getRouteQueryTab: () => "workflow" }, children: _jsx(JobLocalReduxContainer, { job: job, jobMaterials: selectedMaterials, materials: selectedMaterials, project: { name: "Demo Project", _id: "standalone-project" }, metaProperties: [], accountUsers: [], accountUsersIsLoading: false, profile: {
                         user: { entity: { id: "1" } },
                         account: { entity: { id: "1" } },
                         personalAccount: { entity: { id: "1" } },
-                    }, publicAccount: { entity: { id: "public" } }, clusters: [], refreshMetaProperties: () => { }, jobDialogs: {
-                        selectMaterialsReduxDialog: {
-                            isOpen: false,
-                            open: () => { },
-                            close: () => { },
-                        },
-                        selectParentJobExplorerDialog: {
-                            isOpen: false,
-                            open: () => { },
-                            close: () => { },
-                        },
-                        selectWorkflowReduxDialog: {
-                            isOpen: false,
-                            open: () => { },
-                            close: () => { },
-                        },
-                        datasetUploadsReduxDialog: {
-                            isOpen: false,
-                            open: () => { },
-                            close: () => { },
-                        },
+                    }, publicAccount: { entity: { id: "public" } }, clusters: DEMO_CLUSTERS, refreshMetaProperties: () => { }, 
+                    // Tuples, as `useReduxDialog` returns and the webapp passes —
+                    // the object form the demo used before did not match what
+                    // `Job.jsx` destructures, so every "Select …" action threw.
+                    jobDialogs: {
+                        selectMaterialsReduxDialog: demoDialog("Select materials"),
+                        selectParentJobExplorerDialog: demoDialog("Select parent job"),
+                        selectWorkflowReduxDialog: demoDialog("Select workflow"),
+                        datasetUploadsReduxDialog: demoDialog("Select dataset"),
                     }, workflowDialogs: {
                         pseudoUploadReduxDialog: [() => { }, () => { }],
                         unitTypeReduxDialog: [() => { }, () => { }],
-                    }, templates: [], resultsProperties: [], jobProperties: [], createMetaProperty: async () => undefined, fetchMaterials: async () => [], loadWorkflowEntityById: async () => undefined, MaterialViewerComponent: StandaloneMaterialViewer }, designerKey) })] }));
+                    }, templates: [], resultsProperties: [], jobProperties: [], createMetaProperty: async () => undefined, fetchMaterials: async () => [], loadWorkflowEntityById: async () => undefined, MaterialViewerComponent: StandaloneMaterialViewer, useGuidedDesigner: useGuidedDesigner, clusterMetadata: DEMO_CLUSTER_METADATA, computeQuota: DEMO_QUOTA }, designerKey) })] }));
 }
 const rootElement = document.getElementById("root");
 if (!rootElement)

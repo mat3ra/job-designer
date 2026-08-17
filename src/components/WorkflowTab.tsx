@@ -35,6 +35,13 @@ export type WorkflowTabProps = Pick<
     accountUsers: any[];
     accountUsersIsLoading: boolean;
     isDescriptionEditable: boolean;
+    /**
+     * Phase 3.3 (@mat3ra/workflow-designer): clicking a unit opens its settings
+     * beside the flowchart, and the designer inherits this shell's theme instead
+     * of forcing a light one. Ignored by releases predating them.
+     */
+    useUnitInspector?: boolean;
+    useHostTheme?: boolean;
 };
 
 export default function WorkflowTab({
@@ -65,6 +72,8 @@ export default function WorkflowTab({
     jobHasParent = false,
     isDescriptionEditable,
     workflowRenderGeneration,
+    useUnitInspector,
+    useHostTheme,
 }: WorkflowTabProps) {
     const onSubworkflowUnitUpdate = useCallback(
         (subworkflowOrSchema: SubworkflowDesignerUpdate) => {
@@ -131,6 +140,11 @@ export default function WorkflowTab({
                 workflowRenderGeneration={workflowRenderGeneration}
                 isDescriptionEditable={isDescriptionEditable}
                 jobProperties={jobProperties}
+                // The job has its own Compute tab; without this the same screen
+                // offers two of them and the reader has to guess which one runs.
+                hideComputeSubTab
+                useUnitInspector={useUnitInspector}
+                useHostTheme={useHostTheme}
             />
         </div>
     );

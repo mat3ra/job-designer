@@ -22,6 +22,10 @@ export default function ComputeTab(props) {
         currentAccount,
         currentUser,
         accountUsersIsLoading,
+        useComputeCards,
+        clusterMetadata,
+        computeQuota,
+        runs,
     } = props;
 
     return (
@@ -38,6 +42,10 @@ export default function ComputeTab(props) {
                 showAdvancedOptions={showAdvancedOptions}
                 accountUsers={accountUsers}
                 isAccountUsersLoading={accountUsersIsLoading}
+                useComputeCards={useComputeCards}
+                clusterMetadata={clusterMetadata}
+                computeQuota={computeQuota}
+                runs={runs}
             />
         </div>
     );
@@ -58,6 +66,12 @@ ComputeTab.propTypes = {
     currentUser: PropTypes.object.isRequired,
     currentAccount: PropTypes.object.isRequired,
     clusters: PropTypes.arrayOf(PropTypes.object).isRequired,
+    /* Phase 2.3 (@mat3ra/ive): cluster cards, resource steppers and the estimate panel.
+       Ignored by ive releases predating it. */
+    useComputeCards: PropTypes.bool,
+    clusterMetadata: PropTypes.arrayOf(PropTypes.object),
+    computeQuota: PropTypes.object,
+    runs: PropTypes.number,
 };
 
 ComputeTab.defaultProps = {

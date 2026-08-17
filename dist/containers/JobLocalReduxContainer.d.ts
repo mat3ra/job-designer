@@ -2,6 +2,7 @@ import type { Template } from "@mat3ra/ade";
 import type { Job } from "@mat3ra/jode";
 import type { ResultsProps } from "@mat3ra/jove";
 import React from "react";
+import type { ClusterMetadata, ComputeQuota } from "../computeEstimate";
 interface JobDesignerUser {
     entity: {
         id: string;
@@ -87,6 +88,21 @@ interface JobStoreLocalReduxContainerProps {
     headerChildren?: React.ReactNode;
     /** Whether the job is editable. */
     editable?: boolean;
+    /**
+     * Opt into the guided layout (readiness rail + context strip) instead of the
+     * numbered tab strip. Off by default so hosts flip it when they are ready;
+     * the legacy path stays until parity is verified.
+     */
+    useGuidedDesigner?: boolean;
+    /**
+     * Per-cluster pricing, limits and queue waits. Not part of the job document —
+     * the host supplies it here or through `setDependencies({ clusterMetadata })`.
+     * Without it the estimate and the preflight's limit check report that they
+     * cannot judge, rather than passing on no evidence.
+     */
+    clusterMetadata?: ClusterMetadata[];
+    /** Remaining allowance for the account paying for the job, when the host tracks one. */
+    computeQuota?: ComputeQuota | null;
 }
 type JobLocalReduxContainerProps = JobStoreLocalReduxContainerProps & {
     jobMaterials: any[];

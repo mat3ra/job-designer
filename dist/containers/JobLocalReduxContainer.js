@@ -9,7 +9,7 @@ import { useJobDesignerDeps } from "../JobDesignerContext";
 import { createJobDesignerReducer } from "../reducers";
 import JobContainer from "./JobContainer";
 import { JobDesignerReduxContext, useJobDesignerDispatch, useJobDesignerSelector, } from "./JobDesignerReduxContext";
-function JobStoreLocalReduxContainer({ jobId, workflowId, materials, job, project, publicAccount, metaProperties, accountUsers, accountUsersIsLoading, profile, clusters, refreshMetaProperties, jobDialogs, workflowDialogs, templates, resultsProperties, jobProperties, createMetaProperty, fetchMaterials, loadWorkflowEntityById, onMaterialAdd, onMaterialRemove, onDestroy, getJobMaterialClient, MaterialViewerComponent, headerChildren, editable, }) {
+function JobStoreLocalReduxContainer({ jobId, workflowId, materials, job, project, publicAccount, metaProperties, accountUsers, accountUsersIsLoading, profile, clusters, refreshMetaProperties, jobDialogs, workflowDialogs, templates, resultsProperties, jobProperties, createMetaProperty, fetchMaterials, loadWorkflowEntityById, onMaterialAdd, onMaterialRemove, onDestroy, getJobMaterialClient, MaterialViewerComponent, headerChildren, editable, useGuidedDesigner, clusterMetadata, computeQuota, }) {
     const dispatch = useJobDesignerDispatch();
     const stateMaterials = useJobDesignerSelector((state) => state.materials);
     const stateMaterial = useJobDesignerSelector((state) => state.material);
@@ -114,7 +114,7 @@ function JobStoreLocalReduxContainer({ jobId, workflowId, materials, job, projec
             return;
         handleWorkflowSelect(workflowId).catch(console.error);
     }, [jobId, workflowId]);
-    return (_jsx(JobContainer, { project: project, publicAccount: publicAccount, metaProperties: metaProperties, accountUsers: accountUsers, accountUsersIsLoading: accountUsersIsLoading, profile: profile, clusters: clusters, jobDialogs: jobDialogs, workflowDialogs: workflowDialogs, templates: templates, resultsProperties: resultsProperties, jobProperties: jobProperties, createMetaProperty: createMetaProperty, fetchMaterials: fetchMaterials, onMaterialAdd: onMaterialAdd, onMaterialRemove: onMaterialRemove, onDestroy: onDestroy, getJobMaterialClient: getJobMaterialClient, onWorkflowSelect: handleWorkflowSelect, onWorkflowUpdate: syncWorkflowWithJob, getRouteQueryTab: getRouteQueryTab, MaterialViewerComponent: MaterialViewerComponent, headerChildren: headerChildren, editable: editable }));
+    return (_jsx(JobContainer, { project: project, publicAccount: publicAccount, metaProperties: metaProperties, accountUsers: accountUsers, accountUsersIsLoading: accountUsersIsLoading, profile: profile, clusters: clusters, jobDialogs: jobDialogs, workflowDialogs: workflowDialogs, templates: templates, resultsProperties: resultsProperties, jobProperties: jobProperties, createMetaProperty: createMetaProperty, fetchMaterials: fetchMaterials, onMaterialAdd: onMaterialAdd, onMaterialRemove: onMaterialRemove, onDestroy: onDestroy, getJobMaterialClient: getJobMaterialClient, onWorkflowSelect: handleWorkflowSelect, onWorkflowUpdate: syncWorkflowWithJob, getRouteQueryTab: getRouteQueryTab, MaterialViewerComponent: MaterialViewerComponent, headerChildren: headerChildren, editable: editable, useGuidedDesigner: useGuidedDesigner, clusterMetadata: clusterMetadata, computeQuota: computeQuota }));
 }
 function JobLocalReduxContainer(props) {
     const { job, jobMaterials, metaProperties, workflow: _workflowBootstrap, ...restProps } = props;

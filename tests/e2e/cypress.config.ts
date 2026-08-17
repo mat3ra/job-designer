@@ -4,7 +4,9 @@ import createEsbuildPlugin from "@badeball/cypress-cucumber-preprocessor/esbuild
 import createBundler from "@bahmutov/cypress-esbuild-preprocessor";
 import { defineConfig } from "cypress";
 
-const defaultBaseUrl = "http://localhost:3002";
+// The job designer's own dev server. This said 3002, which is
+// `workflow-designer`'s port — the suite was pointed at a different app.
+const defaultBaseUrl = "http://localhost:3003";
 
 export default defineConfig({
     e2e: {

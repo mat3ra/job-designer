@@ -1,15 +1,34 @@
 /* eslint-disable jsx-a11y/anchor-is-valid */
 import IconByName from "@mat3ra/cove/dist/mui/components/icon/IconByName";
+import { JobLifecycleTimeline } from "@mat3ra/cove/dist/mui/components/lifecycle/LifecycleTimeline";
 import { showWarningAlert } from "@mat3ra/cove/dist/other/alerts";
 import Alert from "@mui/material/Alert";
+import AlertTitle from "@mui/material/AlertTitle";
 import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogContentText from "@mui/material/DialogContentText";
+import DialogTitle from "@mui/material/DialogTitle";
+import Tooltip from "@mui/material/Tooltip";
+import Typography from "@mui/material/Typography";
 import lodash from "lodash";
 import { mix } from "mixwith";
 import React from "react";
 import { ErrorBoundary } from "react-error-boundary";
 import { TAB_NAVIGATION_CONFIG } from "@mat3ra/jode";
+import { ANALYTICS_EVENTS, durationSince, trackEvent } from "../analytics";
+import { estimateComputeUsage, formatEstimate } from "../computeEstimate";
+import { formatBlockedReason } from "../jobSubmission";
+import { normalizeDialogHandle } from "../dialogHandles";
+import { getJobReadiness } from "../jobReadiness";
+import { getSaveState, getSaveStateLabel, shouldWarnBeforeLeaving } from "../saveState";
 import { shouldPersistJobOnUpdate } from "../shouldPersistJobOnUpdate";
 import ComputeTab from "./ComputeTab";
+import JobContextStrip from "./JobContextStrip";
+import JobReadinessRail from "./JobReadinessRail";
+import PreflightDialog from "./PreflightDialog";
 import DatasetTab from "./DatasetTab";
 import FilesTab from "./FilesTab";
 import MaterialTab from "./MaterialTab";
@@ -74,6 +93,48 @@ const getConditionalTabs = (config, conditionalMap, key) =>
     Object.values(config).filter((tab) => conditionalMap[tab[key]] !== false);
 const createMessageTextTAPi18n = (key) => key;
 
+/**
+ * Shown when the designer throws while rendering.
+ *
+ * The fallback used to be `<div />`: a render error produced a silently blank
+ * page, with nothing to report and no way back. Anything the reader can act on
+ * beats an empty screen, so this names what happened and offers a reload; the
+ * digest is there to be pasted into a bug report.
+ */
+function JobDesignerErrorCard({ error, resetErrorBoundary }) {
+    return (
+        <Box p={3}>
+            <Alert
+                severity="error"
+                action={
+                    <Button color="inherit" size="small" onClick={resetErrorBoundary}>
+                        Reload designer
+                    </Button>
+                }
+            >
+                <AlertTitle>This job could not be displayed</AlertTitle>
+                Something in the designer failed to render. Your saved job is unaffected — reloading
+                usually clears it. If it keeps happening, include this with a report:
+                <Box
+                    component="code"
+                    sx={{
+                        display: "block",
+                        mt: 1,
+                        p: 1,
+                        borderRadius: 1,
+                        bgcolor: "action.hover",
+                        fontSize: "0.75rem",
+                        whiteSpace: "pre-wrap",
+                        wordBreak: "break-word",
+                    }}
+                >
+                    {error?.message ?? String(error)}
+                </Box>
+            </Alert>
+        </Box>
+    );
+}
+
 // TODO: resolve the problem with unit output update and make job component deep-comparable again
 class Job extends mix(React.Component).with(
     StatePropsCompareOnUpdateForJobMIxin,
@@ -88,6 +149,10 @@ class Job extends mix(React.Component).with(
             entity: this.props.job, // make a copy to avoid modifying original object `parentJob`
             currentTab: this.defaultTab,
             isWorkflowLoading: false,
+            isTerminateConfirmationOpen: false,
+            hasUnsavedChanges: false,
+            isPreflightOpen: false,
+            hasSubmitted: false,
         };
         this.onEntityUpdate = this.props.onUpdate;
         this.onWorkflowUpdate = this.onWorkflowUpdate.bind(this);
@@ -107,7 +172,18 @@ class Job extends mix(React.Component).with(
     onWorkflowUpdate(workflow) {
         const job = this.state.entity;
         job.setWorkflow(workflow);
+        this.markUnsavedChanges();
         this.props.onUpdate(job);
+    }
+
+    /**
+     * Something the reader did changed the job. Deliberately called from the
+     * handlers rather than from `persistJob()`: that also runs on mount and on
+     * entering the Workflow tab, neither of which is an edit, and claiming
+     * unsaved changes for them would make the indicator meaningless.
+     */
+    markUnsavedChanges() {
+        if (!this.state.hasUnsavedChanges) this.setState({ hasUnsavedChanges: true });
     }
 
     get computedEntity() {
@@ -162,11 +238,151 @@ class Job extends mix(React.Component).with(
 
     componentDidMount() {
         this.persistJob();
+        window.addEventListener("beforeunload", this.warnIfLeavingWithUnsavedChanges);
+
+        // Baseline for "time to first submit". Only for drafts: opening a job that
+        // has already run is a different act and would skew the number.
+        if (this.state.entity.isInInitialStatus) {
+            this.openedAtMs = Date.now();
+            trackEvent(ANALYTICS_EVENTS.designerOpened, {
+                useGuidedDesigner: Boolean(this.props.useGuidedDesigner),
+                startedFromParent: Boolean(this.state.entity.getParentJobClient?.()),
+            });
+        }
+    }
+
+    /**
+     * Browsers ignore custom text here and show their own wording; setting
+     * returnValue is what makes the prompt appear at all.
+     */
+    warnIfLeavingWithUnsavedChanges = (event) => {
+        if (!shouldWarnBeforeLeaving(this.saveStateInputs)) return undefined;
+
+        event.preventDefault();
+        event.returnValue = "";
+        return "";
+    };
+
+    /**
+     * Pure derivation - no entity mutation, and in particular no `job.render()`.
+     * Recomputed per render rather than memoised: it walks a handful of arrays,
+     * whereas caching it would mean tracking invalidation across the same
+     * in-place model mutations that already make this component hard to reason
+     * about.
+     */
+    get jobReadiness() {
+        return getJobReadiness({
+            job: this.state.entity,
+            materials: this.props.materials ?? [],
+            isUsingMaterials: this.isUsingMaterialsTab,
+            datasetConfig: this.props.datasetConfig,
+            editable: Boolean(this.props.editable),
+            clusterMetadata: this.getPreflightContext().clusterMetadata,
+        });
+    }
+
+    /**
+     * The "Select …" dialog that fills each step.
+     *
+     * This is what makes the rail a creation path rather than navigation: without
+     * it the only way to choose a material or a workflow is still the actions
+     * dropdown, which is the thing the rail exists to replace. Review has nothing
+     * to choose, so it gets no affordance.
+     */
+    get readinessStepDialogs() {
+        if (!this.state.entity.isInInitialStatus) return {};
+
+        return {
+            material: this.openSelectMaterialsDialog,
+            dataset: this.openDatasetUploadsDialog,
+            workflow: this.openSelectWorkflowDialog,
+        };
+    }
+
+    /** The rail's Review step has no tab of its own; it lands on Compute. */
+    onReadinessStepSelect = (stepId) => {
+        // The step a session ends on is where abandonment happens.
+        trackEvent(ANALYTICS_EVENTS.stepSelected, { stepId });
+        this.setCurrentTab(stepId === "review" ? TAB_NAVIGATION_CONFIG.compute.id : stepId);
+    };
+
+    /**
+     * Core-hours the job will consume, and what they cost where the host told us
+     * the price. Undefined until nodes, cores and a walltime are all set — the
+     * chip is then left out rather than showing a zero the reader would read as
+     * "free".
+     */
+    get estimateLabel() {
+        const { clusterMetadata } = this.getPreflightContext();
+        const runs = this.isUsingMaterialsTab ? this.props.materials?.length ?? 0 : 1;
+
+        return formatEstimate(
+            estimateComputeUsage(this.state.entity.compute, clusterMetadata, runs),
+        );
+    }
+
+    openPreflight = () => this.setState({ isPreflightOpen: true });
+
+    closePreflight = () => this.setState({ isPreflightOpen: false });
+
+    /**
+     * Read at the moment the checks run rather than captured at render time: the
+     * job entity is mutated in place, and the checks must judge what would
+     * actually be submitted.
+     */
+    getPreflightContext = () => ({
+        job: this.state.entity,
+        materials: this.props.materials ?? [],
+        isUsingMaterials: this.isUsingMaterialsTab,
+        // Pricing, limits and quota are not in the job document — the host injects
+        // them. Absent, the cost and limit checks report that they cannot judge
+        // rather than passing on no evidence.
+        clusterMetadata: getInjectedDeps().clusterMetadata ?? this.props.clusterMetadata,
+        quota: getInjectedDeps().computeQuota ?? this.props.computeQuota,
+    });
+
+    /** Every unit across the job's subworkflows, in workflow order. */
+    get workflowUnits() {
+        const subworkflows = this.state.entity.workflow?.subworkflows ?? [];
+
+        return subworkflows.flatMap(
+            (subworkflow) => subworkflow?.unitsInstances ?? subworkflow?.units ?? [],
+        );
+    }
+
+    confirmPreflightSubmit = () => {
+        // Navigation waits for the status to actually change (see
+        // componentDidUpdate). Switching now would land the reader on a Results
+        // tab that the conditional tab map has not enabled yet, because the job
+        // is still `pre-submission` until the server says otherwise.
+        this.submittedAtMs = Date.now();
+        this.setState({ isPreflightOpen: false, hasSubmitted: true });
+        this.props.onSubmit?.();
+    };
+
+    get saveStateInputs() {
+        return {
+            hasUnsavedChanges: this.state.hasUnsavedChanges,
+            editable: Boolean(this.props.editable),
+            isSaving: Boolean(this.props.isLoading),
+        };
     }
 
     componentDidUpdate(prevProps) {
         if (prevProps.job !== this.props.job) {
             this.setState({ entity: this.props.job });
+        }
+        // The job the reader just submitted has left their hands; what they want
+        // next is to watch it run, not the form they finished with (C2). Fires on
+        // the transition rather than on the click, so the monitor is reachable by
+        // the time we get there.
+        if (this.state.hasSubmitted && !this.props.job.isInInitialStatus) {
+            this.setState({ hasSubmitted: false });
+            trackEvent(ANALYTICS_EVENTS.jobSubmitted, {
+                secondsInDesigner: durationSince(this.openedAtMs),
+                useGuidedDesigner: Boolean(this.props.useGuidedDesigner),
+            });
+            this.setCurrentTab(TAB_NAVIGATION_CONFIG.results.id);
         }
         if (shouldPersistJobOnUpdate(prevProps, this.props)) {
             this.persistJob();
@@ -174,6 +390,7 @@ class Job extends mix(React.Component).with(
     }
 
     componentWillUnmount() {
+        window.removeEventListener("beforeunload", this.warnIfLeavingWithUnsavedChanges);
         this.props.onDestroy();
     }
 
@@ -182,13 +399,20 @@ class Job extends mix(React.Component).with(
             this.shouldComponentUpdateForJob(nextProps, nextState) ||
             this.shouldComponentUpdateFromComputableEntityMixin(nextProps, nextState) ||
             this.state.currentTab !== nextState.currentTab ||
-            this.state.isWorkflowLoading !== nextState.isWorkflowLoading
+            this.state.isWorkflowLoading !== nextState.isWorkflowLoading ||
+            // Without this the confirmation never appears: the mixins below only
+            // consider the job entity, so a state change this component owns is
+            // invisible to them and the render is skipped.
+            this.state.isTerminateConfirmationOpen !== nextState.isTerminateConfirmationOpen ||
+            this.state.hasUnsavedChanges !== nextState.hasUnsavedChanges ||
+            this.state.isPreflightOpen !== nextState.isPreflightOpen
         );
     }
 
     onComputeUpdate = (compute) => {
         const job = this.state.entity;
         job.setCompute(compute);
+        this.markUnsavedChanges();
         this._resetStateEntityAndUpdateParents(job);
     };
 
@@ -207,23 +431,29 @@ class Job extends mix(React.Component).with(
     onNameUpdate = (name) => {
         const job = this.state.entity;
         job.setName(name);
+        this.markUnsavedChanges();
         this._resetStateEntityAndUpdateParents(job);
     };
 
     setParentJob = (parent) => {
         const job = this.state.entity;
         job.setParent(parent);
+        this.markUnsavedChanges();
         this._resetStateEntityAndUpdateParents(job);
     };
 
     onParentRemove = () => {
         const job = this.state.entity;
         job.unsetParent();
+        this.markUnsavedChanges();
         // Workaround to propagate changes to component TODO: figure out how to avoid using forceUpdate
         this._resetStateEntityAndUpdateParents(job);
     };
 
     renderParentJob() {
+        // The context strip carries the parent as a chip; two of them is one too many.
+        if (this.props.useGuidedDesigner) return null;
+
         const parentJob = this.state.entity.getParentJobClient?.();
         return parentJob ? (
             <Alert severity="info" onClose={this.props.editable ? this.onParentRemove : undefined}>
@@ -272,18 +502,10 @@ class Job extends mix(React.Component).with(
                 content: "Select dataset",
                 onClick: this.openDatasetUploadsDialog,
             },
-            {
-                isShown: Boolean(job.id && job.isInInitialStatus),
-                id: "select-submit",
-                content: "Submit",
-                onClick: this.props.onSubmit,
-            },
-            {
-                isShown: Boolean(job.id && job.isInRunningStatus),
-                id: "select-terminate",
-                content: "Terminate",
-                onClick: this.props.onTerminate,
-            },
+            // Submit and Terminate deliberately do NOT live here any more: they are
+            // the two actions the whole screen exists to reach, and a menu item that
+            // silently disappears when the job is not ready tells the reader nothing.
+            // They are header buttons now - see renderSubmitAction().
         ];
 
         // renders divider if some actions should be shown
@@ -293,6 +515,172 @@ class Job extends mix(React.Component).with(
 
         return actions;
     };
+
+    /**
+     * Persists the entity, then clears the unsaved-changes flag.
+     *
+     * Both header paths (injected organism and package-native fallback) go
+     * through here so the indicator cannot be cleared by one and missed by the
+     * other - and so the flag only drops once the save has actually been handed
+     * off, not merely requested.
+     */
+    saveJob(save, ...args) {
+        this._resetStateEntityAndUpdateParents(this.state.entity, () => {
+            save(...args);
+            this.setState({ hasUnsavedChanges: false });
+        });
+    }
+
+    openTerminateConfirmation = () => this.setState({ isTerminateConfirmationOpen: true });
+
+    closeTerminateConfirmation = () => this.setState({ isTerminateConfirmationOpen: false });
+
+    confirmTerminate = () => {
+        // Terminating soon after submitting is the proxy for "submitted with the
+        // wrong settings" — the thing the estimate and preflight should reduce.
+        trackEvent(ANALYTICS_EVENTS.jobTerminated, {
+            secondsSinceSubmit: durationSince(this.submittedAtMs),
+        });
+        this.closeTerminateConfirmation();
+        this.props.onTerminate();
+    };
+
+    /**
+     * Submit and Terminate as header buttons rather than dropdown items.
+     *
+     * A disabled Submit says what is missing instead of vanishing, which is what
+     * the dropdown did. Terminate asks first - it kills a running job, and it
+     * used to be a single unconfirmed click.
+     */
+    /**
+     * Where the job is in its life, in the header.
+     *
+     * Replaces the status tint on the header icon (`iconCls: text-${statusCls}`),
+     * which had one glyph carrying "queued", "running" and "errored" alike and
+     * could say nothing about what had already happened or when. On a draft it
+     * also does the work of telling a first-time reader what is coming.
+     */
+    renderLifecycleTimeline() {
+        const job = this.state.entity;
+
+        return (
+            <JobLifecycleTimeline
+                id="job-lifecycle-timeline"
+                status={job.status}
+                statusTrack={job.statusTrack}
+            />
+        );
+    }
+
+    /**
+     * Says whether the job on screen has been persisted. Only while editable:
+     * a read-only view has nothing to save, so the words would be noise.
+     */
+    renderSaveStateIndicator() {
+        if (!this.props.editable) return null;
+
+        const saveState = getSaveState(this.saveStateInputs);
+
+        return (
+            <Typography
+                id="job-save-state"
+                variant="caption"
+                color={saveState === "unsaved" ? "warning.main" : "text.secondary"}
+                sx={{ whiteSpace: "nowrap" }}
+            >
+                {getSaveStateLabel(saveState)}
+            </Typography>
+        );
+    }
+
+    renderSubmitAction() {
+        const job = this.state.entity;
+        const { editable, onSubmit } = this.props;
+
+        if (!editable) return null;
+
+        if (job.isInRunningStatus) {
+            return (
+                <Button
+                    id="job-terminate-button"
+                    variant="outlined"
+                    color="error"
+                    size="small"
+                    onClick={this.openTerminateConfirmation}
+                >
+                    Terminate
+                </Button>
+            );
+        }
+
+        if (!job.isInInitialStatus) return null;
+
+        // Read from the readiness selector, not from `getSubmitBlockers` directly:
+        // it is the one that knows about host-published cluster limits, and a
+        // Submit button that stayed enabled over a preflight that refuses would be
+        // the designer contradicting itself.
+        const blockedReason = formatBlockedReason(this.jobReadiness.blockingReasons);
+        // Under the guided designer Submit opens the preflight, which is where the
+        // job is actually submitted from. Hosts still on the legacy layout keep
+        // today's one-click submit rather than silently gaining a second step.
+        const usePreflight = Boolean(this.props.useGuidedDesigner);
+
+        return (
+            <Tooltip title={blockedReason ?? ""}>
+                {/* span: MUI needs a non-disabled wrapper for the tooltip to fire. */}
+                <span>
+                    <Button
+                        id="job-submit-button"
+                        variant="contained"
+                        size="small"
+                        disabled={Boolean(blockedReason)}
+                        onClick={usePreflight ? this.openPreflight : onSubmit}
+                    >
+                        Submit
+                    </Button>
+                </span>
+            </Tooltip>
+        );
+    }
+
+    renderPreflightDialog() {
+        if (!this.props.useGuidedDesigner) return null;
+
+        return (
+            <PreflightDialog
+                open={Boolean(this.state.isPreflightOpen)}
+                onClose={this.closePreflight}
+                getContext={this.getPreflightContext}
+                onSubmit={this.confirmPreflightSubmit}
+                onGoToStep={this.onReadinessStepSelect}
+            />
+        );
+    }
+
+    renderTerminateConfirmation() {
+        const job = this.state.entity;
+
+        return (
+            <Dialog
+                open={Boolean(this.state.isTerminateConfirmationOpen)}
+                onClose={this.closeTerminateConfirmation}
+            >
+                <DialogTitle>Terminate this job?</DialogTitle>
+                <DialogContent>
+                    <DialogContentText>
+                        <b>{job.name}</b> is still running. Terminating stops it where it is;
+                        results produced so far are kept, but the run cannot be resumed.
+                    </DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={this.closeTerminateConfirmation}>Keep running</Button>
+                    <Button color="error" variant="contained" onClick={this.confirmTerminate}>
+                        Terminate
+                    </Button>
+                </DialogActions>
+            </Dialog>
+        );
+    }
 
     getSaveBtnProps() {
         const isDesignerLoading = this.props.isLoading || this.state.isWorkflowLoading;
@@ -315,9 +703,7 @@ class Job extends mix(React.Component).with(
                         // persist the entity as it was on the very first render (e.g. the
                         // original auto-generated job, before any parent/workflow/materials
                         // selection or rename) — silently reverting all later edits on Save.
-                        this._resetStateEntityAndUpdateParents(this.state.entity, () =>
-                            this.props.onSave(...args),
-                        );
+                        this.saveJob((...saveArgs) => this.props.onSave(...saveArgs), ...args);
                     },
                 },
             ],
@@ -401,8 +787,8 @@ class Job extends mix(React.Component).with(
     };
 
     openAddMaterialsDialog = () => {
-        const [openAddMaterialsDialog, closeAddMaterialsDialog] =
-            this.props.jobDialogs.selectMaterialsReduxDialog;
+        const { open: openAddMaterialsDialog, close: closeAddMaterialsDialog } =
+            normalizeDialogHandle(this.props.jobDialogs.selectMaterialsReduxDialog);
 
         openAddMaterialsDialog({
             id: "material-add",
@@ -418,8 +804,8 @@ class Job extends mix(React.Component).with(
     };
 
     openSelectMaterialsDialog = () => {
-        const [openSelectMaterialsDialog, closeSelectMaterialsDialog] =
-            this.props.jobDialogs.selectMaterialsReduxDialog;
+        const { open: openSelectMaterialsDialog, close: closeSelectMaterialsDialog } =
+            normalizeDialogHandle(this.props.jobDialogs.selectMaterialsReduxDialog);
 
         openSelectMaterialsDialog({
             title: "Select Materials",
@@ -434,8 +820,8 @@ class Job extends mix(React.Component).with(
     };
 
     openSelectParentJobDialog = () => {
-        const [openSelectParentJobDialog, closeSelectParentJobDialog] =
-            this.props.jobDialogs.selectParentJobExplorerDialog;
+        const { open: openSelectParentJobDialog, close: closeSelectParentJobDialog } =
+            normalizeDialogHandle(this.props.jobDialogs.selectParentJobExplorerDialog);
 
         openSelectParentJobDialog({
             onClose: closeSelectParentJobDialog,
@@ -444,14 +830,16 @@ class Job extends mix(React.Component).with(
     };
 
     closeSelectParentJobDialog() {
-        const [, closeSelectParentJobDialog] = this.props.jobDialogs.selectParentJobExplorerDialog;
+        const { close: closeSelectParentJobDialog } = normalizeDialogHandle(
+            this.props.jobDialogs.selectParentJobExplorerDialog,
+        );
 
         closeSelectParentJobDialog();
     }
 
     openSelectWorkflowDialog = () => {
-        const [openSelectWorkflowDialog, closeSelectWorkflowDialog] =
-            this.props.jobDialogs.selectWorkflowReduxDialog;
+        const { open: openSelectWorkflowDialog, close: closeSelectWorkflowDialog } =
+            normalizeDialogHandle(this.props.jobDialogs.selectWorkflowReduxDialog);
 
         openSelectWorkflowDialog({
             onClose: closeSelectWorkflowDialog,
@@ -460,14 +848,16 @@ class Job extends mix(React.Component).with(
     };
 
     closeSelectWorkflowDialog = () => {
-        const [, closeSelectWorkflowDialog] = this.props.jobDialogs.selectWorkflowReduxDialog;
+        const { close: closeSelectWorkflowDialog } = normalizeDialogHandle(
+            this.props.jobDialogs.selectWorkflowReduxDialog,
+        );
 
         closeSelectWorkflowDialog();
     };
 
     openDatasetUploadsDialog = () => {
-        const [openDatasetUploadsDialog, closeDatasetUploadsDialog] =
-            this.props.jobDialogs.datasetUploadsReduxDialog;
+        const { open: openDatasetUploadsDialog, close: closeDatasetUploadsDialog } =
+            normalizeDialogHandle(this.props.jobDialogs.datasetUploadsReduxDialog);
 
         openDatasetUploadsDialog({
             onClose: closeDatasetUploadsDialog,
@@ -582,6 +972,15 @@ class Job extends mix(React.Component).with(
 
         const activeTabIndex = tabsToRender.findIndex((item) => item.id === this.state.currentTab);
 
+        // Phase 2 layout is opt-in per host so the webapp and the demo can flip
+        // independently; the legacy tab strip stays until parity is verified.
+        const useGuidedDesigner = Boolean(this.props.useGuidedDesigner);
+        const readiness = this.jobReadiness;
+        const parentJobClient = job.getParentJobClient?.();
+        const parentJobForStrip = parentJobClient
+            ? { name: parentJobClient.name, projectSlug: parentJobClient._project?.slug }
+            : null;
+
         const isDescriptionEditable = this.isDescriptionEditable(job);
         const isDesignerLoading = isLoading || this.state.isWorkflowLoading;
         const dropdownProps = this.getDropdownProps();
@@ -594,7 +993,7 @@ class Job extends mix(React.Component).with(
         const InjectedEntityHeader = getInjectedDeps().EntityHeaderComponent;
 
         return (
-            <ErrorBoundary fallback={<div />}>
+            <ErrorBoundary FallbackComponent={JobDesignerErrorCard}>
                 {InjectedEntityHeader ? (
                     <InjectedEntityHeader
                         name={job.name}
@@ -604,7 +1003,6 @@ class Job extends mix(React.Component).with(
                         subtitle={project?.name ? { project: project.name } : undefined}
                         description={job.description}
                         icon="entities.job"
-                        iconCls={`text-${job.statusCls}`}
                         id="job-designer-header"
                         saveBtnProps={{
                             isShown: Boolean(this.props.editable),
@@ -614,8 +1012,9 @@ class Job extends mix(React.Component).with(
                             // on mount, so a captured entity would forever persist the very
                             // first render's state - see getSaveBtnProps for the full note.
                             onSave: (omitRedirect) =>
-                                this._resetStateEntityAndUpdateParents(this.state.entity, () =>
-                                    this.props.onSave(omitRedirect),
+                                this.saveJob(
+                                    (redirectFlag) => this.props.onSave(redirectFlag),
+                                    omitRedirect,
                                 ),
                         }}
                         dropdownProps={dropdownProps}
@@ -625,6 +1024,9 @@ class Job extends mix(React.Component).with(
                         isDescriptionEditable={isDescriptionEditable}
                         onDescriptionUpdate={this.onDescriptionUpdate}
                     >
+                        {this.renderLifecycleTimeline()}
+                        {this.renderSaveStateIndicator()}
+                        {this.renderSubmitAction()}
                         {headerChildren ?? null}
                     </InjectedEntityHeader>
                 ) : (
@@ -643,19 +1045,59 @@ class Job extends mix(React.Component).with(
                             empty menu. */}
                         {dropdownProps.isShown && <Dropdown {...dropdownProps} />}
                         {this.props.editable && <ButtonMultiSelect {...this.getSaveBtnProps()} />}
+                        {this.renderLifecycleTimeline()}
+                        {this.renderSaveStateIndicator()}
+                        {this.renderSubmitAction()}
                         {headerChildren ?? null}
                     </EntityHeader>
                 )}
+                {this.renderTerminateConfirmation()}
+                {this.renderPreflightDialog()}
                 {this.renderParentJob()}
                 {this.renderErrors()}
                 {this.renderWarnings()}
-                <TabsMenu
-                    tabs={tabs}
-                    activeTabIndex={activeTabIndex}
-                    variant="fullWidth"
-                    centered
-                />
-                <Box>
+                {useGuidedDesigner ? (
+                    <JobContextStrip
+                        steps={readiness.steps}
+                        onSelect={this.onReadinessStepSelect}
+                        parentJob={parentJobForStrip}
+                        onParentRemove={editable ? this.onParentRemove : undefined}
+                        estimateLabel={this.estimateLabel}
+                    />
+                ) : null}
+                {useGuidedDesigner ? null : (
+                    <TabsMenu
+                        tabs={tabs}
+                        activeTabIndex={activeTabIndex}
+                        variant="fullWidth"
+                        centered
+                    />
+                )}
+                <Box
+                    sx={
+                        useGuidedDesigner
+                            ? {
+                                  display: "grid",
+                                  gridTemplateColumns: { xs: "1fr", md: "auto minmax(0, 1fr)" },
+                                  alignItems: "start",
+                              }
+                            : undefined
+                    }
+                >
+                    {useGuidedDesigner ? (
+                        <JobReadinessRail
+                            steps={readiness.steps}
+                            activeStepId={
+                                this.state.currentTab === TAB_NAVIGATION_CONFIG.compute.id &&
+                                readiness.isSubmittable
+                                    ? TAB_NAVIGATION_CONFIG.compute.id
+                                    : this.state.currentTab
+                            }
+                            onSelect={this.onReadinessStepSelect}
+                            onChange={this.readinessStepDialogs}
+                            editable={editable}
+                        />
+                    ) : null}
                     <div className="tab-content">
                         {this.state.isWorkflowLoading ? (
                             <LoadingIndicator included />
@@ -672,6 +1114,7 @@ class Job extends mix(React.Component).with(
                                         index={index}
                                         length={length}
                                         onUpdateIndex={onUpdateIndex}
+                                        materials={materials}
                                         onMaterialRemove={onMaterialRemove}
                                         addRemoveAllowed={!job.id}
                                         openAddMaterialsDialog={this.openAddMaterialsDialog}
@@ -719,6 +1162,10 @@ class Job extends mix(React.Component).with(
                                         createMetaProperty={createMetaProperty}
                                         jobProperties={jobProperties}
                                         isDescriptionEditable={isDescriptionEditable}
+                                        // Phase 3.3 lives in @mat3ra/workflow-designer;
+                                        // inert until a release carrying it is installed.
+                                        useUnitInspector={useGuidedDesigner}
+                                        useHostTheme={useGuidedDesigner}
                                     />
                                 )}
                                 {isCurrentTabCompute && (
@@ -736,6 +1183,16 @@ class Job extends mix(React.Component).with(
                                         accountUsersIsLoading={accountUsersIsLoading}
                                         currentUser={currentUser}
                                         currentAccount={currentAccount}
+                                        // Phase 2.3 lives in @mat3ra/ive; these are inert
+                                        // until a release carrying it is installed.
+                                        useComputeCards={useGuidedDesigner}
+                                        clusterMetadata={this.getPreflightContext().clusterMetadata}
+                                        computeQuota={this.getPreflightContext().quota}
+                                        runs={
+                                            this.isUsingMaterialsTab
+                                                ? Math.max(materials?.length ?? 1, 1)
+                                                : 1
+                                        }
                                     />
                                 )}
                                 {isCurrentTabResults && (
@@ -753,6 +1210,12 @@ class Job extends mix(React.Component).with(
                                         MaterialComponent={MaterialViewerComponent}
                                         fileUtils={getFileUtils()}
                                         DataGridComponent={getInjectedDeps().DataGridComponent}
+                                        // Phase 3.2 lives in @mat3ra/jove; inert until a
+                                        // release carrying it is installed.
+                                        showRunMonitor={useGuidedDesigner && !job.isInInitialStatus}
+                                        units={this.workflowUnits}
+                                        logText={getInjectedDeps().getJobLogTail?.(job)}
+                                        hasLogSource={Boolean(getInjectedDeps().getJobLogTail)}
                                     />
                                 )}
                                 {isCurrentTabFiles && (
