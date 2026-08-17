@@ -147,7 +147,11 @@ class Job extends mix(React.Component).with(StatePropsCompareOnUpdateForJobMIxin
         };
         this.confirmPreflightSubmit = () => {
             var _a, _b;
-            this.setState({ isPreflightOpen: false });
+            // Navigation waits for the status to actually change (see
+            // componentDidUpdate). Switching now would land the reader on a Results
+            // tab that the conditional tab map has not enabled yet, because the job
+            // is still `pre-submission` until the server says otherwise.
+            this.setState({ isPreflightOpen: false, hasSubmitted: true });
             (_b = (_a = this.props).onSubmit) === null || _b === void 0 ? void 0 : _b.call(_a);
         };
         this.onComputeUpdate = (compute) => {
@@ -370,6 +374,7 @@ class Job extends mix(React.Component).with(StatePropsCompareOnUpdateForJobMIxin
             isTerminateConfirmationOpen: false,
             hasUnsavedChanges: false,
             isPreflightOpen: false,
+            hasSubmitted: false,
         };
         this.onEntityUpdate = this.props.onUpdate;
         this.onWorkflowUpdate = this.onWorkflowUpdate.bind(this);
@@ -481,6 +486,12 @@ class Job extends mix(React.Component).with(StatePropsCompareOnUpdateForJobMIxin
         const runs = this.isUsingMaterialsTab ? (_b = (_a = this.props.materials) === null || _a === void 0 ? void 0 : _a.length) !== null && _b !== void 0 ? _b : 0 : 1;
         return formatEstimate(estimateComputeUsage(this.state.entity.compute, clusterMetadata, runs));
     }
+    /** Every unit across the job's subworkflows, in workflow order. */
+    get workflowUnits() {
+        var _a, _b;
+        const subworkflows = (_b = (_a = this.state.entity.workflow) === null || _a === void 0 ? void 0 : _a.subworkflows) !== null && _b !== void 0 ? _b : [];
+        return subworkflows.flatMap((subworkflow) => { var _a, _b; return (_b = (_a = subworkflow === null || subworkflow === void 0 ? void 0 : subworkflow.unitsInstances) !== null && _a !== void 0 ? _a : subworkflow === null || subworkflow === void 0 ? void 0 : subworkflow.units) !== null && _b !== void 0 ? _b : []; });
+    }
     get saveStateInputs() {
         return {
             hasUnsavedChanges: this.state.hasUnsavedChanges,
@@ -491,6 +502,14 @@ class Job extends mix(React.Component).with(StatePropsCompareOnUpdateForJobMIxin
     componentDidUpdate(prevProps) {
         if (prevProps.job !== this.props.job) {
             this.setState({ entity: this.props.job });
+        }
+        // The job the reader just submitted has left their hands; what they want
+        // next is to watch it run, not the form they finished with (C2). Fires on
+        // the transition rather than on the click, so the monitor is reachable by
+        // the time we get there.
+        if (this.state.hasSubmitted && !this.props.job.isInInitialStatus) {
+            this.setState({ hasSubmitted: false });
+            this.setCurrentTab(TAB_NAVIGATION_CONFIG.results.id);
         }
         if (shouldPersistJobOnUpdate(prevProps, this.props)) {
             this.persistJob();
@@ -642,7 +661,7 @@ class Job extends mix(React.Component).with(StatePropsCompareOnUpdateForJobMIxin
         closeSelectParentJobDialog();
     }
     render() {
-        var _a, _b, _c, _d;
+        var _a, _b, _c, _d, _e, _f;
         const { editable, isLoading, hideDescription, material, index, length, onUpdateIndex, onMaterialRemove, datasetConfig, allowedWorkflows, onWorkflowSelect, materials, materialsSet, metaProperties, onIsMultiMaterialChanged, onMaterialSwitch, onOutputUpdateRequest, clusters, profile, accountUsers, accountUsersIsLoading, workflowDialogs, publicAccount, project, templates, resultsProperties, jobProperties, createMetaProperty, fetchMaterials, renderGeneration, MaterialViewerComponent, 
         /** Optional children rendered in the right side of the EntityHeader (selectors, export button, etc.). */
         headerChildren, } = this.props;
@@ -716,7 +735,10 @@ class Job extends mix(React.Component).with(StatePropsCompareOnUpdateForJobMIxin
                                         // until a release carrying it is installed.
                                         useComputeCards: useGuidedDesigner, clusterMetadata: this.getPreflightContext().clusterMetadata, computeQuota: this.getPreflightContext().quota, runs: this.isUsingMaterialsTab
                                             ? Math.max((_d = materials === null || materials === void 0 ? void 0 : materials.length) !== null && _d !== void 0 ? _d : 1, 1)
-                                            : 1 })), isCurrentTabResults && (_jsx(ResultsTab, { className: `jobs-view ${isActive(isCurrentTabResults)}`, id: TAB_NAVIGATION_CONFIG.results.id, role: "tabpanel", job: job, material: material, publicAccount: publicAccount, profile: profile, resultsProperties: resultsProperties, jobProperties: jobProperties, fetchMaterials: fetchMaterials, MaterialComponent: MaterialViewerComponent, fileUtils: getFileUtils(), DataGridComponent: getInjectedDeps().DataGridComponent })), isCurrentTabFiles && (_jsx(FilesTab, { className: `jobs-view ${isActive(isCurrentTabFiles)}`, id: TAB_NAVIGATION_CONFIG.files.id, role: "tabpanel", job: job }))] })) })] })] }));
+                                            : 1 })), isCurrentTabResults && (_jsx(ResultsTab, { className: `jobs-view ${isActive(isCurrentTabResults)}`, id: TAB_NAVIGATION_CONFIG.results.id, role: "tabpanel", job: job, material: material, publicAccount: publicAccount, profile: profile, resultsProperties: resultsProperties, jobProperties: jobProperties, fetchMaterials: fetchMaterials, MaterialComponent: MaterialViewerComponent, fileUtils: getFileUtils(), DataGridComponent: getInjectedDeps().DataGridComponent, 
+                                        // Phase 3.2 lives in @mat3ra/jove; inert until a
+                                        // release carrying it is installed.
+                                        showRunMonitor: useGuidedDesigner && !job.isInInitialStatus, units: this.workflowUnits, logText: (_f = (_e = getInjectedDeps()).getJobLogTail) === null || _f === void 0 ? void 0 : _f.call(_e, job), hasLogSource: Boolean(getInjectedDeps().getJobLogTail) })), isCurrentTabFiles && (_jsx(FilesTab, { className: `jobs-view ${isActive(isCurrentTabFiles)}`, id: TAB_NAVIGATION_CONFIG.files.id, role: "tabpanel", job: job }))] })) })] })] }));
     }
 }
 export default Job;

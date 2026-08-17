@@ -61,6 +61,8 @@ declare class Job {
         clusterMetadata: any;
         quota: any;
     };
+    /** Every unit across the job's subworkflows, in workflow order. */
+    get workflowUnits(): any;
     confirmPreflightSubmit: () => void;
     get saveStateInputs(): {
         hasUnsavedChanges: any;

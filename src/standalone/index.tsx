@@ -174,6 +174,9 @@ const DEMO_CLUSTER_METADATA = [
     },
 ];
 
+/** Fixed unix seconds so the simulated run reads the same on every reload. */
+const SIMULATED_START = 1_755_000_000;
+
 const DEMO_QUOTA = { remainingCoreHours: 500, totalCoreHours: 1000, currency: "USD" };
 
 function App() {
@@ -196,6 +199,10 @@ function App() {
     );
     // Phase 2 layout, opt-in: the demo is where it gets reviewed before any host flips it on.
     const [useGuidedDesigner, setUseGuidedDesigner] = useState(true);
+    // A submitted job cannot be reached in the demo — its submit API is a stub —
+    // so the monitor, the lifecycle timeline past Draft, and the rail's Monitor
+    // step would never be reviewable. This starts the job already running.
+    const [isRunSimulated, setIsRunSimulated] = useState(false);
     const [materialIndex, setMaterialIndex] = useState(() => {
         const idx = allMaterialJsons.findIndex((m: any) => /silicon|^si\b/i.test(m.name ?? ""));
         return idx >= 0 ? idx : 0;
@@ -224,7 +231,18 @@ function App() {
             // acquire one - leaving Submit permanently blocked on "Save the job" and
             // the preflight unreachable. The save-state indicator is unaffected; it
             // tracks edits, not identity.
-            const newJob = new Job({ _id: "standalone-job-1", name, status: "pre-submission" });
+            const newJob = new Job({
+                _id: "standalone-job-1",
+                name,
+                status: isRunSimulated ? "active" : "pre-submission",
+                statusTrack: isRunSimulated
+                    ? [
+                          { status: "pre-submission", trackedAt: SIMULATED_START },
+                          { status: "submitted", trackedAt: SIMULATED_START + 60 },
+                          { status: "active", trackedAt: SIMULATED_START + 180 },
+                      ]
+                    : [],
+            });
             newJob.setWorkflow(wodeWorkflow);
             newJob.setMaterial(selectedMaterial);
 
@@ -244,7 +262,7 @@ function App() {
             return null;
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [wodeWorkflow, selectedMaterial]);
+    }, [wodeWorkflow, selectedMaterial, isRunSimulated]);
 
     if (job) jobRef.current = job;
 
@@ -259,7 +277,9 @@ function App() {
         downloadJson(raw, safeFilename);
     };
 
-    const designerKey = `${workflowIndex}-${materialIndex}`;
+    // Remount on a simulated-run flip too: the container builds its redux store from
+    // the job it is first given, so a new Job instance alone would not be picked up.
+    const designerKey = `${workflowIndex}-${materialIndex}-${isRunSimulated}`;
 
     if (!wodeWorkflow || !selectedMaterial || !job) {
         return (
@@ -344,6 +364,14 @@ function App() {
                         sx={{ mr: 1 }}
                     >
                         {useGuidedDesigner ? "Guided layout: on" : "Guided layout: off"}
+                    </Button>
+                    <Button
+                        size="small"
+                        variant={isRunSimulated ? "contained" : "outlined"}
+                        onClick={() => setIsRunSimulated((on) => !on)}
+                        data-tid="simulate-run-toggle"
+                    >
+                        {isRunSimulated ? "Job: running" : "Job: draft"}
                     </Button>
 
                     <Button

@@ -150,6 +150,8 @@ const DEMO_CLUSTER_METADATA = [
         queueWaitMinutes: 25,
     },
 ];
+/** Fixed unix seconds so the simulated run reads the same on every reload. */
+const SIMULATED_START = 1755000000;
 const DEMO_QUOTA = { remainingCoreHours: 500, totalCoreHours: 1000, currency: "USD" };
 function App() {
     const allWorkflowJsons = useMemo(() => { var _a; return (_a = new WorkflowStandata().getAll()) !== null && _a !== void 0 ? _a : []; }, []);
@@ -167,6 +169,10 @@ function App() {
     }, []);
     // Phase 2 layout, opt-in: the demo is where it gets reviewed before any host flips it on.
     const [useGuidedDesigner, setUseGuidedDesigner] = useState(true);
+    // A submitted job cannot be reached in the demo — its submit API is a stub —
+    // so the monitor, the lifecycle timeline past Draft, and the rail's Monitor
+    // step would never be reviewable. This starts the job already running.
+    const [isRunSimulated, setIsRunSimulated] = useState(false);
     const [materialIndex, setMaterialIndex] = useState(() => {
         const idx = allMaterialJsons.findIndex((m) => { var _a; return /silicon|^si\b/i.test((_a = m.name) !== null && _a !== void 0 ? _a : ""); });
         return idx >= 0 ? idx : 0;
@@ -189,7 +195,18 @@ function App() {
             // acquire one - leaving Submit permanently blocked on "Save the job" and
             // the preflight unreachable. The save-state indicator is unaffected; it
             // tracks edits, not identity.
-            const newJob = new Job({ _id: "standalone-job-1", name, status: "pre-submission" });
+            const newJob = new Job({
+                _id: "standalone-job-1",
+                name,
+                status: isRunSimulated ? "active" : "pre-submission",
+                statusTrack: isRunSimulated
+                    ? [
+                        { status: "pre-submission", trackedAt: SIMULATED_START },
+                        { status: "submitted", trackedAt: SIMULATED_START + 60 },
+                        { status: "active", trackedAt: SIMULATED_START + 180 },
+                    ]
+                    : [],
+            });
             newJob.setWorkflow(wodeWorkflow);
             newJob.setMaterial(selectedMaterial);
             // job-designer's own reducers (inherited from the webapp's original Job
@@ -208,7 +225,7 @@ function App() {
             return null;
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [wodeWorkflow, selectedMaterial]);
+    }, [wodeWorkflow, selectedMaterial, isRunSimulated]);
     if (job)
         jobRef.current = job;
     const handleExportJson = () => {
@@ -223,7 +240,9 @@ function App() {
             .toLowerCase()}-${Date.now()}.json`;
         downloadJson(raw, safeFilename);
     };
-    const designerKey = `${workflowIndex}-${materialIndex}`;
+    // Remount on a simulated-run flip too: the container builds its redux store from
+    // the job it is first given, so a new Job instance alone would not be picked up.
+    const designerKey = `${workflowIndex}-${materialIndex}-${isRunSimulated}`;
     if (!wodeWorkflow || !selectedMaterial || !job) {
         return (_jsx(Box, { p: 4, children: _jsx(Typography, { children: "Loading..." }) }));
     }
@@ -239,7 +258,7 @@ function App() {
                                             }) })] })] }), _jsxs(Stack, { direction: "row", spacing: 1, alignItems: "center", children: [_jsx(ScienceIcon, { fontSize: "small", sx: { color: "secondary.main", flexShrink: 0 } }), _jsxs(FormControl, { size: "small", sx: { minWidth: 240 }, children: [_jsx(InputLabel, { id: "material-select-label", children: "Material" }), _jsx(Select, { labelId: "material-select-label", value: materialIndex, label: "Material", onChange: (e) => setMaterialIndex(Number(e.target.value)), children: allMaterialJsons.map((mat, i) => {
                                                 var _a, _b;
                                                 return (_jsx(MenuItem, { value: i, children: (_b = (_a = mat === null || mat === void 0 ? void 0 : mat.name) !== null && _a !== void 0 ? _a : mat === null || mat === void 0 ? void 0 : mat.formula) !== null && _b !== void 0 ? _b : `Material ${i + 1}` }, i));
-                                            }) })] })] }), _jsx(Divider, { orientation: "vertical", flexItem: true }), _jsx(Tooltip, { title: `${allWorkflowJsons.length} workflows · ${allMaterialJsons.length} materials from standata`, children: _jsx(Chip, { label: "standata", size: "small", variant: "outlined", color: "secondary" }) }), _jsx(Box, { sx: { flexGrow: 1 } }), _jsx(Button, { variant: "outlined", size: "small", onClick: () => setUseGuidedDesigner((isOn) => !isOn), sx: { mr: 1 }, children: useGuidedDesigner ? "Guided layout: on" : "Guided layout: off" }), _jsx(Button, { variant: "outlined", size: "small", startIcon: _jsx(DownloadIcon, {}), onClick: handleExportJson, sx: {
+                                            }) })] })] }), _jsx(Divider, { orientation: "vertical", flexItem: true }), _jsx(Tooltip, { title: `${allWorkflowJsons.length} workflows · ${allMaterialJsons.length} materials from standata`, children: _jsx(Chip, { label: "standata", size: "small", variant: "outlined", color: "secondary" }) }), _jsx(Box, { sx: { flexGrow: 1 } }), _jsx(Button, { variant: "outlined", size: "small", onClick: () => setUseGuidedDesigner((isOn) => !isOn), sx: { mr: 1 }, children: useGuidedDesigner ? "Guided layout: on" : "Guided layout: off" }), _jsx(Button, { size: "small", variant: isRunSimulated ? "contained" : "outlined", onClick: () => setIsRunSimulated((on) => !on), "data-tid": "simulate-run-toggle", children: isRunSimulated ? "Job: running" : "Job: draft" }), _jsx(Button, { variant: "outlined", size: "small", startIcon: _jsx(DownloadIcon, {}), onClick: handleExportJson, sx: {
                                 borderColor: "rgba(124,77,255,0.5)",
                                 color: "primary.main",
                                 "&:hover": {

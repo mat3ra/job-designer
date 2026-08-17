@@ -150,6 +150,7 @@ class Job extends mix(React.Component).with(
             isTerminateConfirmationOpen: false,
             hasUnsavedChanges: false,
             isPreflightOpen: false,
+            hasSubmitted: false,
         };
         this.onEntityUpdate = this.props.onUpdate;
         this.onWorkflowUpdate = this.onWorkflowUpdate.bind(this);
@@ -308,8 +309,21 @@ class Job extends mix(React.Component).with(
         quota: getInjectedDeps().computeQuota ?? this.props.computeQuota,
     });
 
+    /** Every unit across the job's subworkflows, in workflow order. */
+    get workflowUnits() {
+        const subworkflows = this.state.entity.workflow?.subworkflows ?? [];
+
+        return subworkflows.flatMap(
+            (subworkflow) => subworkflow?.unitsInstances ?? subworkflow?.units ?? [],
+        );
+    }
+
     confirmPreflightSubmit = () => {
-        this.setState({ isPreflightOpen: false });
+        // Navigation waits for the status to actually change (see
+        // componentDidUpdate). Switching now would land the reader on a Results
+        // tab that the conditional tab map has not enabled yet, because the job
+        // is still `pre-submission` until the server says otherwise.
+        this.setState({ isPreflightOpen: false, hasSubmitted: true });
         this.props.onSubmit?.();
     };
 
@@ -324,6 +338,14 @@ class Job extends mix(React.Component).with(
     componentDidUpdate(prevProps) {
         if (prevProps.job !== this.props.job) {
             this.setState({ entity: this.props.job });
+        }
+        // The job the reader just submitted has left their hands; what they want
+        // next is to watch it run, not the form they finished with (C2). Fires on
+        // the transition rather than on the click, so the monitor is reachable by
+        // the time we get there.
+        if (this.state.hasSubmitted && !this.props.job.isInInitialStatus) {
+            this.setState({ hasSubmitted: false });
+            this.setCurrentTab(TAB_NAVIGATION_CONFIG.results.id);
         }
         if (shouldPersistJobOnUpdate(prevProps, this.props)) {
             this.persistJob();
@@ -1140,6 +1162,12 @@ class Job extends mix(React.Component).with(
                                         MaterialComponent={MaterialViewerComponent}
                                         fileUtils={getFileUtils()}
                                         DataGridComponent={getInjectedDeps().DataGridComponent}
+                                        // Phase 3.2 lives in @mat3ra/jove; inert until a
+                                        // release carrying it is installed.
+                                        showRunMonitor={useGuidedDesigner && !job.isInInitialStatus}
+                                        units={this.workflowUnits}
+                                        logText={getInjectedDeps().getJobLogTail?.(job)}
+                                        hasLogSource={Boolean(getInjectedDeps().getJobLogTail)}
                                     />
                                 )}
                                 {isCurrentTabFiles && (
