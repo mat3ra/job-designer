@@ -3,7 +3,7 @@
  *
  * The designer saves manually, but says nothing about whether it needs to: a
  * job with unsaved edits looks exactly like a saved one, and closing the tab
- * loses them silently. The guided-designer mockups show "All changes saved" in
+ * loses them silently. The guided-designer mockups show getMessage("saveState.saved") in
  * the header — copy that would be worse than the current silence if it were not
  * actually true, so this tracks the real thing.
  *
@@ -11,6 +11,8 @@
  * (UX-498) with its own backend implications; this only stops the interface
  * from being quiet about state it already knows.
  */
+
+import { getMessage } from "./messages";
 
 export type SaveState = "saved" | "unsaved" | "saving";
 
@@ -27,9 +29,9 @@ export function getSaveState({
 }
 
 const SAVE_STATE_LABELS: Record<SaveState, string> = {
-    saved: "All changes saved",
-    unsaved: "Unsaved changes",
-    saving: "Saving…",
+    saved: getMessage("saveState.saved"),
+    unsaved: getMessage("saveState.unsaved"),
+    saving: getMessage("saveState.saving"),
 };
 
 export function getSaveStateLabel(state: SaveState): string {

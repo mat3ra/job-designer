@@ -25,6 +25,7 @@ declare class Job {
     get defaultTab(): any;
     isCurrentTab(tabNameId: any): boolean;
     componentDidMount(): void;
+    openedAtMs: number;
     /**
      * Browsers ignore custom text here and show their own wording; setting
      * returnValue is what makes the prompt appear at all.
@@ -64,6 +65,7 @@ declare class Job {
     /** Every unit across the job's subworkflows, in workflow order. */
     get workflowUnits(): any;
     confirmPreflightSubmit: () => void;
+    submittedAtMs: number;
     get saveStateInputs(): {
         hasUnsavedChanges: any;
         editable: boolean;

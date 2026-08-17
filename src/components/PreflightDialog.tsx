@@ -20,6 +20,8 @@ import {
     type PreflightState,
     runPreflightChecks,
 } from "../preflight";
+import { ANALYTICS_EVENTS, summarizeReportForAnalytics, trackEvent } from "../analytics";
+import { getMessage } from "../messages";
 
 /**
  * Icon and tone per outcome. Never colour alone — every state has a glyph, and
@@ -90,7 +92,7 @@ function PreflightRowView({
                 <Stack direction="row" spacing={0.5} alignItems="center" flexShrink={0}>
                     {row.explanation ? (
                         <Button size="small" onClick={onToggleExpanded} aria-expanded={isExpanded}>
-                            Details
+                            {getMessage("preflight.details")}
                         </Button>
                     ) : null}
                     {needsAcknowledgement ? (
@@ -100,12 +102,12 @@ function PreflightRowView({
                             onClick={onAcknowledge}
                             id={`job-preflight-ack-${row.id}`}
                         >
-                            Acknowledge
+                            {getMessage("preflight.acknowledge")}
                         </Button>
                     ) : null}
                     {isAcknowledged ? (
                         <Typography variant="caption" color="text.secondary">
-                            Acknowledged
+                            {getMessage("preflight.acknowledged")}
                         </Typography>
                     ) : null}
                     {row.fix ? (
@@ -170,6 +172,12 @@ export default function PreflightDialog({
         try {
             const nextReport = await runPreflightChecks(getContextRef.current());
             setReport(nextReport);
+            // Which checks fail, not just how many — a check that fails often names
+            // a step whose affordances still do not work.
+            trackEvent(
+                ANALYTICS_EVENTS.preflightCompleted,
+                summarizeReportForAnalytics(nextReport),
+            );
             // Acknowledgements answer a specific report. Keep the ones whose
             // warning is still there — re-running after fixing something else
             // should not make the reader dismiss the same caveat again — and drop
@@ -194,6 +202,8 @@ export default function PreflightDialog({
     const canSubmit = canSubmitFromReport(report, acknowledged);
 
     const handleFix = (stepId: string) => {
+        // Low usage against a high fail rate means the deep link is not being found.
+        trackEvent(ANALYTICS_EVENTS.preflightFixFollowed, { stepId });
         onClose();
         onGoToStep(stepId);
     };
@@ -202,7 +212,7 @@ export default function PreflightDialog({
         <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth id="job-preflight-dialog">
             <DialogTitle sx={{ pb: 1 }}>
                 <Typography variant="h6" component="span">
-                    Preflight
+                    {getMessage("preflight.title")}
                 </Typography>
                 <Typography
                     variant="body2"
@@ -210,7 +220,9 @@ export default function PreflightDialog({
                     id="job-preflight-summary"
                     sx={{ display: "block" }}
                 >
-                    {isRunning ? "Running checks…" : getReportSummary(report, acknowledged)}
+                    {isRunning
+                        ? getMessage("preflight.running")
+                        : getReportSummary(report, acknowledged)}
                 </Typography>
             </DialogTitle>
 
@@ -227,22 +239,27 @@ export default function PreflightDialog({
                             onToggleExpanded={() =>
                                 setExpandedRowId(expandedRowId === row.id ? null : row.id)
                             }
-                            onAcknowledge={() => setAcknowledged([...acknowledged, row.id])}
+                            onAcknowledge={() => {
+                                trackEvent(ANALYTICS_EVENTS.preflightWarningAcknowledged, {
+                                    checkId: row.id,
+                                });
+                                setAcknowledged([...acknowledged, row.id]);
+                            }}
                             onFix={handleFix}
                         />
                     ))}
                     {!report && !isRunning ? (
                         <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
-                            No checks ran.
+                            {getMessage("preflight.noChecks")}
                         </Typography>
                     ) : null}
                 </Stack>
             </DialogContent>
 
             <DialogActions>
-                <Button onClick={onClose}>Back to designer</Button>
+                <Button onClick={onClose}>{getMessage("preflight.back")}</Button>
                 <Button onClick={run} disabled={isRunning} id="job-preflight-rerun">
-                    Re-run checks
+                    {getMessage("preflight.rerun")}
                 </Button>
                 <Button
                     variant="contained"
@@ -250,7 +267,7 @@ export default function PreflightDialog({
                     disabled={!canSubmit || isRunning}
                     id="job-preflight-submit"
                 >
-                    Submit job
+                    {getMessage("preflight.submit")}
                 </Button>
             </DialogActions>
         </Dialog>

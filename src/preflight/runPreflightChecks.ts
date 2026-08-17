@@ -1,3 +1,4 @@
+import { getMessage } from "../messages";
 import { getInjectedDeps } from "../setDependencies";
 import { DEFAULT_PREFLIGHT_CHECKS } from "./checks";
 import type { PreflightCheck, PreflightContext, PreflightReport, PreflightRow } from "./types";
@@ -27,7 +28,7 @@ async function runOne(
             id: `check-error-${check.name || "anonymous"}`,
             label: check.name || "Check",
             state: "skip",
-            detail: "This check could not run",
+            detail: getMessage("preflight.checkFailed"),
             explanation: error instanceof Error ? error.message : String(error),
         };
     }
@@ -84,18 +85,22 @@ export function getReportSummary(
     report: PreflightReport | null,
     acknowledged: ReadonlySet<string> | string[] = [],
 ): string {
-    if (!report) return "Running checks…";
+    if (!report) return getMessage("preflight.running");
 
     const acknowledgedIds = Array.isArray(acknowledged) ? new Set(acknowledged) : acknowledged;
     const failures = report.failures.length;
-    if (failures) return failures === 1 ? "1 problem to fix" : `${failures} problems to fix`;
+    if (failures) {
+        return failures === 1
+            ? getMessage("preflight.oneProblem")
+            : getMessage("preflight.problems", { count: failures });
+    }
 
     const unacknowledged = report.warnings.filter((id) => !acknowledgedIds.has(id)).length;
     if (unacknowledged) {
         return unacknowledged === 1
-            ? "1 warning to acknowledge"
-            : `${unacknowledged} warnings to acknowledge`;
+            ? getMessage("preflight.oneWarning")
+            : getMessage("preflight.warnings", { count: unacknowledged });
     }
 
-    return "All checks passed";
+    return getMessage("preflight.allPassed");
 }

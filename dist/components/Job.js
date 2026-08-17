@@ -19,6 +19,7 @@ import { mix } from "mixwith";
 import React from "react";
 import { ErrorBoundary } from "react-error-boundary";
 import { TAB_NAVIGATION_CONFIG } from "@mat3ra/jode";
+import { ANALYTICS_EVENTS, durationSince, trackEvent } from "../analytics";
 import { estimateComputeUsage, formatEstimate } from "../computeEstimate";
 import { formatBlockedReason } from "../jobSubmission";
 import { getJobReadiness } from "../jobReadiness";
@@ -123,6 +124,8 @@ class Job extends mix(React.Component).with(StatePropsCompareOnUpdateForJobMIxin
         };
         /** The rail's Review step has no tab of its own; it lands on Compute. */
         this.onReadinessStepSelect = (stepId) => {
+            // The step a session ends on is where abandonment happens.
+            trackEvent(ANALYTICS_EVENTS.stepSelected, { stepId });
             this.setCurrentTab(stepId === "review" ? TAB_NAVIGATION_CONFIG.compute.id : stepId);
         };
         this.openPreflight = () => this.setState({ isPreflightOpen: true });
@@ -151,6 +154,7 @@ class Job extends mix(React.Component).with(StatePropsCompareOnUpdateForJobMIxin
             // componentDidUpdate). Switching now would land the reader on a Results
             // tab that the conditional tab map has not enabled yet, because the job
             // is still `pre-submission` until the server says otherwise.
+            this.submittedAtMs = Date.now();
             this.setState({ isPreflightOpen: false, hasSubmitted: true });
             (_b = (_a = this.props).onSubmit) === null || _b === void 0 ? void 0 : _b.call(_a);
         };
@@ -230,6 +234,11 @@ class Job extends mix(React.Component).with(StatePropsCompareOnUpdateForJobMIxin
         this.openTerminateConfirmation = () => this.setState({ isTerminateConfirmationOpen: true });
         this.closeTerminateConfirmation = () => this.setState({ isTerminateConfirmationOpen: false });
         this.confirmTerminate = () => {
+            // Terminating soon after submitting is the proxy for "submitted with the
+            // wrong settings" — the thing the estimate and preflight should reduce.
+            trackEvent(ANALYTICS_EVENTS.jobTerminated, {
+                secondsSinceSubmit: durationSince(this.submittedAtMs),
+            });
             this.closeTerminateConfirmation();
             this.props.onTerminate();
         };
@@ -453,8 +462,18 @@ class Job extends mix(React.Component).with(StatePropsCompareOnUpdateForJobMIxin
         return this.state.currentTab === tabNameId;
     }
     componentDidMount() {
+        var _a, _b;
         this.persistJob();
         window.addEventListener("beforeunload", this.warnIfLeavingWithUnsavedChanges);
+        // Baseline for "time to first submit". Only for drafts: opening a job that
+        // has already run is a different act and would skew the number.
+        if (this.state.entity.isInInitialStatus) {
+            this.openedAtMs = Date.now();
+            trackEvent(ANALYTICS_EVENTS.designerOpened, {
+                useGuidedDesigner: Boolean(this.props.useGuidedDesigner),
+                startedFromParent: Boolean((_b = (_a = this.state.entity).getParentJobClient) === null || _b === void 0 ? void 0 : _b.call(_a)),
+            });
+        }
     }
     /**
      * Pure derivation - no entity mutation, and in particular no `job.render()`.
@@ -509,6 +528,10 @@ class Job extends mix(React.Component).with(StatePropsCompareOnUpdateForJobMIxin
         // the time we get there.
         if (this.state.hasSubmitted && !this.props.job.isInInitialStatus) {
             this.setState({ hasSubmitted: false });
+            trackEvent(ANALYTICS_EVENTS.jobSubmitted, {
+                secondsInDesigner: durationSince(this.openedAtMs),
+                useGuidedDesigner: Boolean(this.props.useGuidedDesigner),
+            });
             this.setCurrentTab(TAB_NAVIGATION_CONFIG.results.id);
         }
         if (shouldPersistJobOnUpdate(prevProps, this.props)) {

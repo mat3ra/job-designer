@@ -12,6 +12,7 @@
  * takes the page down with it would be worse than no panel, so every field is
  * read through {@link readSafely} and simply omitted when unavailable.
  */
+import { getMessage } from "./messages";
 function readSafely(read) {
     try {
         return read();
@@ -88,6 +89,6 @@ export function getMaterialSummary(material) {
  */
 export function getBatchDescription(materialCount) {
     if (materialCount <= 1)
-        return "The workflow runs once.";
-    return `${materialCount} materials — the workflow runs ${materialCount} times, once per material.`;
+        return getMessage("materials.runsOnce");
+    return getMessage("materials.runsPerMaterial", { count: materialCount });
 }

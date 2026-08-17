@@ -13,6 +13,8 @@
  * read through {@link readSafely} and simply omitted when unavailable.
  */
 
+import { getMessage } from "./messages";
+
 export interface MaterialSource {
     id: string;
     name?: string;
@@ -131,7 +133,7 @@ export function getMaterialSummary(material: any): MaterialSummary {
  * A materials set silently turns one job into N, which the designer never says.
  */
 export function getBatchDescription(materialCount: number): string {
-    if (materialCount <= 1) return "The workflow runs once.";
+    if (materialCount <= 1) return getMessage("materials.runsOnce");
 
-    return `${materialCount} materials — the workflow runs ${materialCount} times, once per material.`;
+    return getMessage("materials.runsPerMaterial", { count: materialCount });
 }

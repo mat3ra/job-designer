@@ -12,6 +12,8 @@
  * same answer, and the three must never disagree about whether a job is ready.
  */
 
+import { getMessage } from "./messages";
+
 /** Minimal shape this module needs; the real entity is jode's `Job`. */
 export interface SubmittableJob {
     id?: string;
@@ -45,21 +47,21 @@ export function getSubmitBlockers({
     const blockers: string[] = [];
 
     if (isUsingMaterials && materials.length === 0) {
-        blockers.push("Select a material");
+        blockers.push(getMessage("blocker.material"));
     }
 
     if (!job.workflow?.subworkflows?.length) {
-        blockers.push("Select a workflow");
+        blockers.push(getMessage("blocker.workflow"));
     }
 
     if (!job.compute?.cluster?.fqdn) {
-        blockers.push("Configure compute");
+        blockers.push(getMessage("blocker.compute"));
     }
 
     // Last, because it is the one the reader fixes by pressing the button next
     // to Submit rather than by going somewhere else.
     if (!job.id) {
-        blockers.push("Save the job");
+        blockers.push(getMessage("blocker.save"));
     }
 
     return blockers;
@@ -84,7 +86,7 @@ export function formatBlockedReason(blockers: string[]): string | null {
     if (blockers.length === 0) return null;
     if (blockers.length === 1) return blockers[0];
 
-    return `${blockers[0]} (+${blockers.length - 1} more)`;
+    return getMessage("blocker.more", { first: blockers[0], count: blockers.length - 1 });
 }
 
 /** The same line, for callers holding a job rather than a readiness report. */

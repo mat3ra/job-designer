@@ -1,5 +1,6 @@
 import { estimateComputeUsage, findClusterMetadata, formatCoreHours, formatCost, parseWalltimeHours, } from "../computeEstimate";
 import { getMaterialSummary } from "../materialSummary";
+import { getMessage } from "../messages";
 /**
  * The checks that run before a job is submitted, in the order a reader would
  * work through them: what it runs on, what it runs, where it runs, what it
@@ -28,39 +29,42 @@ export const checkInputs = async ({ job, materials = [], isUsingMaterials = true
         const hasDataset = Boolean((_a = job.workflow) === null || _a === void 0 ? void 0 : _a.isUsingDataset);
         return {
             id: "inputs",
-            label: "Dataset",
+            label: getMessage("readiness.dataset.label"),
             state: hasDataset ? "pass" : "fail",
-            detail: hasDataset ? "Dataset job — materials not required" : "No dataset selected",
-            fix: hasDataset ? undefined : { label: "Choose a dataset", stepId: "dataset" },
+            detail: getMessage(hasDataset ? "preflight.inputs.datasetOk" : "readiness.dataset.empty"),
+            fix: hasDataset
+                ? undefined
+                : { label: getMessage("preflight.inputs.chooseDataset"), stepId: "dataset" },
         };
     }
     if (materials.length === 0) {
         return {
             id: "inputs",
-            label: "Material",
+            label: getMessage("readiness.material.label"),
             state: "fail",
-            detail: "No material selected",
-            fix: { label: "Choose a material", stepId: "material" },
+            detail: getMessage("readiness.material.empty"),
+            fix: { label: getMessage("preflight.inputs.chooseMaterial"), stepId: "material" },
         };
     }
     if (materials.length > 1) {
         return {
             id: "inputs",
-            label: "Material",
+            label: getMessage("readiness.material.label"),
             state: "pass",
             // The multiplier is the thing a reader most often does not expect at
             // submit time, so it is the thing the row says.
-            detail: `${materials.length} materials — the workflow runs ${materials.length} times`,
+            detail: getMessage("preflight.inputs.batch", { count: materials.length }),
         };
     }
     const summary = getMaterialSummary(materials[0]);
     const atoms = summary.atomCount === undefined ? undefined : `${summary.atomCount} atoms`;
     return {
         id: "inputs",
-        label: "Material",
+        label: getMessage("readiness.material.label"),
         state: "pass",
-        detail: [(_c = (_b = summary.formula) !== null && _b !== void 0 ? _b : summary.name) !== null && _c !== void 0 ? _c : "1 material", atoms].filter(Boolean).join(" · ") ||
-            "1 material",
+        detail: [(_c = (_b = summary.formula) !== null && _b !== void 0 ? _b : summary.name) !== null && _c !== void 0 ? _c : getMessage("readiness.material.single"), atoms]
+            .filter(Boolean)
+            .join(" · ") || getMessage("readiness.material.single"),
     };
 };
 /**
@@ -75,19 +79,19 @@ export const checkWorkflowRenders = async ({ job }) => {
     if (!subworkflows.length) {
         return {
             id: "workflow",
-            label: "Workflow renders",
+            label: getMessage("preflight.workflow.label"),
             state: "fail",
-            detail: "No workflow selected",
-            fix: { label: "Choose a workflow", stepId: "workflow" },
+            detail: getMessage("readiness.workflow.empty"),
+            fix: { label: getMessage("blocker.workflow"), stepId: "workflow" },
         };
     }
     const unitCount = subworkflows.reduce((total, subworkflow) => { var _a, _b; return total + ((_b = (_a = subworkflow === null || subworkflow === void 0 ? void 0 : subworkflow.units) === null || _a === void 0 ? void 0 : _a.length) !== null && _b !== void 0 ? _b : 0); }, 0);
     if (typeof job.render !== "function") {
         return {
             id: "workflow",
-            label: "Workflow renders",
+            label: getMessage("preflight.workflow.label"),
             state: "skip",
-            detail: `${unitCount} units — rendering not available here`,
+            detail: getMessage("preflight.workflow.noRenderer", { count: unitCount }),
         };
     }
     try {
@@ -96,18 +100,18 @@ export const checkWorkflowRenders = async ({ job }) => {
     catch (error) {
         return {
             id: "workflow",
-            label: "Workflow renders",
+            label: getMessage("preflight.workflow.label"),
             state: "fail",
-            detail: "A unit's input template failed to render",
+            detail: getMessage("preflight.workflow.failed"),
             explanation: error instanceof Error ? error.message : String(error),
-            fix: { label: "Open the workflow", stepId: "workflow" },
+            fix: { label: getMessage("preflight.workflow.open"), stepId: "workflow" },
         };
     }
     return {
         id: "workflow",
-        label: "Workflow renders",
+        label: getMessage("preflight.workflow.label"),
         state: "pass",
-        detail: `${unitCount} units · all input templates render`,
+        detail: getMessage("preflight.workflow.ok", { count: unitCount }),
     };
 };
 /**
@@ -122,10 +126,10 @@ export const checkComputeLimits = async ({ job, clusterMetadata = [] }) => {
     if (!clusterName) {
         return {
             id: "compute",
-            label: "Compute within limits",
+            label: getMessage("preflight.compute.label"),
             state: "fail",
-            detail: "No cluster selected",
-            fix: { label: "Configure compute", stepId: "compute" },
+            detail: getMessage("preflight.compute.noCluster"),
+            fix: { label: getMessage("blocker.compute"), stepId: "compute" },
         };
     }
     const walltimeHours = parseWalltimeHours(compute === null || compute === void 0 ? void 0 : compute.timeLimit);
@@ -134,37 +138,46 @@ export const checkComputeLimits = async ({ job, clusterMetadata = [] }) => {
     if (!limits) {
         return {
             id: "compute",
-            label: "Compute within limits",
+            label: getMessage("preflight.compute.label"),
             state: "skip",
-            detail: `${clusterName} · ${resources} — no published limits to check against`,
+            detail: getMessage("preflight.compute.noLimits", {
+                cluster: clusterName,
+                resources,
+            }),
         };
     }
     const violations = [];
     if (limits.maxNodes !== undefined && ((_e = compute === null || compute === void 0 ? void 0 : compute.nodes) !== null && _e !== void 0 ? _e : 0) > limits.maxNodes) {
-        violations.push(`${compute.nodes} nodes exceeds the ${limits.maxNodes}-node limit`);
+        violations.push(getMessage("preflight.compute.overNodes", {
+            nodes: compute.nodes,
+            limit: limits.maxNodes,
+        }));
     }
     if (limits.maxPpn !== undefined && ((_f = compute === null || compute === void 0 ? void 0 : compute.ppn) !== null && _f !== void 0 ? _f : 0) > limits.maxPpn) {
-        violations.push(`${compute.ppn} cores per node exceeds the limit of ${limits.maxPpn}`);
+        violations.push(getMessage("preflight.compute.overPpn", { ppn: compute.ppn, limit: limits.maxPpn }));
     }
     if (limits.maxWalltimeHours !== undefined &&
         walltimeHours !== undefined &&
         walltimeHours > limits.maxWalltimeHours) {
-        violations.push(`walltime ${formatHours(walltimeHours)} exceeds the queue limit of ${formatHours(limits.maxWalltimeHours)}`);
+        violations.push(getMessage("preflight.compute.overWalltime", {
+            walltime: formatHours(walltimeHours),
+            limit: formatHours(limits.maxWalltimeHours),
+        }));
     }
     if (violations.length) {
         return {
             id: "compute",
-            label: "Compute within limits",
+            label: getMessage("preflight.compute.label"),
             state: "fail",
             detail: capitalise(violations[0]),
             explanation: violations.length > 1 ? violations.map(capitalise).join(". ") : undefined,
-            fix: { label: "Adjust compute", stepId: "compute" },
+            fix: { label: getMessage("preflight.compute.adjust"), stepId: "compute" },
         };
     }
     const walltime = walltimeHours === undefined ? undefined : formatHours(walltimeHours);
     return {
         id: "compute",
-        label: "Compute within limits",
+        label: getMessage("preflight.compute.label"),
         state: "pass",
         detail: [clusterName, resources, walltime].filter(Boolean).join(" · "),
     };
@@ -175,14 +188,15 @@ export const checkComputeLimits = async ({ job, clusterMetadata = [] }) => {
  * row backed by nothing would be a lie the reader has no way to check.
  */
 export const checkBudget = async ({ job, materials = [], isUsingMaterials = true, clusterMetadata = [], quota, }) => {
+    var _a, _b, _c, _d;
     const runs = isUsingMaterials ? Math.max(materials.length, 1) : 1;
     const estimate = estimateComputeUsage(job.compute, clusterMetadata, runs);
     if (estimate.coreHours === undefined) {
         return {
             id: "budget",
-            label: "Budget",
+            label: getMessage("preflight.budget.label"),
             state: "skip",
-            detail: "Set nodes, cores and a walltime to estimate the cost",
+            detail: getMessage("preflight.budget.incomplete"),
         };
     }
     const usage = [
@@ -193,15 +207,23 @@ export const checkBudget = async ({ job, materials = [], isUsingMaterials = true
         .join(" ≈ ");
     const remaining = quota === null || quota === void 0 ? void 0 : quota.remainingCoreHours;
     if (remaining === undefined) {
-        return { id: "budget", label: "Budget", state: "skip", detail: usage };
+        return {
+            id: "budget",
+            label: getMessage("preflight.budget.label"),
+            state: "skip",
+            detail: usage,
+        };
     }
     if (estimate.coreHours > remaining) {
         return {
             id: "budget",
-            label: "Budget",
+            label: getMessage("preflight.budget.label"),
             state: "fail",
-            detail: `${usage} — only ${formatCoreHours(remaining)} left this month`,
-            fix: { label: "Reduce resources", stepId: "compute" },
+            detail: getMessage("preflight.budget.overQuota", {
+                usage,
+                remaining: (_a = formatCoreHours(remaining)) !== null && _a !== void 0 ? _a : "",
+            }),
+            fix: { label: getMessage("preflight.budget.reduce"), stepId: "compute" },
         };
     }
     const left = remaining - estimate.coreHours;
@@ -210,17 +232,25 @@ export const checkBudget = async ({ job, materials = [], isUsingMaterials = true
     if (estimate.coreHours > remaining / 2) {
         return {
             id: "budget",
-            label: "Budget",
+            label: getMessage("preflight.budget.label"),
             state: "warn",
-            detail: `${usage} — more than half of the remaining ${formatCoreHours(remaining)}`,
-            explanation: `${formatCoreHours(left)} would be left after this job.`,
+            detail: getMessage("preflight.budget.mostOfQuota", {
+                usage,
+                remaining: (_b = formatCoreHours(remaining)) !== null && _b !== void 0 ? _b : "",
+            }),
+            explanation: getMessage("preflight.budget.wouldRemain", {
+                left: (_c = formatCoreHours(left)) !== null && _c !== void 0 ? _c : "",
+            }),
         };
     }
     return {
         id: "budget",
-        label: "Budget",
+        label: getMessage("preflight.budget.label"),
         state: "pass",
-        detail: `${usage} — ${formatCoreHours(left)} would remain`,
+        detail: getMessage("preflight.budget.remainingAfter", {
+            usage,
+            left: (_d = formatCoreHours(left)) !== null && _d !== void 0 ? _d : "",
+        }),
     };
 };
 /**
@@ -229,14 +259,19 @@ export const checkBudget = async ({ job, materials = [], isUsingMaterials = true
  */
 export const checkSaved = async ({ job }) => {
     if (job.id) {
-        return { id: "saved", label: "Saved", state: "pass", detail: "Job is saved" };
+        return {
+            id: "saved",
+            label: getMessage("preflight.saved.label"),
+            state: "pass",
+            detail: getMessage("preflight.saved.ok"),
+        };
     }
     return {
         id: "saved",
-        label: "Saved",
+        label: getMessage("preflight.saved.label"),
         state: "fail",
-        detail: "The job has never been saved",
-        fix: { label: "Save the job", stepId: "review" },
+        detail: getMessage("preflight.saved.never"),
+        fix: { label: getMessage("blocker.save"), stepId: "review" },
     };
 };
 export const DEFAULT_PREFLIGHT_CHECKS = [

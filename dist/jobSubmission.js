@@ -11,6 +11,7 @@
  * readiness rail and the submit preflight (SOF-8023 phases 2.1 and 2.4) need the
  * same answer, and the three must never disagree about whether a job is ready.
  */
+import { getMessage } from "./messages";
 /**
  * Reasons the job cannot be submitted, in the order a reader would fix them.
  * Empty means ready. Each string is shown to the reader verbatim, so it names
@@ -20,18 +21,18 @@ export function getSubmitBlockers({ job, materials = [], isUsingMaterials = true
     var _a, _b, _c, _d;
     const blockers = [];
     if (isUsingMaterials && materials.length === 0) {
-        blockers.push("Select a material");
+        blockers.push(getMessage("blocker.material"));
     }
     if (!((_b = (_a = job.workflow) === null || _a === void 0 ? void 0 : _a.subworkflows) === null || _b === void 0 ? void 0 : _b.length)) {
-        blockers.push("Select a workflow");
+        blockers.push(getMessage("blocker.workflow"));
     }
     if (!((_d = (_c = job.compute) === null || _c === void 0 ? void 0 : _c.cluster) === null || _d === void 0 ? void 0 : _d.fqdn)) {
-        blockers.push("Configure compute");
+        blockers.push(getMessage("blocker.compute"));
     }
     // Last, because it is the one the reader fixes by pressing the button next
     // to Submit rather than by going somewhere else.
     if (!job.id) {
-        blockers.push("Save the job");
+        blockers.push(getMessage("blocker.save"));
     }
     return blockers;
 }
@@ -54,7 +55,7 @@ export function formatBlockedReason(blockers) {
         return null;
     if (blockers.length === 1)
         return blockers[0];
-    return `${blockers[0]} (+${blockers.length - 1} more)`;
+    return getMessage("blocker.more", { first: blockers[0], count: blockers.length - 1 });
 }
 /** The same line, for callers holding a job rather than a readiness report. */
 export function getSubmitBlockedReason(options) {

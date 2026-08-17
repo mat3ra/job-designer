@@ -1,5 +1,6 @@
 import { type ClusterMetadata, findClusterMetadata, parseWalltimeHours } from "./computeEstimate";
 import { getSubmitBlockers, type SubmittableJob } from "./jobSubmission";
+import { getMessage } from "./messages";
 
 /**
  * What the job still needs, as a sequence of steps.
@@ -69,32 +70,36 @@ export interface JobReadinessOptions {
 const REVIEW_STEP_ID = "review";
 
 function describeMaterials(materials: any[], parentJobName?: string): string {
-    if (parentJobName) return `From parent job ${parentJobName}`;
-    if (materials.length === 0) return "No material selected";
+    if (parentJobName) return getMessage("readiness.material.fromParent", { name: parentJobName });
+    if (materials.length === 0) return getMessage("readiness.material.empty");
     if (materials.length === 1) {
         const [material] = materials;
-        return material?.formula ?? material?.name ?? "1 material";
+        return material?.formula ?? material?.name ?? getMessage("readiness.material.single");
     }
 
-    return `${materials.length} materials — runs ${materials.length} times`;
+    return getMessage("readiness.material.batch", { count: materials.length });
 }
 
 function describeWorkflow(workflow: any): string {
     const subworkflows = workflow?.subworkflows ?? [];
-    if (!subworkflows.length) return "No workflow selected";
+    if (!subworkflows.length) return getMessage("readiness.workflow.empty");
 
     const unitCount = subworkflows.reduce(
         (total: number, subworkflow: any) => total + (subworkflow?.units?.length ?? 0),
         0,
     );
-    const name = workflow?.name ?? `${subworkflows.length} subworkflows`;
+    const name =
+        workflow?.name ??
+        getMessage("readiness.workflow.subworkflowCount", { count: subworkflows.length });
 
-    return unitCount ? `${name} · ${unitCount} units` : name;
+    return unitCount
+        ? getMessage("readiness.workflow.withUnits", { name, count: unitCount })
+        : name;
 }
 
 function describeCompute(compute: any): string {
     const clusterName = compute?.cluster?.fqdn;
-    if (!clusterName) return "Cluster and resources needed";
+    if (!clusterName) return getMessage("readiness.compute.empty");
 
     const resources = [compute?.nodes, compute?.ppn].every((value) => value)
         ? `${compute.nodes}×${compute.ppn}`
@@ -119,17 +124,19 @@ function getComputeLimitViolations(compute: any, clusterMetadata: ClusterMetadat
     const violations: string[] = [];
 
     if (limits.maxNodes !== undefined && (compute?.nodes ?? 0) > limits.maxNodes) {
-        violations.push(`over the ${limits.maxNodes}-node limit`);
+        violations.push(getMessage("readiness.compute.overNodes", { limit: limits.maxNodes }));
     }
     if (limits.maxPpn !== undefined && (compute?.ppn ?? 0) > limits.maxPpn) {
-        violations.push(`over ${limits.maxPpn} cores per node`);
+        violations.push(getMessage("readiness.compute.overPpn", { limit: limits.maxPpn }));
     }
     if (
         limits.maxWalltimeHours !== undefined &&
         walltimeHours !== undefined &&
         walltimeHours > limits.maxWalltimeHours
     ) {
-        violations.push(`over the ${limits.maxWalltimeHours} h queue limit`);
+        violations.push(
+            getMessage("readiness.compute.overWalltime", { limit: limits.maxWalltimeHours }),
+        );
     }
 
     return violations;
@@ -160,23 +167,23 @@ function getCreationSteps({
         const hasMaterial = materials.length > 0 || Boolean(parentJobName);
         steps.push({
             id: "material",
-            label: "Material",
+            label: getMessage("readiness.material.label"),
             state: hasMaterial ? "complete" : "empty",
             summary: describeMaterials(materials, parentJobName),
         });
     } else {
         steps.push({
             id: "dataset",
-            label: "Dataset",
+            label: getMessage("readiness.dataset.label"),
             state: datasetConfig ? "complete" : "empty",
-            summary: datasetConfig?.name ?? "No dataset selected",
+            summary: datasetConfig?.name ?? getMessage("readiness.dataset.empty"),
         });
     }
 
     const hasWorkflow = Boolean(job.workflow?.subworkflows?.length);
     steps.push({
         id: "workflow",
-        label: "Workflow",
+        label: getMessage("readiness.workflow.label"),
         state: hasWorkflow ? "complete" : "empty",
         summary: describeWorkflow(job.workflow),
     });
@@ -185,7 +192,7 @@ function getCreationSteps({
     const violations = hasCompute ? getComputeLimitViolations(job.compute, clusterMetadata) : [];
     steps.push({
         id: "compute",
-        label: "Compute",
+        label: getMessage("readiness.compute.label"),
         state: hasCompute && !violations.length ? "complete" : "attention",
         summary: violations.length ? violations.join(" · ") : describeCompute(job.compute),
     });
@@ -207,8 +214,8 @@ function withLimitBlocker(
     const computeStep = steps.find((step) => step.id === "compute");
     if (!hasCluster || computeStep?.state !== "attention") return blockers;
 
-    const limitBlocker = "Bring compute within the cluster's limits";
-    const saveIndex = blockers.indexOf("Save the job");
+    const limitBlocker = getMessage("blocker.computeLimits");
+    const saveIndex = blockers.indexOf(getMessage("blocker.save"));
     if (saveIndex === -1) return [...blockers, limitBlocker];
 
     return [...blockers.slice(0, saveIndex), limitBlocker, ...blockers.slice(saveIndex)];
@@ -237,12 +244,12 @@ function getReviewSummary({
     isSubmittable: boolean;
     blockingReasons: string[];
 }): string {
-    if (!editable) return "View only";
-    if (isSubmittable) return "Ready to submit";
+    if (!editable) return getMessage("readiness.review.viewOnly");
+    if (isSubmittable) return getMessage("readiness.review.ready");
 
     return blockingReasons.length === 1
-        ? "1 step remaining"
-        : `${blockingReasons.length} steps remaining`;
+        ? getMessage("readiness.review.oneRemaining")
+        : getMessage("readiness.review.remaining", { count: blockingReasons.length });
 }
 
 export function getJobReadiness({
@@ -284,11 +291,20 @@ export function getJobReadiness({
         // of what ran, and what matters is what it is doing.
         steps.push({
             id: "results",
-            label: job.isInFinalStatus ? "Results" : "Monitor",
+            label: getMessage(
+                job.isInFinalStatus ? "readiness.results.label" : "readiness.monitor.label",
+            ),
             state: "complete",
-            summary: job.isInFinalStatus ? "Outputs and properties" : "Running",
+            summary: getMessage(
+                job.isInFinalStatus ? "readiness.results.summary" : "readiness.monitor.running",
+            ),
         });
-        steps.push({ id: "files", label: "Files", state: "complete", summary: "Job directory" });
+        steps.push({
+            id: "files",
+            label: getMessage("readiness.files.label"),
+            state: "complete",
+            summary: getMessage("readiness.files.summary"),
+        });
 
         return { steps, isSubmittable: false, blockingReasons: [], isRunOrFinished };
     }
@@ -297,7 +313,7 @@ export function getJobReadiness({
 
     steps.push({
         id: REVIEW_STEP_ID,
-        label: "Review & submit",
+        label: getMessage("readiness.review.label"),
         state: getReviewState({ editable, isSubmittable }),
         summary: getReviewSummary({ editable, isSubmittable, blockingReasons }),
     });

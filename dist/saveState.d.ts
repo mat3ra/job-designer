@@ -3,7 +3,7 @@
  *
  * The designer saves manually, but says nothing about whether it needs to: a
  * job with unsaved edits looks exactly like a saved one, and closing the tab
- * loses them silently. The guided-designer mockups show "All changes saved" in
+ * loses them silently. The guided-designer mockups show getMessage("saveState.saved") in
  * the header — copy that would be worse than the current silence if it were not
  * actually true, so this tracks the real thing.
  *

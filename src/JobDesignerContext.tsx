@@ -38,6 +38,18 @@ export interface JobDesignerDeps {
     /** Optional Files explorer component. In standalone, renders nothing. */
     FilesExplorerContainer?: React.ComponentType<any>;
     /**
+     * Resolves a message key to localized copy (the webapp wraps TAPi18n).
+     * Return undefined for a key you have no translation for — the designer
+     * falls back to its English default per key, never shows the key itself.
+     * See `src/messages.ts` for the catalogue.
+     */
+    translate?: (key: string, params?: Record<string, string | number>) => string | undefined;
+    /**
+     * Records a product event. No-op when absent — see `src/analytics.ts` for the
+     * events the guided designer emits and why each one is worth having.
+     */
+    trackEvent?: (event: string, properties?: Record<string, unknown>) => void;
+    /**
      * Optional full-featured page header (the webapp's EntityHeader organism: description
      * toggle/editor, Save & Exit split button, dropdown). When absent, Job renders a minimal
      * header built on cove's EntityHeader (no description support) so standalone still works.
