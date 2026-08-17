@@ -219,6 +219,10 @@ function App() {
     // so the monitor, the lifecycle timeline past Draft, and the rail's Monitor
     // step would never be reviewable. This starts the job already running.
     const [isRunSimulated, setIsRunSimulated] = useState(false);
+    // The batch multiplier is the thing the plan says surprises readers most —
+    // "3 materials, the workflow runs 3 times" — and with a single material the
+    // tray copy, the rail summary and the ×3 estimate could never be reviewed.
+    const [isBatch, setIsBatch] = useState(false);
     const [materialIndex, setMaterialIndex] = useState(() => {
         const idx = allMaterialJsons.findIndex((m: any) => /silicon|^si\b/i.test(m.name ?? ""));
         return idx >= 0 ? idx : 0;
@@ -227,6 +231,16 @@ function App() {
         () => new Material(allMaterialJsons[materialIndex]),
         [materialIndex, allMaterialJsons],
     );
+
+    /** One material, or that one plus its two neighbours as a batch. */
+    const selectedMaterials = useMemo(() => {
+        if (!isBatch) return [selectedMaterial];
+
+        return [0, 1, 2].map(
+            (offset) =>
+                new Material(allMaterialJsons[(materialIndex + offset) % allMaterialJsons.length]),
+        );
+    }, [isBatch, selectedMaterial, materialIndex, allMaterialJsons]);
 
     const jobRef = useRef<InstanceType<typeof Job> | null>(null);
 
@@ -295,7 +309,7 @@ function App() {
 
     // Remount on a simulated-run flip too: the container builds its redux store from
     // the job it is first given, so a new Job instance alone would not be picked up.
-    const designerKey = `${workflowIndex}-${materialIndex}-${isRunSimulated}`;
+    const designerKey = `${workflowIndex}-${materialIndex}-${isRunSimulated}-${isBatch}`;
 
     if (!wodeWorkflow || !selectedMaterial || !job) {
         return (
@@ -389,6 +403,14 @@ function App() {
                     >
                         {isRunSimulated ? "Job: running" : "Job: draft"}
                     </Button>
+                    <Button
+                        size="small"
+                        variant={isBatch ? "contained" : "outlined"}
+                        onClick={() => setIsBatch((on) => !on)}
+                        data-tid="batch-toggle"
+                    >
+                        {isBatch ? "Materials: 3" : "Materials: 1"}
+                    </Button>
 
                     <Button
                         variant="outlined"
@@ -414,8 +436,8 @@ function App() {
                 <JobLocalReduxContainer
                     key={designerKey}
                     job={job}
-                    jobMaterials={[selectedMaterial]}
-                    materials={[selectedMaterial]}
+                    jobMaterials={selectedMaterials}
+                    materials={selectedMaterials}
                     project={{ name: "Demo Project", _id: "standalone-project" } as any}
                     metaProperties={[]}
                     accountUsers={[]}

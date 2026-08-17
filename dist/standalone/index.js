@@ -188,11 +188,21 @@ function App() {
     // so the monitor, the lifecycle timeline past Draft, and the rail's Monitor
     // step would never be reviewable. This starts the job already running.
     const [isRunSimulated, setIsRunSimulated] = useState(false);
+    // The batch multiplier is the thing the plan says surprises readers most —
+    // "3 materials, the workflow runs 3 times" — and with a single material the
+    // tray copy, the rail summary and the ×3 estimate could never be reviewed.
+    const [isBatch, setIsBatch] = useState(false);
     const [materialIndex, setMaterialIndex] = useState(() => {
         const idx = allMaterialJsons.findIndex((m) => { var _a; return /silicon|^si\b/i.test((_a = m.name) !== null && _a !== void 0 ? _a : ""); });
         return idx >= 0 ? idx : 0;
     });
     const selectedMaterial = useMemo(() => new Material(allMaterialJsons[materialIndex]), [materialIndex, allMaterialJsons]);
+    /** One material, or that one plus its two neighbours as a batch. */
+    const selectedMaterials = useMemo(() => {
+        if (!isBatch)
+            return [selectedMaterial];
+        return [0, 1, 2].map((offset) => new Material(allMaterialJsons[(materialIndex + offset) % allMaterialJsons.length]));
+    }, [isBatch, selectedMaterial, materialIndex, allMaterialJsons]);
     const jobRef = useRef(null);
     const job = useMemo(() => {
         var _a, _b, _c, _d;
@@ -257,7 +267,7 @@ function App() {
     };
     // Remount on a simulated-run flip too: the container builds its redux store from
     // the job it is first given, so a new Job instance alone would not be picked up.
-    const designerKey = `${workflowIndex}-${materialIndex}-${isRunSimulated}`;
+    const designerKey = `${workflowIndex}-${materialIndex}-${isRunSimulated}-${isBatch}`;
     if (!wodeWorkflow || !selectedMaterial || !job) {
         return (_jsx(Box, { p: 4, children: _jsx(Typography, { children: "Loading..." }) }));
     }
@@ -273,14 +283,14 @@ function App() {
                                             }) })] })] }), _jsxs(Stack, { direction: "row", spacing: 1, alignItems: "center", children: [_jsx(ScienceIcon, { fontSize: "small", sx: { color: "secondary.main", flexShrink: 0 } }), _jsxs(FormControl, { size: "small", sx: { minWidth: 240 }, children: [_jsx(InputLabel, { id: "material-select-label", children: "Material" }), _jsx(Select, { labelId: "material-select-label", value: materialIndex, label: "Material", onChange: (e) => setMaterialIndex(Number(e.target.value)), children: allMaterialJsons.map((mat, i) => {
                                                 var _a, _b;
                                                 return (_jsx(MenuItem, { value: i, children: (_b = (_a = mat === null || mat === void 0 ? void 0 : mat.name) !== null && _a !== void 0 ? _a : mat === null || mat === void 0 ? void 0 : mat.formula) !== null && _b !== void 0 ? _b : `Material ${i + 1}` }, i));
-                                            }) })] })] }), _jsx(Divider, { orientation: "vertical", flexItem: true }), _jsx(Tooltip, { title: `${allWorkflowJsons.length} workflows · ${allMaterialJsons.length} materials from standata`, children: _jsx(Chip, { label: "standata", size: "small", variant: "outlined", color: "secondary" }) }), _jsx(Box, { sx: { flexGrow: 1 } }), _jsx(Button, { variant: "outlined", size: "small", onClick: () => setUseGuidedDesigner((isOn) => !isOn), sx: { mr: 1 }, children: useGuidedDesigner ? "Guided layout: on" : "Guided layout: off" }), _jsx(Button, { size: "small", variant: isRunSimulated ? "contained" : "outlined", onClick: () => setIsRunSimulated((on) => !on), "data-tid": "simulate-run-toggle", children: isRunSimulated ? "Job: running" : "Job: draft" }), _jsx(Button, { variant: "outlined", size: "small", startIcon: _jsx(DownloadIcon, {}), onClick: handleExportJson, sx: {
+                                            }) })] })] }), _jsx(Divider, { orientation: "vertical", flexItem: true }), _jsx(Tooltip, { title: `${allWorkflowJsons.length} workflows · ${allMaterialJsons.length} materials from standata`, children: _jsx(Chip, { label: "standata", size: "small", variant: "outlined", color: "secondary" }) }), _jsx(Box, { sx: { flexGrow: 1 } }), _jsx(Button, { variant: "outlined", size: "small", onClick: () => setUseGuidedDesigner((isOn) => !isOn), sx: { mr: 1 }, children: useGuidedDesigner ? "Guided layout: on" : "Guided layout: off" }), _jsx(Button, { size: "small", variant: isRunSimulated ? "contained" : "outlined", onClick: () => setIsRunSimulated((on) => !on), "data-tid": "simulate-run-toggle", children: isRunSimulated ? "Job: running" : "Job: draft" }), _jsx(Button, { size: "small", variant: isBatch ? "contained" : "outlined", onClick: () => setIsBatch((on) => !on), "data-tid": "batch-toggle", children: isBatch ? "Materials: 3" : "Materials: 1" }), _jsx(Button, { variant: "outlined", size: "small", startIcon: _jsx(DownloadIcon, {}), onClick: handleExportJson, sx: {
                                 borderColor: "rgba(124,77,255,0.5)",
                                 color: "primary.main",
                                 "&:hover": {
                                     borderColor: "primary.main",
                                     bgcolor: "rgba(124,77,255,0.08)",
                                 },
-                            }, children: "Export JSON" })] }) }), _jsx(JobDesignerProvider, { deps: { getRouteQueryTab: () => "workflow" }, children: _jsx(JobLocalReduxContainer, { job: job, jobMaterials: [selectedMaterial], materials: [selectedMaterial], project: { name: "Demo Project", _id: "standalone-project" }, metaProperties: [], accountUsers: [], accountUsersIsLoading: false, profile: {
+                            }, children: "Export JSON" })] }) }), _jsx(JobDesignerProvider, { deps: { getRouteQueryTab: () => "workflow" }, children: _jsx(JobLocalReduxContainer, { job: job, jobMaterials: selectedMaterials, materials: selectedMaterials, project: { name: "Demo Project", _id: "standalone-project" }, metaProperties: [], accountUsers: [], accountUsersIsLoading: false, profile: {
                         user: { entity: { id: "1" } },
                         account: { entity: { id: "1" } },
                         personalAccount: { entity: { id: "1" } },

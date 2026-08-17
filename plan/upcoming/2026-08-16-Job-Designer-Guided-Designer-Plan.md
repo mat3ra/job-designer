@@ -277,6 +277,10 @@ recorder and a dashboard — the events exist, nothing is collecting them yet.
 3. Does the monitor (3.2) poll job properties or can the webapp provide a push channel? Polling
    is acceptable for v1.
 4. File per-phase SOF tickets under SOF-8023 — one per phase, or one per proposal group?
+5. Should a **saved draft** be able to change its materials? `MaterialTab`'s
+   `addRemoveAllowed={!job.id}` says no, while `editable` says the job is still editable. The
+   guided designer makes the contradiction visible, because the materials tray is now the
+   primary affordance and is inert on any saved draft. Pre-existing; not changed here.
    (Suggest one per phase.)
 5. Which analytics channel should the success-metrics events use — the webapp's existing
    telemetry, or is this the moment to add a product-analytics hook to the seam? (Gates the

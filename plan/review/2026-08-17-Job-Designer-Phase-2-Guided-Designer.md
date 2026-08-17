@@ -76,6 +76,25 @@ acknowledged, then releases it.
   quota. A fifth — *Saved* — was added, because "the job has never been saved" was
   otherwise reported only by a disabled button.
 
+### Found by auditing the acceptance criteria against the running app
+
+Two of 2.1's criteria were recorded as built and were not; both are now fixed (see the
+"Built" note under 2.1). A third is a question rather than a defect:
+
+- **A saved draft cannot change its materials.** `MaterialTab` receives
+  `addRemoveAllowed={!job.id}`, so the tray's Add and Remove affordances disappear the moment
+  a draft is saved — while `editable` (which is `status === pre_submission`) stays true, so
+  the designer simultaneously reports the job as editable. This predates the guided designer,
+  but the guided designer makes it matter much more: the tray is now the *primary* affordance
+  for materials, and on any saved draft it is inert. Whether the rule is intended is a product
+  question — materials may well be baked into the saved job document — so it is recorded here
+  rather than changed. The rail's "Change Material" affordance is gated on
+  `isInInitialStatus` instead, so the selector itself remains reachable.
+- Consequently **"removing the active material selects a sane neighbour" is unverified in the
+  demo**: its job carries an `_id` so that Submit is not permanently blocked on "Save the
+  job", which switches the remove affordance off. The batch copy either side of it is
+  verified — see below.
+
 ### Still open
 
 - **Queue-derived limits.** Limits come from `clusterMetadata` per cluster; real queues
@@ -128,6 +147,14 @@ The layout change. Mockups: `01-guided-designer.html`, `02-compute-cost.html`,
   with creation steps summarized; the rail is keyboard-navigable (arrow keys between steps,
   visible focus, `aria-current` on the active step). Size: L.
 - **Built** — `src/jobReadiness.ts` (16 unit tests) and `src/components/JobReadinessRail.tsx`.
+  Two criteria were initially missed and fixed after an audit against the running app: each
+  step that owns a "Select …" dialog now carries a **Change** (or **Choose**) affordance, so
+  the headline acceptance — creating a job without opening the dropdown — actually holds; and
+  the rail **collapses to a horizontal scrolling strip below the md breakpoint** rather than
+  stacking full-width rows that pushed the step's own content off a narrow screen. Adding the
+  affordances exposed a crash (`object is not iterable`): the package's dialog types describe
+  `{ isOpen, open, close }` while `Job.jsx` destructures `[open, close]`, and only the
+  never-clicked dropdown had ever reached them. `normalizeDialogHandle` accepts either.
   `@mat3ra/jode` was left alone: the rail takes its order and labels from the selector and
   reuses the existing tab ids, so deep links keep working without new schema. The selector
   also reads host-published cluster limits, so the Compute step says *over the 12 h queue
@@ -206,6 +233,10 @@ The layout change. Mockups: `01-guided-designer.html`, `02-compute-cost.html`,
   `Material` model next to the injected viewer; the viewer component API is unchanged.
 - Acceptance: adding a second material updates the tray, the batch copy, and the context strip;
   removing the active material selects a sane neighbor. Size: M.
+- **Verified in the demo** with its new 1-vs-3 materials toggle: three chips in the tray over
+  "3 materials — the workflow runs 3 times, once per material.", with the rail step and the
+  context chip both reading "3 materials — runs 3 times". The removal half could not be
+  exercised — see the audit note above.
 - **Built** — [job-designer#19](https://github.com/mat3ra/job-designer/pull/19). Divergence:
   the metadata is read through a defensive `getMaterialSummary()` that omits any field it
   cannot read, because `MaterialTab` already renders a fallback for hosts passing a plain
