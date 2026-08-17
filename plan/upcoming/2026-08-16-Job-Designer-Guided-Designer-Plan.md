@@ -13,8 +13,7 @@ six portion documents in that repo's `plan/`). The two overlap in three places, 
 documents as authoritative for those: its **portion 2** covers the cove design language this
 plan's §"Design language" opens (cove#97 implements the semantic and dark-palette half); its
 **portion 1 items 1.1/1.5** are this plan's item 1.3; and its **portion 3** covers the
-`@mat3ra/ive` compute form that phase 2.3 below rebuilds. Coordinate before starting any of
-those.
+`@mat3ra/ive` compute form that phase 2.3 rebuilds. Coordinate before starting any of those.
 
 ## Summary
 
@@ -144,134 +143,11 @@ are recorded in
 
 Phases are split across documents so each can move through `plan/` independently, as the
 folder's own convention asks — this overview moves last.
+## Phase 2 — Guided designer (moved)
 
-## Phase 2 — Guided designer (proposals A1, A2, B1–B3, C1, E1, E2)
-
-> **Progress (2026-08-16):** 2.5 and 2.6 are **built and in review** on
-> [job-designer#19](https://github.com/mat3ra/job-designer/pull/19) — they are job-designer-local
-> and needed no new cove primitives, so they were taken out of order. 2.1–2.4 remain gated:
-> the readiness rail and context strip consume `StatusChip` from
-> [cove#97](https://github.com/mat3ra/cove/pull/97), and the estimator half of 2.3 is blocked on
-> open question 1 (where pricing and quota live). The limits/validation half of 2.3 can proceed
-> without that answer.
-
-The layout change. Mockups: `01-guided-designer.html`, `02-compute-cost.html`,
-`03-preflight-submit.html`.
-
-### 2.1 Readiness rail replaces numbered tabs (A1) — job-designer, `@mat3ra/jode`
-
-- New `JobReadinessRail` component (job-designer) renders lifecycle steps — Material, Workflow,
-  Compute, Review & Submit (+ Dataset when `workflow.isUsingDataset`; Results, Files after
-  submission) — each with state (complete / needs attention / empty) and a one-line selection
-  summary. It replaces `TabsMenu` as the designer's navigation; `currentTab` state machine in
-  `Job.jsx` stays, only the navigation surface changes.
-- Step state derives from a new pure selector module (proposed `src/jobReadiness.ts`):
-  `getJobReadiness(job, materials) → { steps: [{ id, state, summary }], isSubmittable,
-  blockingReasons }`. Unit-test this module heavily; it also drives the Submit button and
-  preflight. It must cover all creation shapes: material jobs, dataset jobs
-  (`workflow.isUsingDataset`), multi-material sets (`materialsSet` / `isMultiMaterial`), and
-  parent-derived jobs (parent supplies the material — the Material step reads "from parent
-  job", not "missing").
-- **The rail spans the whole lifecycle, not just creation.** After submission the creation
-  steps collapse into read-only summaries and Monitor (later Results, Files) become the active
-  steps — this replaces today's `defaultTab` status-jumping logic. With `editable={false}`
-  (shared/public jobs) the rail renders view-only: no "Change" affordances, no Submit.
-- `TAB_NAVIGATION_CONFIG` (`@mat3ra/jode`) grows optional per-tab step metadata (order, label)
-  so webapp and standalone agree on the sequence.
-- The three "Select …" dialogs stay as they are, but open from "Change" affordances on their
-  steps.
-- Layout: rail left (fixed ~260 px, collapses to a horizontal stepper under 760 px — the
-  compact variant can extend cove's existing `StyledStepper`), content right. Step state
-  renders with cove `StatusChip` colors from the job-status mapping (1.5). Keep the DOM of tab
-  panels unchanged where possible so Cypress selectors survive.
-- Acceptance: a new user can create and submit a job without opening any dropdown; deep links
-  via `getRouteQueryTab` still land on the right step; a finished job opens on Monitor/Results
-  with creation steps summarized; the rail is keyboard-navigable (arrow keys between steps,
-  visible focus, `aria-current` on the active step). Size: L.
-
-### 2.2 Context strip (A2) — job-designer
-
-- New `JobContextStrip` under the header: chips for material (formula · source), workflow
-  (name · subworkflow/unit counts), compute (cluster · nodes×cores · walltime), estimate
-  (core-hours ≈ cost). Chips navigate to their step; incomplete chips render in the attention
-  style. Data comes from the same `getJobReadiness` selector plus the estimate helper (2.3).
-- The parent job moves here too: today it renders as a dismissable `Alert` above the tabs
-  (`Job.jsx#renderParentJob`); it becomes a context chip (parent name · project) with the
-  remove affordance in its popover — same `setParent` / `unsetParent` model calls (the flow
-  fixed in SOF-7962).
-- Acceptance: on every step, the other selections stay visible; clicking a chip switches step;
-  a parent-derived job shows the parent chip and no orphaned Alert. Size: S–M.
-
-### 2.3 Compute redesign: cluster cards, presets, live estimate (B1–B3) — `@mat3ra/ive`
-
-- Cluster picker becomes selectable cards — cove `SelectableCard` with a `StatusChip` queue
-  badge — fed by the existing `clusters` prop; job-designer passes an optional
-  `clusterMetadata` enrichment (pricing, limits, queue wait) injected by the webapp through
-  `setDependencies()` — standalone falls back to static demo data. Nodes / cores / walltime
-  become cove `NumericStepperInput`s with min/max from `clusterMetadata`.
-- New `ComputeEstimatePanel` built from cove `MetricTile`s and a `SegmentedMeter` for quota:
-  core-hours = nodes × cores × walltime, price, queue ETA, monthly quota. Pure function
-  `estimateComputeCost(computeConfiguration, clusterMetadata)` lives beside the panel and is
-  unit-tested.
-- Presets row (Debug / Standard / Production / same-as-last-job) writes through the normal
-  `onUpdate(compute)` path so undo/save semantics are untouched.
-- Validation limits (max nodes, cores per node, queue walltime caps) come from
-  `clusterMetadata`; violations render inline (not red-on-first-paint — 1.1's touched logic).
-- The advanced-options section (`showAdvancedComputeOptions`, gated today by the applications'
-  `hasAdvancedComputeOptions` in `Job.jsx`) is preserved as a collapsed "Advanced" group below
-  the cards — redesign must not drop the espresso-class options.
-- Acceptance: changing any field updates the estimate synchronously; exceeding a limit flags
-  the field and the estimate panel; presets fill the form in one click; advanced options remain
-  reachable; webapp data path and standalone fallback both render. Size: L.
-
-### 2.4 Preflight at submit (C1) — job-designer (+ webapp data)
-
-- New `PreflightDialog` opened by Submit: runs ordered checks — material set, workflow renders
-  (`job.render()` succeeds / template errors empty), compute within `clusterMetadata` limits,
-  estimated cost vs. remaining quota. Each check row: pass / warn / fail; fails deep-link to
-  the owning step; warns require acknowledge. Submit proceeds only with zero fails and all
-  warns acknowledged, then calls the existing `onSubmit` prop.
-- Check implementations live in `src/preflight/` as pure async functions
-  `runPreflightChecks(job, materials, clusterMetadata, quota) → PreflightReport`, injectable so
-  the webapp can add checks (e.g. balance) via `setDependencies()`.
-- Acceptance: submitting an incomplete job is impossible through the UI; every fail row's
-  action lands on the field that fixes it; checks are unit-tested including the warn/ack flow.
-  Size: M–L.
-
-### 2.5 Materials tray and metadata (E1, E2) — job-designer (+ viewer package)
-
-- `MaterialTab` gains a chips tray above the viewer (add / remove / switch — reusing
-  `onUpdateIndex`, `onMaterialRemove`, `openAddMaterialsDialog`) and the explicit copy
-  "N materials → the workflow runs N times". Multi-material switching stops hiding inside the
-  Workflow tab (the workflow pane's switcher stays for parity but the tray is the primary
-  affordance).
-- Metadata side panel (formula, lattice, space group, atom count, source id) rendered from the
-  `Material` model next to the injected viewer; the viewer component API is unchanged.
-- Acceptance: adding a second material updates the tray, the batch copy, and the context strip;
-  removing the active material selects a sane neighbor. Size: M.
-- **Built** — [job-designer#19](https://github.com/mat3ra/job-designer/pull/19). Divergence:
-  the metadata is read through a defensive `getMaterialSummary()` that omits any field it
-  cannot read, because `MaterialTab` already renders a fallback for hosts passing a plain
-  config and made's model getters throw on partial data. Space group is shown only when the
-  model actually carries a `symmetry` derived property — standata materials generally do not,
-  so the row is usually absent rather than guessed from the name.
-
-### 2.6 Save-state honesty (new; relates to UX-498)
-
-- The header states the truth about persistence: "Saved" only after the entity actually
-  persisted through `onSave` / the `shouldPersistJobOnUpdate` pipeline, "Unsaved changes"
-  otherwise, and a leave-guard (browser `beforeunload` + router guard injected via the seam)
-  when a dirty draft is about to be abandoned. The mockups' "All changes saved" copy is the
-  target state; showing it without it being true would be worse than today.
-- Explicit non-goal here: no new autosave backend — this item only surfaces existing state
-  honestly. If product wants real autosave (UX-498 direction), that is a separate ticket.
-- Acceptance: editing any field flips the indicator to dirty; Save flips it back; closing the
-  tab with a dirty draft warns; the indicator never claims "Saved" while in-memory state
-  differs from the persisted entity. Size: S–M.
-- **Built** — [job-designer#19](https://github.com/mat3ra/job-designer/pull/19). Dirty state is
-  marked in the mutating handlers rather than in `persistJob()`, which also runs on mount and
-  on entering the Workflow tab; and both save paths were routed through a single `saveJob()`
-  so the flag cannot be cleared by one header and missed by the other.
+Built and in review. Its items, what actually shipped, and the divergences from this plan
+are recorded in
+[`../review/2026-08-17-Job-Designer-Phase-2-Guided-Designer.md`](../review/2026-08-17-Job-Designer-Phase-2-Guided-Designer.md).
 
 ## Phase 3 — The living job (proposals F1, F2, C2, D3, D4)
 
@@ -350,9 +226,11 @@ Additive props with safe defaults everywhere, so no lockstep release is required
 1. `cove` (1.5, palette + primitives) — everything else consumes it.
 2. `ive` (1.1, 2.3), `workflow-designer` (1.2, 1.3, 3.3), `jove` (3.2) — in parallel, each
    behind default-off props.
-3. `jode` (2.1 step metadata).
+3. ~~`jode` (2.1 step metadata)~~ — not needed; the rail derives its sequence from the
+   readiness selector and reuses the existing tab ids. jode is untouched.
 4. `job-designer` — version bumps + the shell work (1.4, 1.6, 2.1, 2.2, 2.4, 2.5, 2.6),
-   verified in the standalone demo.
+   verified in the standalone demo. Its `src/computeEstimate.ts` is a stand-in for ive's
+   canonical estimator and is deleted at this step, once ive ships one.
 5. `web-app` — pin bumps, seam wiring (`registerDependencies`), flag flip after the Cypress
    suite is green.
 
@@ -396,8 +274,11 @@ through an analytics hook injected via the seam (no-op in standalone):
 ## Open questions
 
 1. Where do pricing and quota live today — is there an existing accounting endpoint the webapp
-   can inject, or is this new backend work? (Blocks the cost half of 2.3; the limits half can
-   ship first.)
+   can inject, or is this new backend work? **Still open, and no longer blocking:** 2.3 and
+   2.4 shipped with `clusterMetadata` / `computeQuota` as injected props, demo values in the
+   standalone apps, and per-tile degradation — core-hours from the job alone, cost only with a
+   published price, and a preflight row that reports *skip* rather than passing on no
+   evidence. The question is now what the webapp injects, not whether the UI can wait for it.
 2. Should preflight warnings (e.g. convergence sanity) come from workflow model metadata or
    stay host-injected only? Package-native heuristics risk false alarms.
 3. Does the monitor (3.2) poll job properties or can the webapp provide a push channel? Polling

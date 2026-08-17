@@ -55,6 +55,11 @@ disappeared when unavailable to a header button that names what is missing.
 
 - Nothing from Phase 1 is unimplemented. The remaining work is review and the release
   order recorded in the parent plan (cove → wove → ive / workflow-designer → job-designer).
+- Phase 2 has since been built on the same branches; see
+  [`2026-08-17-Job-Designer-Phase-2-Guided-Designer.md`](2026-08-17-Job-Designer-Phase-2-Guided-Designer.md).
+  It adds four cove primitives and new ive components to the same release train, so the
+  order above now matters more, not less: ive's compute redesign will not render against a
+  cove that predates them.
 
 ## Phase 1 — De-noise (proposals B4, D1, D2, A3)
 
