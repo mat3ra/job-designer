@@ -109,6 +109,15 @@ declare class Job {
      * used to be a single unconfirmed click.
      */
     /**
+     * Where the job is in its life, in the header.
+     *
+     * Replaces the status tint on the header icon (`iconCls: text-${statusCls}`),
+     * which had one glyph carrying "queued", "running" and "errored" alike and
+     * could say nothing about what had already happened or when. On a draft it
+     * also does the work of telling a first-time reader what is coming.
+     */
+    renderLifecycleTimeline(): React.JSX.Element;
+    /**
      * Says whether the job on screen has been persisted. Only while editable:
      * a read-only view has nothing to save, so the words would be noise.
      */

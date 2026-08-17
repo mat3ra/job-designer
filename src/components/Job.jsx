@@ -1,5 +1,6 @@
 /* eslint-disable jsx-a11y/anchor-is-valid */
 import IconByName from "@mat3ra/cove/dist/mui/components/icon/IconByName";
+import { JobLifecycleTimeline } from "@mat3ra/cove/dist/mui/components/lifecycle/LifecycleTimeline";
 import { showWarningAlert } from "@mat3ra/cove/dist/other/alerts";
 import Alert from "@mui/material/Alert";
 import AlertTitle from "@mui/material/AlertTitle";
@@ -488,6 +489,26 @@ class Job extends mix(React.Component).with(
      * used to be a single unconfirmed click.
      */
     /**
+     * Where the job is in its life, in the header.
+     *
+     * Replaces the status tint on the header icon (`iconCls: text-${statusCls}`),
+     * which had one glyph carrying "queued", "running" and "errored" alike and
+     * could say nothing about what had already happened or when. On a draft it
+     * also does the work of telling a first-time reader what is coming.
+     */
+    renderLifecycleTimeline() {
+        const job = this.state.entity;
+
+        return (
+            <JobLifecycleTimeline
+                id="job-lifecycle-timeline"
+                status={job.status}
+                statusTrack={job.statusTrack}
+            />
+        );
+    }
+
+    /**
      * Says whether the job on screen has been persisted. Only while editable:
      * a read-only view has nothing to save, so the words would be noise.
      */
@@ -914,7 +935,6 @@ class Job extends mix(React.Component).with(
                         subtitle={project?.name ? { project: project.name } : undefined}
                         description={job.description}
                         icon="entities.job"
-                        iconCls={`text-${job.statusCls}`}
                         id="job-designer-header"
                         saveBtnProps={{
                             isShown: Boolean(this.props.editable),
@@ -936,6 +956,7 @@ class Job extends mix(React.Component).with(
                         isDescriptionEditable={isDescriptionEditable}
                         onDescriptionUpdate={this.onDescriptionUpdate}
                     >
+                        {this.renderLifecycleTimeline()}
                         {this.renderSaveStateIndicator()}
                         {this.renderSubmitAction()}
                         {headerChildren ?? null}
@@ -956,6 +977,7 @@ class Job extends mix(React.Component).with(
                             empty menu. */}
                         {dropdownProps.isShown && <Dropdown {...dropdownProps} />}
                         {this.props.editable && <ButtonMultiSelect {...this.getSaveBtnProps()} />}
+                        {this.renderLifecycleTimeline()}
                         {this.renderSaveStateIndicator()}
                         {this.renderSubmitAction()}
                         {headerChildren ?? null}

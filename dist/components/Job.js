@@ -1,6 +1,7 @@
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 /* eslint-disable jsx-a11y/anchor-is-valid */
 import IconByName from "@mat3ra/cove/dist/mui/components/icon/IconByName";
+import { JobLifecycleTimeline } from "@mat3ra/cove/dist/mui/components/lifecycle/LifecycleTimeline";
 import { showWarningAlert } from "@mat3ra/cove/dist/other/alerts";
 import Alert from "@mui/material/Alert";
 import AlertTitle from "@mui/material/AlertTitle";
@@ -541,6 +542,18 @@ class Job extends mix(React.Component).with(StatePropsCompareOnUpdateForJobMIxin
      * used to be a single unconfirmed click.
      */
     /**
+     * Where the job is in its life, in the header.
+     *
+     * Replaces the status tint on the header icon (`iconCls: text-${statusCls}`),
+     * which had one glyph carrying "queued", "running" and "errored" alike and
+     * could say nothing about what had already happened or when. On a draft it
+     * also does the work of telling a first-time reader what is coming.
+     */
+    renderLifecycleTimeline() {
+        const job = this.state.entity;
+        return (_jsx(JobLifecycleTimeline, { id: "job-lifecycle-timeline", status: job.status, statusTrack: job.statusTrack }));
+    }
+    /**
      * Says whether the job on screen has been persisted. Only while editable:
      * a read-only view has nothing to save, so the words would be noise.
      */
@@ -678,7 +691,7 @@ class Job extends mix(React.Component).with(StatePropsCompareOnUpdateForJobMIxin
         // Save & Exit split button) for production parity; standalone falls back to a
         // minimal header built on cove's EntityHeader below.
         const InjectedEntityHeader = getInjectedDeps().EntityHeaderComponent;
-        return (_jsxs(ErrorBoundary, { FallbackComponent: JobDesignerErrorCard, children: [InjectedEntityHeader ? (_jsxs(InjectedEntityHeader, { name: job.name, editable: this.props.editable, onNameUpdate: this.onNameUpdate, isLoading: isDesignerLoading, subtitle: (project === null || project === void 0 ? void 0 : project.name) ? { project: project.name } : undefined, description: job.description, icon: "entities.job", iconCls: `text-${job.statusCls}`, id: "job-designer-header", saveBtnProps: {
+        return (_jsxs(ErrorBoundary, { FallbackComponent: JobDesignerErrorCard, children: [InjectedEntityHeader ? (_jsxs(InjectedEntityHeader, { name: job.name, editable: this.props.editable, onNameUpdate: this.onNameUpdate, isLoading: isDesignerLoading, subtitle: (project === null || project === void 0 ? void 0 : project.name) ? { project: project.name } : undefined, description: job.description, icon: "entities.job", id: "job-designer-header", saveBtnProps: {
                         isShown: Boolean(this.props.editable),
                         isLoading: isDesignerLoading,
                         // Read `this.state.entity` at call time (not a render-time `job`
@@ -686,7 +699,7 @@ class Job extends mix(React.Component).with(StatePropsCompareOnUpdateForJobMIxin
                         // on mount, so a captured entity would forever persist the very
                         // first render's state - see getSaveBtnProps for the full note.
                         onSave: (omitRedirect) => this.saveJob((redirectFlag) => this.props.onSave(redirectFlag), omitRedirect),
-                    }, dropdownProps: dropdownProps, descriptionEditorTitle: "Job Description", isDescriptionEditorHidden: hideDescription, item: job, isDescriptionEditable: isDescriptionEditable, onDescriptionUpdate: this.onDescriptionUpdate, children: [this.renderSaveStateIndicator(), this.renderSubmitAction(), headerChildren !== null && headerChildren !== void 0 ? headerChildren : null] })) : (_jsxs(EntityHeader, { name: job.name, editable: this.props.editable, onNameUpdate: this.onNameUpdate, isLoading: isDesignerLoading, subtitle: (project === null || project === void 0 ? void 0 : project.name) ? { project: project.name } : undefined, icon: "entities.job", id: "job-designer-header", children: [dropdownProps.isShown && _jsx(Dropdown, { ...dropdownProps }), this.props.editable && _jsx(ButtonMultiSelect, { ...this.getSaveBtnProps() }), this.renderSaveStateIndicator(), this.renderSubmitAction(), headerChildren !== null && headerChildren !== void 0 ? headerChildren : null] })), this.renderTerminateConfirmation(), this.renderPreflightDialog(), this.renderParentJob(), this.renderErrors(), this.renderWarnings(), useGuidedDesigner ? (_jsx(JobContextStrip, { steps: readiness.steps, onSelect: this.onReadinessStepSelect, parentJob: parentJobForStrip, onParentRemove: editable ? this.onParentRemove : undefined, estimateLabel: this.estimateLabel })) : null, useGuidedDesigner ? null : (_jsx(TabsMenu, { tabs: tabs, activeTabIndex: activeTabIndex, variant: "fullWidth", centered: true })), _jsxs(Box, { sx: useGuidedDesigner
+                    }, dropdownProps: dropdownProps, descriptionEditorTitle: "Job Description", isDescriptionEditorHidden: hideDescription, item: job, isDescriptionEditable: isDescriptionEditable, onDescriptionUpdate: this.onDescriptionUpdate, children: [this.renderLifecycleTimeline(), this.renderSaveStateIndicator(), this.renderSubmitAction(), headerChildren !== null && headerChildren !== void 0 ? headerChildren : null] })) : (_jsxs(EntityHeader, { name: job.name, editable: this.props.editable, onNameUpdate: this.onNameUpdate, isLoading: isDesignerLoading, subtitle: (project === null || project === void 0 ? void 0 : project.name) ? { project: project.name } : undefined, icon: "entities.job", id: "job-designer-header", children: [dropdownProps.isShown && _jsx(Dropdown, { ...dropdownProps }), this.props.editable && _jsx(ButtonMultiSelect, { ...this.getSaveBtnProps() }), this.renderLifecycleTimeline(), this.renderSaveStateIndicator(), this.renderSubmitAction(), headerChildren !== null && headerChildren !== void 0 ? headerChildren : null] })), this.renderTerminateConfirmation(), this.renderPreflightDialog(), this.renderParentJob(), this.renderErrors(), this.renderWarnings(), useGuidedDesigner ? (_jsx(JobContextStrip, { steps: readiness.steps, onSelect: this.onReadinessStepSelect, parentJob: parentJobForStrip, onParentRemove: editable ? this.onParentRemove : undefined, estimateLabel: this.estimateLabel })) : null, useGuidedDesigner ? null : (_jsx(TabsMenu, { tabs: tabs, activeTabIndex: activeTabIndex, variant: "fullWidth", centered: true })), _jsxs(Box, { sx: useGuidedDesigner
                         ? {
                             display: "grid",
                             gridTemplateColumns: { xs: "1fr", md: "auto minmax(0, 1fr)" },
