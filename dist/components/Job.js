@@ -22,6 +22,7 @@ import { TAB_NAVIGATION_CONFIG } from "@mat3ra/jode";
 import { ANALYTICS_EVENTS, durationSince, trackEvent } from "../analytics";
 import { estimateComputeUsage, formatEstimate } from "../computeEstimate";
 import { formatBlockedReason } from "../jobSubmission";
+import { normalizeDialogHandle } from "../dialogHandles";
 import { getJobReadiness } from "../jobReadiness";
 import { getSaveState, getSaveStateLabel, shouldWarnBeforeLeaving } from "../saveState";
 import { shouldPersistJobOnUpdate } from "../shouldPersistJobOnUpdate";
@@ -294,7 +295,7 @@ class Job extends mix(React.Component).with(StatePropsCompareOnUpdateForJobMIxin
             this.setCurrentTab(TAB_NAVIGATION_CONFIG.material.id);
         };
         this.openAddMaterialsDialog = () => {
-            const [openAddMaterialsDialog, closeAddMaterialsDialog] = this.props.jobDialogs.selectMaterialsReduxDialog;
+            const { open: openAddMaterialsDialog, close: closeAddMaterialsDialog } = normalizeDialogHandle(this.props.jobDialogs.selectMaterialsReduxDialog);
             openAddMaterialsDialog({
                 id: "material-add",
                 title: "Import materials",
@@ -308,7 +309,7 @@ class Job extends mix(React.Component).with(StatePropsCompareOnUpdateForJobMIxin
             });
         };
         this.openSelectMaterialsDialog = () => {
-            const [openSelectMaterialsDialog, closeSelectMaterialsDialog] = this.props.jobDialogs.selectMaterialsReduxDialog;
+            const { open: openSelectMaterialsDialog, close: closeSelectMaterialsDialog } = normalizeDialogHandle(this.props.jobDialogs.selectMaterialsReduxDialog);
             openSelectMaterialsDialog({
                 title: "Select Materials",
                 onClose: closeSelectMaterialsDialog,
@@ -321,25 +322,25 @@ class Job extends mix(React.Component).with(StatePropsCompareOnUpdateForJobMIxin
             });
         };
         this.openSelectParentJobDialog = () => {
-            const [openSelectParentJobDialog, closeSelectParentJobDialog] = this.props.jobDialogs.selectParentJobExplorerDialog;
+            const { open: openSelectParentJobDialog, close: closeSelectParentJobDialog } = normalizeDialogHandle(this.props.jobDialogs.selectParentJobExplorerDialog);
             openSelectParentJobDialog({
                 onClose: closeSelectParentJobDialog,
                 customActions: this.customJobsActions,
             });
         };
         this.openSelectWorkflowDialog = () => {
-            const [openSelectWorkflowDialog, closeSelectWorkflowDialog] = this.props.jobDialogs.selectWorkflowReduxDialog;
+            const { open: openSelectWorkflowDialog, close: closeSelectWorkflowDialog } = normalizeDialogHandle(this.props.jobDialogs.selectWorkflowReduxDialog);
             openSelectWorkflowDialog({
                 onClose: closeSelectWorkflowDialog,
                 customActions: this.customWorkflowsActions,
             });
         };
         this.closeSelectWorkflowDialog = () => {
-            const [, closeSelectWorkflowDialog] = this.props.jobDialogs.selectWorkflowReduxDialog;
+            const { close: closeSelectWorkflowDialog } = normalizeDialogHandle(this.props.jobDialogs.selectWorkflowReduxDialog);
             closeSelectWorkflowDialog();
         };
         this.openDatasetUploadsDialog = () => {
-            const [openDatasetUploadsDialog, closeDatasetUploadsDialog] = this.props.jobDialogs.datasetUploadsReduxDialog;
+            const { open: openDatasetUploadsDialog, close: closeDatasetUploadsDialog } = normalizeDialogHandle(this.props.jobDialogs.datasetUploadsReduxDialog);
             openDatasetUploadsDialog({
                 onClose: closeDatasetUploadsDialog,
                 account: this.props.profile.account.entity,
@@ -492,6 +493,23 @@ class Job extends mix(React.Component).with(StatePropsCompareOnUpdateForJobMIxin
             editable: Boolean(this.props.editable),
             clusterMetadata: this.getPreflightContext().clusterMetadata,
         });
+    }
+    /**
+     * The "Select …" dialog that fills each step.
+     *
+     * This is what makes the rail a creation path rather than navigation: without
+     * it the only way to choose a material or a workflow is still the actions
+     * dropdown, which is the thing the rail exists to replace. Review has nothing
+     * to choose, so it gets no affordance.
+     */
+    get readinessStepDialogs() {
+        if (!this.state.entity.isInInitialStatus)
+            return {};
+        return {
+            material: this.openSelectMaterialsDialog,
+            dataset: this.openDatasetUploadsDialog,
+            workflow: this.openSelectWorkflowDialog,
+        };
     }
     /**
      * Core-hours the job will consume, and what they cost where the host told us
@@ -680,7 +698,7 @@ class Job extends mix(React.Component).with(StatePropsCompareOnUpdateForJobMIxin
         };
     }
     closeSelectParentJobDialog() {
-        const [, closeSelectParentJobDialog] = this.props.jobDialogs.selectParentJobExplorerDialog;
+        const { close: closeSelectParentJobDialog } = normalizeDialogHandle(this.props.jobDialogs.selectParentJobExplorerDialog);
         closeSelectParentJobDialog();
     }
     render() {
@@ -750,7 +768,7 @@ class Job extends mix(React.Component).with(StatePropsCompareOnUpdateForJobMIxin
                         : undefined, children: [useGuidedDesigner ? (_jsx(JobReadinessRail, { steps: readiness.steps, activeStepId: this.state.currentTab === TAB_NAVIGATION_CONFIG.compute.id &&
                                 readiness.isSubmittable
                                 ? TAB_NAVIGATION_CONFIG.compute.id
-                                : this.state.currentTab, onSelect: this.onReadinessStepSelect })) : null, _jsx("div", { className: "tab-content", children: this.state.isWorkflowLoading ? (_jsx(LoadingIndicator, { included: true })) : (_jsxs(_Fragment, { children: [isCurrentTabMaterial && (_jsx(MaterialTab, { className: isCurrentTabMaterial ? "active" : null, id: TAB_NAVIGATION_CONFIG.material.id, publicAccount: publicAccount, profile: profile, role: "tabpanel", material: material, index: index, length: length, onUpdateIndex: onUpdateIndex, materials: materials, onMaterialRemove: onMaterialRemove, addRemoveAllowed: !job.id, openAddMaterialsDialog: this.openAddMaterialsDialog, MaterialViewerComponent: MaterialViewerComponent })), isCurrentTabDataset && (_jsx(DatasetTab, { className: isCurrentTabDataset ? "active" : null, id: TAB_NAVIGATION_CONFIG.dataset.id, profile: profile, role: "tabpanel", datasetConfig: datasetConfig, datagridHeaderText: "DataFrame", datagridPopoverText: "Training Model Data" })), isCurrentTabWorkflow && (_jsx(WorkflowTab, { className: isCurrentTabWorkflow ? "active" : null, workflowRenderGeneration: renderGeneration, id: TAB_NAVIGATION_CONFIG.workflow.id, role: "tabpanel", workflow: job.workflow, onJobRender: this.persistJob, jobHasParent: Boolean((_c = job.getParentJobClient) === null || _c === void 0 ? void 0 : _c.call(job)), profile: profile, publicAccount: publicAccount, allowedWorkflows: allowedWorkflows, onWorkflowSelect: onWorkflowSelect, materials: materials, materialsSet: materialsSet, materialsIndex: index, onIsMultiMaterialChanged: onIsMultiMaterialChanged, onMaterialSwitch: onMaterialSwitch, onWorkflowUpdate: this.onWorkflowUpdate, adjustable: job.isInInitialStatus, iconCls: `text-${job.statusCls}`, metaProperties: metaProperties, onOutputUpdateRequest: onOutputUpdateRequest, accountUsers: accountUsers, accountUsersIsLoading: accountUsersIsLoading, dialogs: workflowDialogs, templates: templates, createMetaProperty: createMetaProperty, jobProperties: jobProperties, isDescriptionEditable: isDescriptionEditable, 
+                                : this.state.currentTab, onSelect: this.onReadinessStepSelect, onChange: this.readinessStepDialogs, editable: editable })) : null, _jsx("div", { className: "tab-content", children: this.state.isWorkflowLoading ? (_jsx(LoadingIndicator, { included: true })) : (_jsxs(_Fragment, { children: [isCurrentTabMaterial && (_jsx(MaterialTab, { className: isCurrentTabMaterial ? "active" : null, id: TAB_NAVIGATION_CONFIG.material.id, publicAccount: publicAccount, profile: profile, role: "tabpanel", material: material, index: index, length: length, onUpdateIndex: onUpdateIndex, materials: materials, onMaterialRemove: onMaterialRemove, addRemoveAllowed: !job.id, openAddMaterialsDialog: this.openAddMaterialsDialog, MaterialViewerComponent: MaterialViewerComponent })), isCurrentTabDataset && (_jsx(DatasetTab, { className: isCurrentTabDataset ? "active" : null, id: TAB_NAVIGATION_CONFIG.dataset.id, profile: profile, role: "tabpanel", datasetConfig: datasetConfig, datagridHeaderText: "DataFrame", datagridPopoverText: "Training Model Data" })), isCurrentTabWorkflow && (_jsx(WorkflowTab, { className: isCurrentTabWorkflow ? "active" : null, workflowRenderGeneration: renderGeneration, id: TAB_NAVIGATION_CONFIG.workflow.id, role: "tabpanel", workflow: job.workflow, onJobRender: this.persistJob, jobHasParent: Boolean((_c = job.getParentJobClient) === null || _c === void 0 ? void 0 : _c.call(job)), profile: profile, publicAccount: publicAccount, allowedWorkflows: allowedWorkflows, onWorkflowSelect: onWorkflowSelect, materials: materials, materialsSet: materialsSet, materialsIndex: index, onIsMultiMaterialChanged: onIsMultiMaterialChanged, onMaterialSwitch: onMaterialSwitch, onWorkflowUpdate: this.onWorkflowUpdate, adjustable: job.isInInitialStatus, iconCls: `text-${job.statusCls}`, metaProperties: metaProperties, onOutputUpdateRequest: onOutputUpdateRequest, accountUsers: accountUsers, accountUsersIsLoading: accountUsersIsLoading, dialogs: workflowDialogs, templates: templates, createMetaProperty: createMetaProperty, jobProperties: jobProperties, isDescriptionEditable: isDescriptionEditable, 
                                         // Phase 3.3 lives in @mat3ra/workflow-designer;
                                         // inert until a release carrying it is installed.
                                         useUnitInspector: useGuidedDesigner, useHostTheme: useGuidedDesigner })), isCurrentTabCompute && (_jsx(ComputeTab, { className: isCurrentTabCompute ? "active" : null, id: TAB_NAVIGATION_CONFIG.compute.id, role: "tabpanel", compute: job.compute, job: job, onUpdate: this.onComputeUpdate, editable: editable, clusters: clusters, showAdvancedOptions: showAdvancedCompute, accountUsers: accountUsers, accountUsersIsLoading: accountUsersIsLoading, currentUser: currentUser, currentAccount: currentAccount, 

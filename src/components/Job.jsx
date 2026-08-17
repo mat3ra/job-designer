@@ -21,6 +21,7 @@ import { TAB_NAVIGATION_CONFIG } from "@mat3ra/jode";
 import { ANALYTICS_EVENTS, durationSince, trackEvent } from "../analytics";
 import { estimateComputeUsage, formatEstimate } from "../computeEstimate";
 import { formatBlockedReason } from "../jobSubmission";
+import { normalizeDialogHandle } from "../dialogHandles";
 import { getJobReadiness } from "../jobReadiness";
 import { getSaveState, getSaveStateLabel, shouldWarnBeforeLeaving } from "../saveState";
 import { shouldPersistJobOnUpdate } from "../shouldPersistJobOnUpdate";
@@ -278,6 +279,24 @@ class Job extends mix(React.Component).with(
             editable: Boolean(this.props.editable),
             clusterMetadata: this.getPreflightContext().clusterMetadata,
         });
+    }
+
+    /**
+     * The "Select …" dialog that fills each step.
+     *
+     * This is what makes the rail a creation path rather than navigation: without
+     * it the only way to choose a material or a workflow is still the actions
+     * dropdown, which is the thing the rail exists to replace. Review has nothing
+     * to choose, so it gets no affordance.
+     */
+    get readinessStepDialogs() {
+        if (!this.state.entity.isInInitialStatus) return {};
+
+        return {
+            material: this.openSelectMaterialsDialog,
+            dataset: this.openDatasetUploadsDialog,
+            workflow: this.openSelectWorkflowDialog,
+        };
     }
 
     /** The rail's Review step has no tab of its own; it lands on Compute. */
@@ -768,8 +787,8 @@ class Job extends mix(React.Component).with(
     };
 
     openAddMaterialsDialog = () => {
-        const [openAddMaterialsDialog, closeAddMaterialsDialog] =
-            this.props.jobDialogs.selectMaterialsReduxDialog;
+        const { open: openAddMaterialsDialog, close: closeAddMaterialsDialog } =
+            normalizeDialogHandle(this.props.jobDialogs.selectMaterialsReduxDialog);
 
         openAddMaterialsDialog({
             id: "material-add",
@@ -785,8 +804,8 @@ class Job extends mix(React.Component).with(
     };
 
     openSelectMaterialsDialog = () => {
-        const [openSelectMaterialsDialog, closeSelectMaterialsDialog] =
-            this.props.jobDialogs.selectMaterialsReduxDialog;
+        const { open: openSelectMaterialsDialog, close: closeSelectMaterialsDialog } =
+            normalizeDialogHandle(this.props.jobDialogs.selectMaterialsReduxDialog);
 
         openSelectMaterialsDialog({
             title: "Select Materials",
@@ -801,8 +820,8 @@ class Job extends mix(React.Component).with(
     };
 
     openSelectParentJobDialog = () => {
-        const [openSelectParentJobDialog, closeSelectParentJobDialog] =
-            this.props.jobDialogs.selectParentJobExplorerDialog;
+        const { open: openSelectParentJobDialog, close: closeSelectParentJobDialog } =
+            normalizeDialogHandle(this.props.jobDialogs.selectParentJobExplorerDialog);
 
         openSelectParentJobDialog({
             onClose: closeSelectParentJobDialog,
@@ -811,14 +830,16 @@ class Job extends mix(React.Component).with(
     };
 
     closeSelectParentJobDialog() {
-        const [, closeSelectParentJobDialog] = this.props.jobDialogs.selectParentJobExplorerDialog;
+        const { close: closeSelectParentJobDialog } = normalizeDialogHandle(
+            this.props.jobDialogs.selectParentJobExplorerDialog,
+        );
 
         closeSelectParentJobDialog();
     }
 
     openSelectWorkflowDialog = () => {
-        const [openSelectWorkflowDialog, closeSelectWorkflowDialog] =
-            this.props.jobDialogs.selectWorkflowReduxDialog;
+        const { open: openSelectWorkflowDialog, close: closeSelectWorkflowDialog } =
+            normalizeDialogHandle(this.props.jobDialogs.selectWorkflowReduxDialog);
 
         openSelectWorkflowDialog({
             onClose: closeSelectWorkflowDialog,
@@ -827,14 +848,16 @@ class Job extends mix(React.Component).with(
     };
 
     closeSelectWorkflowDialog = () => {
-        const [, closeSelectWorkflowDialog] = this.props.jobDialogs.selectWorkflowReduxDialog;
+        const { close: closeSelectWorkflowDialog } = normalizeDialogHandle(
+            this.props.jobDialogs.selectWorkflowReduxDialog,
+        );
 
         closeSelectWorkflowDialog();
     };
 
     openDatasetUploadsDialog = () => {
-        const [openDatasetUploadsDialog, closeDatasetUploadsDialog] =
-            this.props.jobDialogs.datasetUploadsReduxDialog;
+        const { open: openDatasetUploadsDialog, close: closeDatasetUploadsDialog } =
+            normalizeDialogHandle(this.props.jobDialogs.datasetUploadsReduxDialog);
 
         openDatasetUploadsDialog({
             onClose: closeDatasetUploadsDialog,
@@ -1071,6 +1094,8 @@ class Job extends mix(React.Component).with(
                                     : this.state.currentTab
                             }
                             onSelect={this.onReadinessStepSelect}
+                            onChange={this.readinessStepDialogs}
+                            editable={editable}
                         />
                     ) : null}
                     <div className="tab-content">

@@ -177,6 +177,22 @@ const DEMO_CLUSTER_METADATA = [
 /** Fixed unix seconds so the simulated run reads the same on every reload. */
 const SIMULATED_START = 1_755_000_000;
 
+/**
+ * A dialog handle in the tuple shape the webapp passes. The demo has no entity
+ * explorer to open, so it says which dialog would have opened rather than
+ * silently doing nothing — otherwise a broken wiring looks exactly like a
+ * working one.
+ */
+function demoDialog(name: string): [(...args: unknown[]) => void, () => void] {
+    return [
+        () => {
+            // eslint-disable-next-line no-alert
+            window.alert(`${name} — the webapp opens its entity explorer here.`);
+        },
+        () => {},
+    ];
+}
+
 const DEMO_QUOTA = { remainingCoreHours: 500, totalCoreHours: 1000, currency: "USD" };
 
 function App() {
@@ -414,28 +430,17 @@ function App() {
                     publicAccount={{ entity: { id: "public" } } as any}
                     clusters={DEMO_CLUSTERS}
                     refreshMetaProperties={() => {}}
-                    jobDialogs={{
-                        selectMaterialsReduxDialog: {
-                            isOpen: false,
-                            open: () => {},
-                            close: () => {},
-                        },
-                        selectParentJobExplorerDialog: {
-                            isOpen: false,
-                            open: () => {},
-                            close: () => {},
-                        },
-                        selectWorkflowReduxDialog: {
-                            isOpen: false,
-                            open: () => {},
-                            close: () => {},
-                        },
-                        datasetUploadsReduxDialog: {
-                            isOpen: false,
-                            open: () => {},
-                            close: () => {},
-                        },
-                    }}
+                    // Tuples, as `useReduxDialog` returns and the webapp passes —
+                    // the object form the demo used before did not match what
+                    // `Job.jsx` destructures, so every "Select …" action threw.
+                    jobDialogs={
+                        {
+                            selectMaterialsReduxDialog: demoDialog("Select materials"),
+                            selectParentJobExplorerDialog: demoDialog("Select parent job"),
+                            selectWorkflowReduxDialog: demoDialog("Select workflow"),
+                            datasetUploadsReduxDialog: demoDialog("Select dataset"),
+                        } as any
+                    }
                     workflowDialogs={{
                         pseudoUploadReduxDialog: [() => {}, () => {}] as any,
                         unitTypeReduxDialog: [() => {}, () => {}] as any,

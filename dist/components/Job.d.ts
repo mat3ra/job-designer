@@ -39,6 +39,23 @@ declare class Job {
      * about.
      */
     get jobReadiness(): import("../jobReadiness").JobReadiness;
+    /**
+     * The "Select …" dialog that fills each step.
+     *
+     * This is what makes the rail a creation path rather than navigation: without
+     * it the only way to choose a material or a workflow is still the actions
+     * dropdown, which is the thing the rail exists to replace. Review has nothing
+     * to choose, so it gets no affordance.
+     */
+    get readinessStepDialogs(): {
+        material?: undefined;
+        dataset?: undefined;
+        workflow?: undefined;
+    } | {
+        material: () => void;
+        dataset: () => void;
+        workflow: () => void;
+    };
     /** The rail's Review step has no tab of its own; it lands on Compute. */
     onReadinessStepSelect: (stepId: any) => void;
     /**

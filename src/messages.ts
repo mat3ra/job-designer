@@ -54,6 +54,10 @@ export const MESSAGES = {
     "readiness.files.label": "Files",
     "readiness.files.summary": "Job directory",
 
+    // The rail's per-step affordance for opening its "Select …" dialog.
+    "rail.choose": "Choose",
+    "rail.change": "Change",
+
     // Why Submit is disabled. Read by the button's tooltip and the preflight.
     "blocker.material": "Select a material",
     "blocker.dataset": "Select a dataset",

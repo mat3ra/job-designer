@@ -4,6 +4,17 @@ export interface JobReadinessRailProps {
     steps: ReadinessStep[];
     activeStepId: string;
     onSelect: (stepId: string) => void;
+    /**
+     * Opens the "Select …" dialog that fills a step, keyed by step id. A step
+     * with no entry gets no Change affordance — Review has nothing to choose.
+     *
+     * This is what makes the rail a creation path rather than just navigation:
+     * without it the only way to pick a material or a workflow is still the
+     * actions dropdown, which is the thing the rail exists to replace.
+     */
+    onChange?: Record<string, (() => void) | undefined>;
+    /** False for shared or finished jobs: the rail renders without Change. */
+    editable?: boolean;
     /** Rendered under the steps — parent job, import, and other power actions. */
     children?: React.ReactNode;
 }
@@ -18,5 +29,5 @@ export interface JobReadinessRailProps {
  * Keyboard: the steps are a toolbar of buttons, arrow keys move between them,
  * and the active one carries `aria-current`.
  */
-export default function JobReadinessRail({ steps, activeStepId, onSelect, children, }: JobReadinessRailProps): React.JSX.Element;
+export default function JobReadinessRail({ steps, activeStepId, onSelect, onChange, editable, children, }: JobReadinessRailProps): React.JSX.Element;
 //# sourceMappingURL=JobReadinessRail.d.ts.map

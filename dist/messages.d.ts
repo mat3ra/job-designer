@@ -47,6 +47,8 @@ export declare const MESSAGES: {
     readonly "readiness.results.summary": "Outputs and properties";
     readonly "readiness.files.label": "Files";
     readonly "readiness.files.summary": "Job directory";
+    readonly "rail.choose": "Choose";
+    readonly "rail.change": "Change";
     readonly "blocker.material": "Select a material";
     readonly "blocker.dataset": "Select a dataset";
     readonly "blocker.workflow": "Select a workflow";
