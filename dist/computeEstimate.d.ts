@@ -7,6 +7,12 @@
  * estimate panel — so it lives here once. Three surfaces disagreeing about how
  * much a job costs would be worse than none of them saying anything.
  *
+ * TODO(SOF-8023): this is a copy. The canonical implementation is
+ * `@mat3ra/ive`'s `utils/computeEstimate`, beside the form that holds the live
+ * values; it is duplicated here only because the ive release carrying it has not
+ * shipped yet. Delete this module and import from ive once it has — the two are
+ * identical today and must not be allowed to drift.
+ *
  * Pricing, limits and quota are not in the job document: they are properties of
  * the cluster and the account, injected by the host through `setDependencies()`
  * (see {@link ClusterMetadata}). Everything here degrades when that metadata is

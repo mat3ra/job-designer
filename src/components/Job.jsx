@@ -1087,6 +1087,16 @@ class Job extends mix(React.Component).with(
                                         accountUsersIsLoading={accountUsersIsLoading}
                                         currentUser={currentUser}
                                         currentAccount={currentAccount}
+                                        // Phase 2.3 lives in @mat3ra/ive; these are inert
+                                        // until a release carrying it is installed.
+                                        useComputeCards={useGuidedDesigner}
+                                        clusterMetadata={this.getPreflightContext().clusterMetadata}
+                                        computeQuota={this.getPreflightContext().quota}
+                                        runs={
+                                            this.isUsingMaterialsTab
+                                                ? Math.max(materials?.length ?? 1, 1)
+                                                : 1
+                                        }
                                     />
                                 )}
                                 {isCurrentTabResults && (

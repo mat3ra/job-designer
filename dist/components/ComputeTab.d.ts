@@ -12,6 +12,10 @@ declare namespace ComputeTab {
         let currentUser: PropTypes.Validator<object>;
         let currentAccount: PropTypes.Validator<object>;
         let clusters: PropTypes.Validator<object[]>;
+        let useComputeCards: PropTypes.Requireable<boolean>;
+        let clusterMetadata: PropTypes.Requireable<object[]>;
+        let computeQuota: PropTypes.Requireable<object>;
+        let runs: PropTypes.Requireable<number>;
     }
     namespace defaultProps {
         let editable_1: boolean;

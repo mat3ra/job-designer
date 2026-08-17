@@ -6,8 +6,8 @@ import PropTypes from "prop-types";
 import React from "react";
 import { Compute } from "@mat3ra/ive";
 export default function ComputeTab(props) {
-    const { className, id, role, compute, job, onUpdate, editable, clusters, showHeader, showAdvancedOptions, accountUsers, currentAccount, currentUser, accountUsersIsLoading, } = props;
-    return (_jsx("div", { className: setClass(className), id: id, role: role, children: _jsx(Compute, { compute: compute, job: job, user: currentUser, account: currentAccount, onUpdate: onUpdate, editable: editable, clusters: clusters, showHeader: showHeader, showAdvancedOptions: showAdvancedOptions, accountUsers: accountUsers, isAccountUsersLoading: accountUsersIsLoading }) }));
+    const { className, id, role, compute, job, onUpdate, editable, clusters, showHeader, showAdvancedOptions, accountUsers, currentAccount, currentUser, accountUsersIsLoading, useComputeCards, clusterMetadata, computeQuota, runs, } = props;
+    return (_jsx("div", { className: setClass(className), id: id, role: role, children: _jsx(Compute, { compute: compute, job: job, user: currentUser, account: currentAccount, onUpdate: onUpdate, editable: editable, clusters: clusters, showHeader: showHeader, showAdvancedOptions: showAdvancedOptions, accountUsers: accountUsers, isAccountUsersLoading: accountUsersIsLoading, useComputeCards: useComputeCards, clusterMetadata: clusterMetadata, computeQuota: computeQuota, runs: runs }) }));
 }
 ComputeTab.propTypes = {
     compute: PropTypes.object,
@@ -23,6 +23,12 @@ ComputeTab.propTypes = {
     currentUser: PropTypes.object.isRequired,
     currentAccount: PropTypes.object.isRequired,
     clusters: PropTypes.arrayOf(PropTypes.object).isRequired,
+    /* Phase 2.3 (@mat3ra/ive): cluster cards, resource steppers and the estimate panel.
+       Ignored by ive releases predating it. */
+    useComputeCards: PropTypes.bool,
+    clusterMetadata: PropTypes.arrayOf(PropTypes.object),
+    computeQuota: PropTypes.object,
+    runs: PropTypes.number,
 };
 ComputeTab.defaultProps = {
     editable: false,
