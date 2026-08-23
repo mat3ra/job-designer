@@ -1,0 +1,26 @@
+# Deploy target for the standalone demo (site: mat3ra-job-designer).
+#
+# The same `build:standalone` bundle is also published to GitHub Pages by
+# .github/workflows/cicd.yml, but only from `main`. Netlify covers the gap:
+# it builds every branch and pull request, so a designer or reviewer can open
+# a work-in-progress branch without checking it out.
+
+[build]
+    command = "npm run build:standalone"
+    publish = "build"
+
+[build.environment]
+    NODE_VERSION = "20"
+    # The dependency tree does not satisfy peer ranges cleanly; this matches
+    # what CI and the README already use. Setting NPM_FLAGS also makes Netlify
+    # run `npm install` rather than `npm ci`, which is what we want here.
+    NPM_FLAGS = "--legacy-peer-deps"
+    # Netlify serves the app from the domain root, unlike GitHub Pages, which
+    # serves it from the /job-designer/ subpath. See vite.config.ts.
+    VITE_BASE = "/"
+
+# Single-page app: any path has to return index.html rather than a 404.
+[[redirects]]
+    from = "/*"
+    to = "/index.html"
+    status = 200

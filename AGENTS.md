@@ -126,6 +126,27 @@ whether your change reached it.
 
 Use GitHub Actions to run tests and linters automatically.
 
+### 1.9. Demo deploys
+
+Packages with a standalone demo (`npm run build:standalone`) publish it to two
+places, and the two disagree about the base path:
+
+| Target        | Serves from                       | Built by                          | Branches |
+| ------------- | --------------------------------- | --------------------------------- | -------- |
+| GitHub Pages  | `mat3ra.github.io/<repo>/`        | `deploy-bundle` in `cicd.yml`     | `main` only — the job `needs: [publish]`, which is gated on `main` |
+| Netlify       | the site root                     | `netlify.toml`                     | every branch and pull request |
+
+Never hardcode Vite's `base`. Read it from `VITE_BASE` with the Pages subpath
+as the default, so the root-served target opts in rather than the subpath one
+silently breaking:
+
+```ts
+base: process.env.VITE_BASE || "/<repo>/",
+```
+
+A wrong `base` fails in the least obvious way: `index.html` loads, then every
+asset 404s, so the deploy looks like a blank page rather than a build error.
+
 ## 2. !!! IMPORTANT !!!: Code Editing & Development HARD RULES
 
 ### 2.1. HARD RULE 1: Never commit without explicit ask from user

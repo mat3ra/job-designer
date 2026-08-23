@@ -4,9 +4,11 @@ import { defineConfig } from "vite";
 import { nodePolyfills } from "vite-plugin-node-polyfills";
 
 export default defineConfig({
-    // Matches the repo name so assets resolve under the GitHub Pages
-    // subpath (mat3ra.github.io/job-designer/). Harmless for `npm run dev`.
-    base: "/job-designer/",
+    // GitHub Pages serves this under the repo subpath
+    // (mat3ra.github.io/job-designer/); Netlify serves it from the domain
+    // root. Each deploy target sets VITE_BASE to say which it is — see
+    // netlify.toml. The default keeps Pages and `npm run dev` working.
+    base: process.env.VITE_BASE || "/job-designer/",
     server: {
         port: 3003,
         fs: {
