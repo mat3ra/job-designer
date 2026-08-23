@@ -89,38 +89,44 @@ Use linting for autoformatting the codebase. Consider language-specific tools an
 
 Use pre-commit to run linters and formatters automatically.
 
-### 1.7.1. Committed build output (`dist/`) — TypeScript packages
+### 1.7.1. Build output (`dist/`) — TypeScript packages
 
-The `@mat3ra/*` TypeScript packages **track `dist/` in git** and ship it (`"files": ["/dist",
-"/src"]`, `"main": "dist/exports.js"`). Committing a `src/` change without the matching
-`dist/` leaves the repository — and any consumer installing from it — running the old code.
-A brand-new module is the dangerous case: its `dist/` file is absent entirely, so the
-emitted code imports something that does not exist, and the package throws at runtime
-rather than merely behaving as the old version.
+**This repo no longer tracks `dist/`.** It is gitignored, and CI publishes WIP
+release tarballs on `[release]` commits through the reusable workflow in
+`mat3ra/actions` (see `RELEASING.md`, `.github/workflows/release-wip.yml`).
+Do not re-add build output to a commit, and do not add a hook that stages it.
 
-The husky `pre-commit` hook already handles this:
+The rest of the `@mat3ra/*` family has not all migrated yet, and the two models
+fail in opposite directions, so **check before you commit rather than assuming
+either one**:
 
 ```sh
-npm run transpile
-git add dist/
+git ls-tree -r origin/main --name-only | grep -c '^dist/'
 ```
 
-**It only fires once hooks are installed.** Repos whose `package.json` has no
-`"prepare": "husky install"` (most of them — `cove` is an exception) leave a fresh clone
-with no active hooks, so `npm install` alone does not arm it and commits go out with a
-stale `dist/`. Do not rely on `prepublishOnly` to cover it either: some packages have no
-such script, and the tracked `dist/` goes stale regardless.
-
-So, before committing in any package that tracks `dist/`:
+Non-zero means that repo still tracks build output. There, committing a `src/`
+change without the matching `dist/` leaves the repository — and any consumer
+installing from git — on the old code. A brand-new module is the dangerous
+case: its `dist/` file is absent entirely, so the emitted code imports
+something that does not exist and the package throws at runtime rather than
+merely behaving as the old version. In those repos, before committing:
 
 ```sh
 npm run transpile   # or: npm run build
 git add dist/
 ```
 
-Verify rather than assume — `git ls-tree -r origin/main --name-only | grep -c '^dist/'`
-says whether the repo tracks build output, and `git status --short` after transpiling says
-whether your change reached it.
+Zero means the repo has migrated, as this one has: let CI build it, and treat
+a `dist/` diff in `git status` as something to leave alone.
+
+#### The pre-commit hook is dormant here
+
+`.husky/pre-commit` exists but never runs: `package.json` has no
+`"prepare": "husky install"`, so a fresh clone arms no hooks. Arming it as-is
+would break commits — the hook's first line is `npx lint-staged`, and
+`lint-staged` is neither a dependency nor configured anywhere in the repo. If
+you want the hook live, add `lint-staged` and its config in the same change;
+do not add `prepare` on its own.
 
 ### 1.8. GitHub Actions
 

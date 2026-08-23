@@ -2,13 +2,13 @@ import { math } from "@mat3ra/code/dist/js/math";
 import JSONSchemasInterface from "@mat3ra/esse/dist/js/esse/JSONSchemasInterface";
 import esseSchemas from "@mat3ra/esse/dist/js/schemas.json";
 import { ApplicationRegistry } from "@mat3ra/standata";
-import { ApplicationDriver } from "@mat3ra/standata/dist/js/ApplicationDriver";
+import StandataDriver from "@mat3ra/standata/dist/js/StandataDriver";
 import { sharedUtils } from "@mat3ra/utils";
 import moment from "moment";
 
 // Bootstrap — must run before any component renders
 JSONSchemasInterface.setSchemas(esseSchemas as any);
-ApplicationRegistry.setDriver(new ApplicationDriver());
+ApplicationRegistry.setDriver(new StandataDriver());
 
 (window as any).moment = moment;
 
