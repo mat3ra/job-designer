@@ -132,6 +132,39 @@ do not add `prepare` on its own.
 
 Use GitHub Actions to run tests and linters automatically.
 
+#### 1.8.1. Building a WIP test release of a `@mat3ra/*` package
+
+`@mat3ra/*` packages don't commit their build output (`dist/`) to git, and don't have a
+local/manual publish path — CI is the only thing that builds and publishes a tarball. To let
+a consumer install a not-yet-merged commit of a `@mat3ra/*` package (e.g. to test a fix in
+`code` from a branch in `made` before `code`'s PR merges), publish a **WIP pre-release**:
+
+1. **Push a commit with `[release]` anywhere in its message** to the package repo (any
+   branch). Its `.github/workflows/release-wip.yml` calls a reusable workflow in
+   [`mat3ra/actions`](https://github.com/mat3ra/actions) that builds, packs, and publishes the
+   package as a GitHub **pre-release** tarball asset tagged `wip-<short-commit-sha>` (e.g.
+   `wip-e8ed741`). Each commit gets its own immutable tag — the asset URL never changes
+   content under you.
+2. **Install it in a consumer** — no local tooling or cloned `mat3ra/actions` needed, just a
+   URL in `package.json` in place of a normal semver range:
+
+   ```json
+   "@mat3ra/code": "https://github.com/mat3ra/code/releases/download/wip-e8ed741/code.tgz"
+   ```
+
+   Then a plain `npm install` resolves it like any other tarball dependency.
+3. **Re-publishing on the same commit** (e.g. re-running the workflow) uploads over that
+   commit's existing asset rather than minting a new tag. Because the URL doesn't change, a
+   plain `npm install` in the consumer won't refetch it — npm caches by URL and
+   `package-lock.json` pins the old `integrity` hash. Force it explicitly:
+   `npm install @mat3ra/<pkg>@<url> --force`.
+4. Once the source commit's real PR merges and a normal registry version is published,
+   switch the consumer back to a semver range/pin — the WIP tarball URL is only for testing
+   pre-merge changes.
+
+Full details (tag scheme, cleanup of stale pre-releases, the exact reusable workflow
+contract): see [`mat3ra/actions`](https://github.com/mat3ra/actions)'s README.
+
 ### 1.9. Demo deploys
 
 Packages with a standalone demo (`npm run build:standalone`) publish it to two
