@@ -147,6 +147,18 @@ base: process.env.VITE_BASE || "/<repo>/",
 A wrong `base` fails in the least obvious way: `index.html` loads, then every
 asset 404s, so the deploy looks like a blank page rather than a build error.
 
+Netlify installs with `npm ci`, which refuses to run at all when
+`package.json` and `package-lock.json` disagree. Our own CI and the README
+both use `npm install --legacy-peer-deps`, which papers over exactly that
+drift — so adding a dependency without regenerating the lockfile passes
+every local and CI check and then fails only on deploy, in seconds, with
+`EUSAGE ... Missing: <pkg> from lock file`. After changing dependencies, run:
+
+```bash
+npm install --package-lock-only --legacy-peer-deps
+npm ci --dry-run   # must report no error
+```
+
 ## 2. !!! IMPORTANT !!!: Code Editing & Development HARD RULES
 
 ### 2.1. HARD RULE 1: Never commit without explicit ask from user
