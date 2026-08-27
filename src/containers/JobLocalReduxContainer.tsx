@@ -9,7 +9,7 @@ import { applyMiddleware, createStore } from "redux";
 import logger from "redux-logger";
 
 import { setMaterials, syncJobWorkflow, updateJob } from "../actions";
-import { type JobDesignerDialogTuple, useJobDesignerDeps } from "../JobDesignerContext";
+import { useJobDesignerDeps } from "../JobDesignerContext";
 import { createJobDesignerReducer } from "../reducers";
 import JobContainer from "./JobContainer";
 import {
@@ -33,39 +33,36 @@ interface JobDesignerAccount {
 }
 
 interface JobDesignerCluster {
-    hostname: string;
-    displayName?: string;
-    isDefault?: boolean;
+    name: string;
+    slug?: string;
+    [key: string]: unknown;
 }
 
-type JobDesignerMetaProperty = object;
+interface JobDesignerMetaProperty {
+    [key: string]: unknown;
+}
 
-type JobDesignerProperty = object;
+interface JobDesignerProperty {
+    [key: string]: unknown;
+}
 
-type JobDesignerMaterialSchema = object;
+interface JobDesignerDialogState {
+    isOpen: boolean;
+    open: (...args: any[]) => void;
+    close: () => void;
+}
 
-type JobDesignerMetaPropertyHolderSchema = object;
+interface JobDesignerMaterialSchema {
+    [key: string]: unknown;
+}
+
+interface JobDesignerMetaPropertyHolderSchema {
+    [key: string]: unknown;
+}
 
 interface JobDesignerCreateMetaPropertyConfig {
-    element: string;
-    approximation: string;
-    functional: string;
-    type: "us" | "nc" | "nc-fr" | "paw" | "coulomb";
-    filename: string;
-    application: string;
-    content: string;
+    [key: string]: unknown;
 }
-
-/**
- * `workflowDialogs` is populated by the webapp's own `useReduxDialog` (bypassing job-designer's
- * DI shim), which returns a 3-element `[open, close, setState]` tuple - looser than
- * `JobDesignerDialogTuple` so both producers are accepted at this package boundary.
- */
-type JobDesignerWorkflowDialogTuple = readonly [
-    open: (...args: any[]) => void,
-    close: () => void,
-    ...rest: unknown[]
-];
 
 interface JobStoreLocalReduxContainerProps {
     jobId?: string;
@@ -81,14 +78,14 @@ interface JobStoreLocalReduxContainerProps {
     clusters: JobDesignerCluster[];
     refreshMetaProperties: (val: string[]) => void;
     jobDialogs: {
-        selectMaterialsReduxDialog: JobDesignerDialogTuple;
-        selectParentJobExplorerDialog: JobDesignerDialogTuple;
-        selectWorkflowReduxDialog: JobDesignerDialogTuple;
-        datasetUploadsReduxDialog: JobDesignerDialogTuple;
+        selectMaterialsReduxDialog: JobDesignerDialogState;
+        selectParentJobExplorerDialog: JobDesignerDialogState;
+        selectWorkflowReduxDialog: JobDesignerDialogState;
+        datasetUploadsReduxDialog: JobDesignerDialogState;
     };
     workflowDialogs: {
-        pseudoUploadReduxDialog: JobDesignerWorkflowDialogTuple;
-        unitTypeReduxDialog: JobDesignerWorkflowDialogTuple;
+        pseudoUploadReduxDialog: JobDesignerDialogState;
+        unitTypeReduxDialog: JobDesignerDialogState;
     };
     templates: Template[];
     resultsProperties: ResultsProps[];

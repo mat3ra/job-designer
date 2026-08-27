@@ -1,9 +1,9 @@
 import "./preloads";
 
+import { ThreeDEditor } from "@mat3ra/wave.js";
 import { Job } from "@mat3ra/jode";
 import { Material } from "@mat3ra/made";
 import { MaterialStandata, WorkflowStandata } from "@mat3ra/standata";
-import { ThreeDEditor } from "@mat3ra/wave.js";
 import { Workflow as WodeWorkflow } from "@mat3ra/wode";
 import WorkIcon from "@mui/icons-material/AccountTree";
 import DownloadIcon from "@mui/icons-material/Download";
@@ -261,14 +261,30 @@ function App() {
                     clusters={[]}
                     refreshMetaProperties={() => {}}
                     jobDialogs={{
-                        selectMaterialsReduxDialog: [() => {}, () => {}],
-                        selectParentJobExplorerDialog: [() => {}, () => {}],
-                        selectWorkflowReduxDialog: [() => {}, () => {}],
-                        datasetUploadsReduxDialog: [() => {}, () => {}],
+                        selectMaterialsReduxDialog: {
+                            isOpen: false,
+                            open: () => {},
+                            close: () => {},
+                        },
+                        selectParentJobExplorerDialog: {
+                            isOpen: false,
+                            open: () => {},
+                            close: () => {},
+                        },
+                        selectWorkflowReduxDialog: {
+                            isOpen: false,
+                            open: () => {},
+                            close: () => {},
+                        },
+                        datasetUploadsReduxDialog: {
+                            isOpen: false,
+                            open: () => {},
+                            close: () => {},
+                        },
                     }}
                     workflowDialogs={{
-                        pseudoUploadReduxDialog: [() => {}, () => {}],
-                        unitTypeReduxDialog: [() => {}, () => {}],
+                        pseudoUploadReduxDialog: [() => {}, () => {}] as any,
+                        unitTypeReduxDialog: [() => {}, () => {}] as any,
                     }}
                     templates={[]}
                     resultsProperties={[]}
