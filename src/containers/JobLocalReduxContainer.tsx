@@ -9,7 +9,7 @@ import { applyMiddleware, createStore } from "redux";
 import logger from "redux-logger";
 
 import { setMaterials, syncJobWorkflow, updateJob } from "../actions";
-import { useJobDesignerDeps } from "../JobDesignerContext";
+import { type JobDesignerDialogTuple, useJobDesignerDeps } from "../JobDesignerContext";
 import { createJobDesignerReducer } from "../reducers";
 import JobContainer from "./JobContainer";
 import {
@@ -19,7 +19,7 @@ import {
 } from "./JobDesignerReduxContext";
 
 interface JobDesignerUser {
-    entity: { id: string; firstName?: string; lastName?: string; email?: string };
+    entity: { id?: string; firstName?: string; lastName?: string; email?: string };
 }
 
 interface JobDesignerProfile {
@@ -29,39 +29,43 @@ interface JobDesignerProfile {
 }
 
 interface JobDesignerAccount {
-    entity: { id: string; slug?: string; name?: string };
+    entity: { id?: string; slug?: string; name?: string };
 }
 
 interface JobDesignerCluster {
-    name: string;
-    slug?: string;
-    [key: string]: unknown;
+    hostname: string;
+    displayName?: string;
+    isDefault?: boolean;
 }
 
-interface JobDesignerMetaProperty {
-    [key: string]: unknown;
-}
+type JobDesignerMetaProperty = object;
 
-interface JobDesignerProperty {
-    [key: string]: unknown;
-}
+type JobDesignerProperty = object;
 
-interface JobDesignerDialogState {
-    isOpen: boolean;
-    open: (...args: any[]) => void;
-    close: () => void;
-}
+type JobDesignerMaterialSchema = object;
 
-interface JobDesignerMaterialSchema {
-    [key: string]: unknown;
-}
-
-interface JobDesignerMetaPropertyHolderSchema {
-    [key: string]: unknown;
-}
+type JobDesignerMetaPropertyHolderSchema = object;
 
 interface JobDesignerCreateMetaPropertyConfig {
-    [key: string]: unknown;
+    element: string;
+    approximation: string;
+    functional: string;
+    type: "us" | "nc" | "nc-fr" | "paw" | "coulomb";
+    filename: string;
+    application: string;
+    content: string;
+}
+
+/**
+ * `workflowDialogs` is populated by the webapp's own `useReduxDialog` (bypassing job-designer's
+ * DI shim), which returns a `ReduxDialogState` - an interface extending `Array<unknown>` with
+ * required indices 0/1/2, not a literal tuple type. A literal readonly tuple isn't structurally
+ * assignable from that (mismatched inherited Array<T> method signatures), so this mirrors the
+ * same "interface extends Array<unknown>" shape instead of declaring a tuple.
+ */
+interface JobDesignerWorkflowDialogTuple extends Array<unknown> {
+    0: (...args: any[]) => void;
+    1: () => void;
 }
 
 interface JobStoreLocalReduxContainerProps {
@@ -78,14 +82,14 @@ interface JobStoreLocalReduxContainerProps {
     clusters: JobDesignerCluster[];
     refreshMetaProperties: (val: string[]) => void;
     jobDialogs: {
-        selectMaterialsReduxDialog: JobDesignerDialogState;
-        selectParentJobExplorerDialog: JobDesignerDialogState;
-        selectWorkflowReduxDialog: JobDesignerDialogState;
-        datasetUploadsReduxDialog: JobDesignerDialogState;
+        selectMaterialsReduxDialog: JobDesignerDialogTuple;
+        selectParentJobExplorerDialog: JobDesignerDialogTuple;
+        selectWorkflowReduxDialog: JobDesignerDialogTuple;
+        datasetUploadsReduxDialog: JobDesignerDialogTuple;
     };
     workflowDialogs: {
-        pseudoUploadReduxDialog: JobDesignerDialogState;
-        unitTypeReduxDialog: JobDesignerDialogState;
+        pseudoUploadReduxDialog: JobDesignerWorkflowDialogTuple;
+        unitTypeReduxDialog: JobDesignerWorkflowDialogTuple;
     };
     templates: Template[];
     resultsProperties: ResultsProps[];
