@@ -9,6 +9,7 @@ import { applyMiddleware, createStore } from "redux";
 import logger from "redux-logger";
 
 import { setMaterials, syncJobWorkflow, updateJob } from "../actions";
+import type { ClusterMetadata, ComputeQuota } from "../computeEstimate";
 import { useJobDesignerDeps } from "../JobDesignerContext";
 import { createJobDesignerReducer } from "../reducers";
 import JobContainer from "./JobContainer";
@@ -104,6 +105,21 @@ interface JobStoreLocalReduxContainerProps {
     headerChildren?: React.ReactNode;
     /** Whether the job is editable. */
     editable?: boolean;
+    /**
+     * Opt into the guided layout (readiness rail + context strip) instead of the
+     * numbered tab strip. Off by default so hosts flip it when they are ready;
+     * the legacy path stays until parity is verified.
+     */
+    useGuidedDesigner?: boolean;
+    /**
+     * Per-cluster pricing, limits and queue waits. Not part of the job document —
+     * the host supplies it here or through `setDependencies({ clusterMetadata })`.
+     * Without it the estimate and the preflight's limit check report that they
+     * cannot judge, rather than passing on no evidence.
+     */
+    clusterMetadata?: ClusterMetadata[];
+    /** Remaining allowance for the account paying for the job, when the host tracks one. */
+    computeQuota?: ComputeQuota | null;
 }
 
 type JobStoreLocalReduxContainerInnerProps = JobStoreLocalReduxContainerProps & {
@@ -147,6 +163,9 @@ function JobStoreLocalReduxContainer({
     MaterialViewerComponent,
     headerChildren,
     editable,
+    useGuidedDesigner,
+    clusterMetadata,
+    computeQuota,
 }: JobStoreLocalReduxContainerInnerProps) {
     const dispatch = useJobDesignerDispatch();
     const stateMaterials = useJobDesignerSelector((state: State) => state.materials);
@@ -308,6 +327,9 @@ function JobStoreLocalReduxContainer({
             MaterialViewerComponent={MaterialViewerComponent}
             headerChildren={headerChildren}
             editable={editable}
+            useGuidedDesigner={useGuidedDesigner}
+            clusterMetadata={clusterMetadata}
+            computeQuota={computeQuota}
         />
     );
 }
