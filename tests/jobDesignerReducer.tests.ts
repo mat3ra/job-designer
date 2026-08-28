@@ -27,6 +27,21 @@ ApplicationRegistry.setDriver(new StandataDriver());
  * `job.workflowInstance` crash.
  */
 
+/**
+ * Minimal material stand-in. jode's `setMaterials`/`setMaterial` call `getAsEntityReference()`
+ * on every material, so plain strings no longer work as fixtures. These tests are about index
+ * and workflow-context bookkeeping, not material behaviour, so a stub with a stable id is
+ * enough - `id` is what the assertions below compare on.
+ */
+function material(id: string) {
+    return { id, getAsEntityReference: () => ({ _id: id }) };
+}
+
+/** Ids of the materials in a reducer state, for order-sensitive assertions. */
+function idsOf(materials: any[]) {
+    return materials.map((m) => m.id);
+}
+
 function makeJob() {
     const workflow = new Workflow(Workflow.defaultConfig);
     const job = new Job({ name: "Test Job", status: "pre-submission" });
@@ -73,7 +88,7 @@ test("MATERIALS_UPDATE_INDEX sets the index immutably", () => {
  */
 test("MATERIALS_REMOVE drops the right entries and keeps contexts aligned", () => {
     const { job } = makeJob();
-    const materials = ["a", "b", "c", "d"] as any[];
+    const materials = ["a", "b", "c", "d"].map(material) as any[];
     const state = {
         ...initialJobDesignerState(job, [], []),
         materials,
@@ -83,7 +98,7 @@ test("MATERIALS_REMOVE drops the right entries and keeps contexts aligned", () =
 
     const next = jobDesignerReducer(state, { type: "MATERIALS_REMOVE", indices: [0, 2] });
 
-    assert.deepStrictEqual(next.materials, ["b", "d"]);
+    assert.deepStrictEqual(idsOf(next.materials), ["b", "d"]);
     assert.deepStrictEqual(
         next.workflowContexts,
         [{ n: 1 }, { n: 3 }],
@@ -92,14 +107,17 @@ test("MATERIALS_REMOVE drops the right entries and keeps contexts aligned", () =
     assert.strictEqual(next.index, 1, "index clamps to the last valid material");
 
     // The previous state must be untouched — the old implementation spliced these in place.
-    assert.deepStrictEqual(state.materials, ["a", "b", "c", "d"]);
+    assert.deepStrictEqual(idsOf(state.materials), ["a", "b", "c", "d"]);
     assert.deepStrictEqual(state.workflowContexts, [{ n: 0 }, { n: 1 }, { n: 2 }, { n: 3 }]);
     assert.strictEqual(state.index, 3);
 });
 
 test("MATERIALS_REMOVE is a no-op at one material", () => {
     const { job } = makeJob();
-    const state = { ...initialJobDesignerState(job, [], []), materials: ["only"] as any[] };
+    const state = {
+        ...initialJobDesignerState(job, [], []),
+        materials: [material("only")] as any[],
+    };
     assert.strictEqual(jobDesignerReducer(state, { type: "MATERIALS_REMOVE" }), state);
 });
 
@@ -107,17 +125,17 @@ test("MATERIALS_ADD appends a cloned context per new material without mutating s
     const { job } = makeJob();
     const state = {
         ...initialJobDesignerState(job, [], []),
-        materials: ["a"] as any[],
+        materials: [material("a")] as any[],
         workflowContexts: [{ tag: "ctx" }],
         index: 0,
     };
 
     const next = jobDesignerReducer(state, {
         type: "MATERIALS_ADD",
-        materials: ["b", "c"] as any[],
+        materials: ["b", "c"].map(material) as any[],
     });
 
-    assert.deepStrictEqual(next.materials, ["a", "b", "c"]);
+    assert.deepStrictEqual(idsOf(next.materials), ["a", "b", "c"]);
     assert.strictEqual(next.workflowContexts.length, 3);
     assert.deepStrictEqual(next.workflowContexts[1], { tag: "ctx" }, "new contexts clone current");
     assert.notStrictEqual(
@@ -133,17 +151,17 @@ test("MATERIALS_SET resets contexts to one clone per material and returns to ind
     const { job } = makeJob();
     const state = {
         ...initialJobDesignerState(job, [], []),
-        materials: ["a", "b"] as any[],
+        materials: ["a", "b"].map(material) as any[],
         workflowContexts: [{ n: 0 }, { n: 1 }],
         index: 1,
     };
 
     const next = jobDesignerReducer(state, {
         type: "MATERIALS_SET",
-        materials: ["x", "y", "z"] as any[],
+        materials: ["x", "y", "z"].map(material) as any[],
     });
 
-    assert.deepStrictEqual(next.materials, ["x", "y", "z"]);
+    assert.deepStrictEqual(idsOf(next.materials), ["x", "y", "z"]);
     assert.strictEqual(next.workflowContexts.length, 3);
     next.workflowContexts.forEach((ctx) =>
         assert.deepStrictEqual(ctx, { n: 1 }, "every context clones the previously active one"),

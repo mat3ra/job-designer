@@ -67,7 +67,7 @@
         "@mat3ra/esse": "2026.8.18-2",
         "@mat3ra/ide": "https://github.com/mat3ra/ide/releases/download/wip-6c4177b/ide.tgz",
         "@mat3ra/ive": "https://github.com/mat3ra/ive/releases/download/wip-2a8a93e/ive.tgz",
-        "@mat3ra/jode": "2026.8.19-1",
+        "@mat3ra/jode": "https://github.com/mat3ra/jode/releases/download/wip-fc3d362/jode.tgz",
         "@mat3ra/jove": "2026.8.19-2",
         "@mat3ra/mode": "2026.8.18-0",
         "@mat3ra/move": "2026.8.19-1",

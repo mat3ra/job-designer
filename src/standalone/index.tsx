@@ -107,7 +107,16 @@ function App() {
             // pre-submission status makes the header editable (name input + Save button),
             // matching how the webapp shows a new job - without it the demo header hides
             // the exact controls the designer is meant to demo.
-            const newJob = new Job({ name, status: "pre-submission" });
+            // `compute` and `_project` are required by jode's `JobEntity` (they come straight
+            // from esse's job schema). The webapp always supplies them from the real project and
+            // cluster defaults; the demo has neither, so it provides minimal stand-ins rather
+            // than casting the requirement away.
+            const newJob = new Job({
+                name,
+                status: "pre-submission",
+                compute: { queue: "D", nodes: 1, ppn: 1, timeLimit: "01:00:00" },
+                _project: { _id: "standalone-project", slug: "demo-project" },
+            } as ConstructorParameters<typeof Job>[0]);
             newJob.setWorkflow(wodeWorkflow);
             newJob.setMaterial(selectedMaterial);
 
