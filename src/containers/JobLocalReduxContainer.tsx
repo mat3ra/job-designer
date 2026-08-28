@@ -170,48 +170,11 @@ function JobLocalReduxContainer({
     } = useJobDesignerState({ job, jobMaterials, metaProperties });
     const { getRouteQueryTab } = useJobDesignerDeps();
 
-    const syncWorkflowWithJob = useCallback(
-        (nextWorkflow: any) => {
-            const nextJob = stateJob.clone();
-            const nextContexts = [...(stateWorkflowContexts || [])];
-            const materialForRender = stateMaterials[stateIndex] || stateMaterial;
-
-            nextWorkflow.updateMethodData(stateMaterials, metaProperties);
-            nextJob.setWorkflow(nextWorkflow);
-
-            if (materialForRender) {
-                if (stateMaterial) {
-                    nextJob.setMaterial(stateMaterial);
-                }
-                if (stateMaterials.length) {
-                    nextJob.setMaterials(stateMaterials);
-                }
-                if (stateMaterialsSet) {
-                    nextJob.setMaterialsSet(stateMaterialsSet);
-                }
-            }
-
-            nextContexts[stateIndex] = nextContexts[stateIndex] || {};
-
-            syncJobWorkflow(
-                nextJob,
-                nextContexts,
-                Boolean(nextWorkflow.isMultiMaterial),
-                metaProperties,
-            );
-        },
-        [
-            syncJobWorkflow,
-            metaProperties,
-            stateIndex,
-            stateJob,
-            stateMaterial,
-            stateMaterials,
-            stateMaterialsSet,
-            stateWorkflowContexts,
-        ],
-    );
-
+    // NOTE: a `syncWorkflowWithJob` callback used to live here and be passed down as
+    // `onWorkflowUpdate`. It was unreachable: `Job` defined its own `onWorkflowUpdate` method and
+    // passed THAT to `WorkflowTab` (Job.jsx:710), so the prop threaded through JobContainer.js:90
+    // was never read. Removed rather than carried forward — see git history if the richer
+    // clone/updateMethodData/re-attach behaviour is ever actually wanted.
     const handleWorkflowSelect = useCallback(
         async (selectedWorkflowId: string) => {
             const nextWorkflow = await loadWorkflowEntityById(selectedWorkflowId);
@@ -329,7 +292,6 @@ function JobLocalReduxContainer({
             }
             onSetDataset={setDataset}
             onWorkflowSelect={handleWorkflowSelect}
-            onWorkflowUpdate={syncWorkflowWithJob}
             onDestroy={() => onDestroy?.()}
             getJobMaterialClient={async (parentJob: any) =>
                 getJobMaterialClient ? getJobMaterialClient(parentJob) : null
