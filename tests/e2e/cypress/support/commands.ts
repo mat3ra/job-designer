@@ -1,5 +1,7 @@
 /// <reference types="cypress" />
 
+import "@mat3ra/tede/src/js/cypress/commands/until";
+
 // ***********************************************
 // Custom Cypress commands for job-designer tests.
 //
@@ -14,5 +16,3 @@
 //   }
 // }
 // ***********************************************
-
-export {};
