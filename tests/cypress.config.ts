@@ -4,7 +4,8 @@ import createEsbuildPlugin from "@badeball/cypress-cucumber-preprocessor/esbuild
 import createBundler from "@bahmutov/cypress-esbuild-preprocessor";
 import { defineConfig } from "cypress";
 
-const defaultBaseUrl = "http://localhost:3002";
+// Matches `vite --port 3003` in the package.json `dev` script (vite.config.ts `server.port`).
+const defaultBaseUrl = "http://localhost:3003";
 
 export default defineConfig({
     e2e: {

@@ -4,8 +4,8 @@
     "description": "Cypress E2E tests for @mat3ra/job-designer standalone app",
     "main": "index.js",
     "scripts": {
-        "test": "CYPRESS_BASE_URL=${CYPRESS_BASE_URL:-'http://localhost:3002'} cypress open",
-        "test:headless": "CYPRESS_BASE_URL=${CYPRESS_BASE_URL:-'http://localhost:3002'} cypress run --e2e",
+        "test": "CYPRESS_BASE_URL=${CYPRESS_BASE_URL:-'http://localhost:3003'} cypress open",
+        "test:headless": "CYPRESS_BASE_URL=${CYPRESS_BASE_URL:-'http://localhost:3003'} cypress run --e2e",
         "lint": "npx eslint cypress && prettier --write cypress"
     },
     "engines": {
