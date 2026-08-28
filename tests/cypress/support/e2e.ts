@@ -5,7 +5,7 @@
 import "./commands";
 
 /**
- * Fail tests on console errors.
+ * Fail the run on console errors.
  *
  * `Job` renders its whole tree inside `<ErrorBoundary fallback={<div />}>`, so a crash in any tab
  * produces an EMPTY DIV rather than an uncaught exception - Cypress's default
@@ -18,23 +18,30 @@ import "./commands";
  * `persistJob()` whenever `shouldPersistJobOnUpdate` returns true. A runaway render loop would
  * otherwise just look like a slow test.
  *
- * Escape hatch while triaging: `cypress run --env ignoreConsoleErrors=true` (or the same key in
- * cypress.config.ts) collects and logs errors without failing.
+ * Escape hatch while triaging: `cypress run --env ignoreConsoleErrors=true` collects and logs
+ * without failing.
  */
 const consoleErrors: string[] = [];
 
+/** Per-test findings, reported together once the spec finishes - see the `after` hook. */
+const offendingTests: { test: string; errors: string[] }[] = [];
+
 /**
- * Narrowly allow-listed pre-existing noise, matched as substrings. Keep this list as small as
- * possible and always comment WHY an entry is here - never widen it to make a real failure pass.
+ * Narrowly allow-listed noise, matched as substrings. Keep this list as small as possible and
+ * always comment WHY an entry is here - never widen it to make a real failure pass.
  */
-const IGNORED_CONSOLE_ERRORS: string[] = [];
+const IGNORED_CONSOLE_ERRORS: string[] = [
+    // wave.js's ThreeDEditor still uses legacy lifecycles; `React.StrictMode` in the standalone
+    // demo (src/standalone/index.tsx) surfaces them as a warning. Third-party, not fixable here.
+    "UNSAFE_componentWillReceiveProps",
+];
 
 /**
  * NOTE: deliberately a plain monkey-patch rather than `cy.stub(win.console, "error")`.
  * `cy.stub()` may only be invoked from a currently running test, but `window:before:load` also
  * fires outside test context - which throws a CypressError that aborts the whole run instead of
  * failing a single test. This version needs no command context, and it forwards to the original
- * `console.error` so the real message still shows up in the browser console while debugging.
+ * `console.error` so the real message still reaches the browser console while debugging.
  */
 Cypress.on("window:before:load", (win) => {
     const originalError = win.console.error;
@@ -58,16 +65,43 @@ beforeEach(() => {
     consoleErrors.length = 0;
 });
 
+/**
+ * Record rather than assert here. A throwing `afterEach` makes Mocha skip every remaining test in
+ * the spec, so one noisy scenario would cost the whole suite (it did: 14 of 15 skipped). Findings
+ * are aggregated and raised once in `after`, so all scenarios still run and the report names
+ * every test that logged.
+ */
 afterEach(() => {
-    const errors = [...consoleErrors];
-    consoleErrors.length = 0;
+    if (!consoleErrors.length) return;
 
-    if (!errors.length) return;
+    const errors = [...new Set(consoleErrors)];
+    consoleErrors.length = 0;
 
     if (Cypress.env("ignoreConsoleErrors")) {
         cy.log(`console.error output (ignored):\n${errors.join("\n---\n")}`);
         return;
     }
 
-    expect(errors, `unexpected console.error output:\n${errors.join("\n---\n")}`).to.have.length(0);
+    offendingTests.push({ test: Cypress.currentTest?.title ?? "<unknown test>", errors });
+});
+
+after(() => {
+    if (!offendingTests.length) return;
+
+    const report = offendingTests
+        .map(({ test, errors }) => {
+            // First line only: these messages carry a full component stack, and the untruncated
+            // text is already in the browser console because the patch above forwards to it.
+            const summarised = errors.map((error) => `    - ${error.split("\n")[0]}`).join("\n");
+            return `  • ${test}\n${summarised}`;
+        })
+        .join("\n\n");
+    const count = offendingTests.length;
+    offendingTests.length = 0;
+
+    throw new Error(
+        `console.error output in ${count} test(s). Fix the cause, or add a narrow entry to ` +
+            `IGNORED_CONSOLE_ERRORS in cypress/support/e2e.ts if it is third-party noise:\n\n` +
+            report,
+    );
 });

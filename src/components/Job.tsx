@@ -526,6 +526,13 @@ function Job(props: JobProps) {
         };
     }, [getDefaultActions]);
 
+    // `isShown` is Job's own render guard, NOT part of cove's `DropdownProps` (only the per-action
+    // `DropdownAction` has one). `Dropdown` spreads unrecognised props onto a MUI `Box`, which
+    // forwards them to a DOM div - React then warns "does not recognize the `isShown` prop on a
+    // DOM element". The injected webapp header below still gets the full object, since its
+    // `dropdownProps` contract does read `isShown`.
+    const { isShown: isDropdownShown, ...dropdownComponentProps } = dropdownProps;
+
     const saveBtnProps = useMemo(
         () => ({
             id: "save-button",
@@ -653,7 +660,7 @@ function Job(props: JobProps) {
                     {/* Actions dropdown to the left of Save, matching the pre-extraction header
                         (EntityHeader organism rendered Dropdown -> Pager -> Save). Hidden when no
                         action is currently shown - otherwise it opens an empty menu. */}
-                    {dropdownProps.isShown && <Dropdown {...dropdownProps} />}
+                    {isDropdownShown && <Dropdown {...dropdownComponentProps} />}
                     {editable && <ButtonMultiSelect {...saveBtnProps} />}
                     {headerChildren ?? null}
                 </EntityHeader>
