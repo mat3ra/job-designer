@@ -25,3 +25,21 @@ Feature: Job Designer standalone app loads and renders
         Then the active status badge has the warning color class
         And the finished status badge has the success color class
         And the error status badge has the error color class
+
+    # Regression coverage for a crash where job-designer's own reducers/components read
+    # `job.workflow.*` expecting a live workflow instance (updateMethodData, isMultiMaterial,
+    # usedApplications, subworkflows) - jode's `Job` class exposes that as `.workflowInstance`
+    # instead, `.workflow` being just the raw JSON schema field. The bug threw synchronously
+    # while building the job designer's Redux store, so it failed before any of the app - not
+    # just the Workflow tab - ever rendered.
+    Scenario: The workflow tab renders real workflow content without a JS error
+        When I open the job designer app
+        And I switch to the workflow tab
+        Then the workflow tab panel is visible
+
+    Scenario: Switching between material and workflow tabs does not throw
+        When I open the job designer app
+        And I switch to the workflow tab
+        And I switch to the material tab
+        And I switch to the workflow tab
+        Then the workflow tab panel is visible

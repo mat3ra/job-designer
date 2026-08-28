@@ -1,4 +1,4 @@
-import { And, Then, When } from "@badeball/cypress-cucumber-preprocessor";
+import { Then, When } from "@badeball/cypress-cucumber-preprocessor";
 
 When("I open the job designer app", () => {
     cy.visit("/");
@@ -50,4 +50,18 @@ Then("the finished status badge has the success color class", () => {
 
 Then("the error status badge has the error color class", () => {
     cy.get("[data-status='error']").should("have.class", "status-badge--error");
+});
+
+// ─── Tabs (regression coverage for job.workflow vs job.workflowInstance) ──────
+
+When("I switch to the workflow tab", () => {
+    cy.contains("2. Workflow").click();
+});
+
+When("I switch to the material tab", () => {
+    cy.contains("1. Materials").click();
+});
+
+Then("the workflow tab panel is visible", () => {
+    cy.get("#workflow").should("be.visible");
 });
