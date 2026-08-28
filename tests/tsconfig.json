@@ -22,5 +22,6 @@
             "module": "ESNext",
             "moduleResolution": "Node"
         }
-    }
+    },
+    "include": ["cypress/**/*", "cypress.config.ts"]
 }
