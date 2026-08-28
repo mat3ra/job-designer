@@ -82,7 +82,15 @@ afterEach(() => {
         return;
     }
 
-    offendingTests.push({ test: Cypress.currentTest?.title ?? "<unknown test>", errors });
+    const title = Cypress.currentTest?.title ?? "<unknown test>";
+    // A retried test runs `afterEach` once per attempt; keep one entry per test so the report
+    // doesn't repeat the same failure.
+    const existing = offendingTests.find((entry) => entry.test === title);
+    if (existing) {
+        existing.errors = [...new Set([...existing.errors, ...errors])];
+    } else {
+        offendingTests.push({ test: title, errors });
+    }
 });
 
 after(() => {

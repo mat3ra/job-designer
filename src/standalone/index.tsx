@@ -245,7 +245,20 @@ function App() {
                     job={job}
                     jobMaterials={[selectedMaterial]}
                     materials={[selectedMaterial]}
-                    project={{ name: "Demo Project", _id: "standalone-project" } as any}
+                    // `owner` and `slug` are not decoration: saving reads
+                    // `project.owner.slug` / `project.slug` to build the post-save redirect
+                    // (see `useJobDesignerState`'s saveJob, unchanged from the old jobSave
+                    // reducer). The webapp always passes a real project entity; without them the
+                    // demo threw "Cannot read properties of undefined (reading 'slug')" on
+                    // every save.
+                    project={
+                        {
+                            name: "Demo Project",
+                            _id: "standalone-project",
+                            slug: "demo-project",
+                            owner: { _id: "standalone-account", slug: "demo-account" },
+                        } as any
+                    }
                     metaProperties={[]}
                     accountUsers={[]}
                     accountUsersIsLoading={false}
