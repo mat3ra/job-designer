@@ -6,7 +6,18 @@
  * `setState` flushes. Calling `persistJob()` in that window overwrites Redux with stale data
  * (e.g. drops `{{ material.formula }}` appended by `setJobNameBasedOnMaterials`).
  */
-export function shouldPersistJobOnUpdate(prevProps, props) {
+interface PersistRelevantProps {
+    job?: unknown;
+    materials?: unknown;
+    index?: unknown;
+    materialsSet?: unknown;
+    metaProperties?: unknown;
+}
+
+export function shouldPersistJobOnUpdate(
+    prevProps: PersistRelevantProps,
+    props: PersistRelevantProps,
+) {
     const externalContextChanged =
         prevProps.materials !== props.materials ||
         prevProps.index !== props.index ||
