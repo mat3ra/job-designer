@@ -10,14 +10,7 @@
         "declaration": true,
         "declarationMap": true,
         "skipLibCheck": true,
-        "strict": false,
-        "noImplicitAny": false,
-        "strictNullChecks": false,
-        "strictFunctionTypes": false,
-        "strictBindCallApply": false,
-        "strictPropertyInitialization": false,
-        "noImplicitThis": false,
-        "alwaysStrict": false,
+        "strict": true,
         "paths": {
             "@mat3ra/wode": [
                 "node_modules/@mat3ra/wode"

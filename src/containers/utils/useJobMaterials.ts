@@ -7,7 +7,10 @@ export default function useJobMaterials(job?: any, defaultMaterial?: any) {
     const materialId = job?._material?._id;
 
     // Memoize materialIds to prevent unnecessary array creation
-    const materialIds = useMemo(() => job?._materials?.map((m) => m._id) || [], [job?._materials]);
+    const materialIds = useMemo(
+        () => job?._materials?.map((m: { _id: string }) => m._id) || [],
+        [job?._materials],
+    );
 
     const materialsListFilter = useMemo(() => {
         if (hasClientMaterials) {
@@ -48,13 +51,13 @@ export default function useJobMaterials(job?: any, defaultMaterial?: any) {
     }
 
     if (materialsListFilter && job?._materials) {
-        const materialIds = job._materials?.map((m) => m._id);
-        const entities = materials?.list.map((m) => m.entity) || [];
+        const materialIds: string[] = job._materials?.map((m: { _id: string }) => m._id);
+        const entities = materials?.list.map((m: { entity: any }) => m.entity) || [];
 
-        return entities.sort((a, b) => {
+        return entities.sort((a: { id: string }, b: { id: string }) => {
             return (
-                materialIds.findIndex((id) => id === a.id) -
-                materialIds.findIndex((id) => id === b.id)
+                materialIds.findIndex((id: string) => id === a.id) -
+                materialIds.findIndex((id: string) => id === b.id)
             );
         });
     }

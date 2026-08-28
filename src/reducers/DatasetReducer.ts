@@ -6,7 +6,7 @@ type Action = {
     datasetConfig: any;
 };
 
-function datasetUpdate(state, action: Action) {
+function datasetUpdate(state: any, action: Action) {
     // Set the metadata for the dataset
     const { datasetConfig } = action;
 

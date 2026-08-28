@@ -13,7 +13,10 @@ import { createDispatchHook, createSelectorHook } from "react-redux";
  * internal store lookups isolated from the default context, so unrelated components bubble
  * up to the real outer store as expected.
  */
-export const JobDesignerReduxContext = createContext(null);
+// `any` rather than react-redux's own ReactReduxContextValue: the store shape here is the
+// untyped local job-designer state, and createContext(null) alone widens to Context<null>,
+// which react-redux's createDispatchHook/createSelectorHook/Provider all reject.
+export const JobDesignerReduxContext = createContext<any>(null);
 
 export const useJobDesignerDispatch = createDispatchHook(JobDesignerReduxContext);
 export const useJobDesignerSelector = createSelectorHook(JobDesignerReduxContext);
