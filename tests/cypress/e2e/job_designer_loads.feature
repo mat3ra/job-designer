@@ -8,11 +8,13 @@ Feature: Job Designer standalone app loads and renders
         When I open the job designer page
         Then the page title contains "Job Designer"
 
-    # The standalone app injects `getRouteQueryTab: () => "workflow"`, which `resolveDefaultTab`
-    # consults first for a job in an initial status.
-    Scenario: The workflow tab is active on load
+    # `resolveDefaultTab` consults `getRouteQueryTab()` FIRST (the demo injects "workflow"), but
+    # its else-if chain then overrides that: the demo's standata workflows all run espresso, so
+    # `isUsingMaterialFor` wins and the materials tab is what actually opens. Same precedence as
+    # the pre-refactor `defaultTab` getter.
+    Scenario: The materials tab is active on load
         When I open the job designer page
-        Then I see the workflow tab panel
+        Then I see the material tab panel
 
     # Guards `conditionalTabsMap` + `getConditionalTabs`: workflow and compute always render,
     # materials needs a material, and dataset/results/files must NOT appear for this
@@ -105,13 +107,13 @@ Feature: Job Designer standalone app loads and renders
         When I open the job designer page
         And I select workflow number 2
         Then I see the job designer page
-        And I see the workflow tab panel
+        And I see the material tab panel
 
     Scenario: Choosing a different material re-initialises the designer
         When I open the job designer page
         And I select material number 2
         Then I see the job designer page
-        And I see the workflow tab panel
+        And I see the material tab panel
 
     Scenario: Tabs still work after re-initialising with a different workflow
         When I open the job designer page
