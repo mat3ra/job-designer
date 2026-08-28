@@ -111,16 +111,6 @@ function App() {
             newJob.setWorkflow(wodeWorkflow);
             newJob.setMaterial(selectedMaterial);
 
-            // job-designer's own reducers (inherited from the webapp's original Job
-            // model) read `job.workflow.updateMethodData(...)` directly; jode's Job
-            // class exposes the live instance as `workflowInstance` instead. Bridge
-            // the two here at the demo boundary only — do not change job-designer's
-            // reducer code or jode's Job class.
-            Object.defineProperty(newJob, "workflow", {
-                get: () => (newJob as any).workflowInstance,
-                configurable: true,
-            });
-
             return newJob;
         } catch (e) {
             console.error("[job-designer standalone] Job creation failed:", e);

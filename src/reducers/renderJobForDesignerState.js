@@ -5,11 +5,11 @@
 export function renderJobForDesignerState(state, job, metaProperties = []) {
     const materials = state.materials || [];
     const materialForRender = materials[state.index] ?? materials[0];
-    if (!materialForRender || !job?.workflow) {
+    if (!materialForRender || !job?.workflowInstance) {
         return job;
     }
 
-    job.workflow.updateMethodData(materials, metaProperties);
+    job.workflowInstance.updateMethodData(materials, metaProperties);
     job.setMaterial(materialForRender);
     job.setMaterials(materials);
     if (state.materialsSet) {

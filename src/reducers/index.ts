@@ -33,10 +33,10 @@ const initialStateFromJobAndAccounts = (
             ? job.dataset.objectStorageContainerData
             : defaultDataset.objectStorageContainerData;
 
-    job?.workflow?.updateMethodData(materials, metaProperties);
+    job?.workflowInstance?.updateMethodData(materials, metaProperties);
 
     const materialForRender = materials[0];
-    if (materialForRender && job?.workflow) {
+    if (materialForRender && job?.workflowInstance) {
         job.setMaterials(materials);
         job.setMaterial(materialForRender);
     }
@@ -48,7 +48,7 @@ const initialStateFromJobAndAccounts = (
         materialsSet: job && job.materialsSet,
         job,
         isLoading: false,
-        isMultiMaterial: job && job.workflow?.isMultiMaterial,
+        isMultiMaterial: job && job.workflowInstance?.isMultiMaterial,
         workflowContexts: materials.map(() => {
             return {};
         }),

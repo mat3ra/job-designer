@@ -1,29 +1,29 @@
 /* eslint-disable jsx-a11y/anchor-is-valid */
+import ButtonMultiSelect from "@mat3ra/cove/dist/mui/components/button/ButtonMultiSelect";
+import Dropdown from "@mat3ra/cove/dist/mui/components/dropdown/Dropdown";
 import IconByName from "@mat3ra/cove/dist/mui/components/icon/IconByName";
+import TabsMenu from "@mat3ra/cove/dist/mui/components/tabs/TabsMenu";
+import { EntityHeader } from "@mat3ra/cove/dist/mui-composed/components/entity-header/EntityHeader";
+import LoadingIndicator from "@mat3ra/cove/dist/mui-composed/components/loading/LoadingIndicator";
 import { showWarningAlert } from "@mat3ra/cove/dist/other/alerts";
+import { ComputableEntityMixin } from "@mat3ra/ive";
+import { TAB_NAVIGATION_CONFIG } from "@mat3ra/jode";
+import { ResultsTab } from "@mat3ra/jove";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import lodash from "lodash";
 import { mix } from "mixwith";
 import React from "react";
 import { ErrorBoundary } from "react-error-boundary";
-import { TAB_NAVIGATION_CONFIG } from "@mat3ra/jode";
+
+import { getInjectedDeps } from "../setDependencies";
 import { shouldPersistJobOnUpdate } from "../shouldPersistJobOnUpdate";
 import ComputeTab from "./ComputeTab";
 import DatasetTab from "./DatasetTab";
 import FilesTab from "./FilesTab";
 import MaterialTab from "./MaterialTab";
 import { StatePropsCompareOnUpdateForJobMIxin } from "./mixins";
-import { ResultsTab } from "@mat3ra/jove";
 import WorkflowTab from "./WorkflowTab";
-import { getInjectedDeps } from "../setDependencies";
-
-import TabsMenu from "@mat3ra/cove/dist/mui/components/tabs/TabsMenu";
-import LoadingIndicator from "@mat3ra/cove/dist/mui-composed/components/loading/LoadingIndicator";
-import { EntityHeader } from "@mat3ra/cove/dist/mui-composed/components/entity-header/EntityHeader";
-import ButtonMultiSelect from "@mat3ra/cove/dist/mui/components/button/ButtonMultiSelect";
-import Dropdown from "@mat3ra/cove/dist/mui/components/dropdown/Dropdown";
-import { ComputableEntityMixin } from "@mat3ra/ive";
 
 // Webapp-specific mixins/utilities — stubbed for standalone build; injected from webapp at runtime.
 const DescriptionUpdateMixin = (superclass) =>
@@ -119,14 +119,14 @@ class Job extends mix(React.Component).with(
     @returns {boolean}
      */
     get isUsingDatasetTab() {
-        return this.state.entity.workflow.isUsingDataset || false;
+        return this.state.entity.workflowInstance.isUsingDataset || false;
     }
 
     get isUsingMaterial() {
         // handle case when job is not yet loaded and defaultJob is in use
         const job = this.state?.entity ?? this.props.job;
 
-        return job.workflow.subworkflows.some((subworkflow) => {
+        return job.workflowInstance.subworkflows.some((subworkflow) => {
             return ["vasp", "nwchem", "espresso"].includes(subworkflow.application.name);
         });
     }
@@ -147,7 +147,7 @@ class Job extends mix(React.Component).with(
             tab = TAB_NAVIGATION_CONFIG.workflow.id;
         } else if (job.isInFinalStatus) {
             tab = TAB_NAVIGATION_CONFIG.results.id;
-        } else if (job.workflow.isUsingDataset) {
+        } else if (job.workflowInstance.isUsingDataset) {
             tab = TAB_NAVIGATION_CONFIG.dataset.id;
         } else if (this.isUsingMaterial) {
             tab = TAB_NAVIGATION_CONFIG.material.id;
@@ -551,7 +551,7 @@ class Job extends mix(React.Component).with(
         const job = this.state.entity;
         // TODO: refactor for modularity
         // consider advanced options useful only for workflows that contain espresso
-        const allApps = job.workflow.usedApplications;
+        const allApps = job.workflowInstance.usedApplications;
         const showAdvancedCompute =
             allApps.length > 0
                 ? allApps.map((a) => a.hasAdvancedComputeOptions).reduce((x, y) => x && y)
@@ -695,7 +695,7 @@ class Job extends mix(React.Component).with(
                                         workflowRenderGeneration={renderGeneration}
                                         id={TAB_NAVIGATION_CONFIG.workflow.id}
                                         role="tabpanel"
-                                        workflow={job.workflow}
+                                        workflow={job.workflowInstance}
                                         onJobRender={this.persistJob}
                                         jobHasParent={Boolean(job.getParentJobClient?.())}
                                         profile={profile}

@@ -1,10 +1,11 @@
 import { deepClone } from "@mat3ra/code/dist/js/utils";
 import { setJobNameBasedOnMaterials } from "@mat3ra/jode";
+
 import {
     MATERIAL_SWITCH,
-    MATERIALS_SET,
     MATERIALS_ADD,
     MATERIALS_REMOVE,
+    MATERIALS_SET,
     MATERIALS_UPDATE_INDEX,
 } from "../actions/Material";
 import { jobSetMaterial } from "./JobReducer";
@@ -33,7 +34,7 @@ function materialsSet(state, action, materialsToRetain = [], resetWorkflowContex
 
     const job = state.job.clone();
 
-    job.workflow.updateMethodData(materials, action.metaProperties);
+    job.workflowInstance.updateMethodData(materials, action.metaProperties);
     job.setMaterialsSet(action.materialsSet);
 
     // Always update the job.materials array, even if the job is not multi-material.
@@ -41,7 +42,7 @@ function materialsSet(state, action, materialsToRetain = [], resetWorkflowContex
     // when both "material" and "materials" are present.
     job.setMaterials(materials);
 
-    if (!job.workflow.isMultiMaterial) {
+    if (!job.workflowInstance.isMultiMaterial) {
         job.setMaterial(materials[state.index]);
         setJobNameBasedOnMaterials(job, materials);
     }

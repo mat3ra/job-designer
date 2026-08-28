@@ -1,6 +1,6 @@
 import { showErrorAlert } from "@mat3ra/cove/dist/other/alerts";
-
 import { renderConfigsFromJobMaterialsWorkflows, setJobNameBasedOnMaterials } from "@mat3ra/jode";
+
 import {
     JOB_IS_MULTI_MATERIAL_SET,
     JOB_SAVE,
@@ -9,8 +9,8 @@ import {
     JOB_UPDATE,
     JOB_WORKFLOW_SYNC,
 } from "../actions";
-import { renderJobForDesignerState } from "./renderJobForDesignerState";
 import { reducerDeps } from "./reducerDeps";
+import { renderJobForDesignerState } from "./renderJobForDesignerState";
 
 function jobUpdate(state, action) {
     const job = renderJobForDesignerState(state, action.job, action.metaProperties ?? []);
@@ -51,7 +51,7 @@ function jobSave(state, action) {
     if (materials.length === 0 && job.materials?.length) {
         materials = job.materials;
     }
-    const isMultiMaterial = Boolean(job.workflow?.isMultiMaterial ?? state.isMultiMaterial);
+    const isMultiMaterial = Boolean(job.workflowInstance?.isMultiMaterial ?? state.isMultiMaterial);
 
     const configs = renderConfigsFromJobMaterialsWorkflows({
         job,
