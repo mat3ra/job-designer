@@ -1,5 +1,5 @@
 import type { JobDesignerDeps } from "./JobDesignerContext";
-import { setReducerDeps } from "./reducers/reducerDeps";
+import { setAsyncDeps } from "./state/asyncDeps";
 
 /** Module-level store for imperatively injected deps (webapp compat). */
 let _injectedDeps: Record<string, any> = {};
@@ -52,8 +52,8 @@ export function setDependencies(deps: Record<string, unknown>): void {
 
     _injectedDeps = { ..._injectedDeps, ...deps, ...mapped };
 
-    // Inject webapp-specific deps into JobReducer (createOrUpdate, Router, etc.)
-    setReducerDeps(deps);
+    // Inject webapp-specific deps for the async job operations (createOrUpdate, Router, etc.)
+    setAsyncDeps(deps);
 }
 
 /**
