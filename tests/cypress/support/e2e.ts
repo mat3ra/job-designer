@@ -17,6 +17,9 @@ import "./commands";
  * `componentDidUpdate` in `Job.tsx` is a `useEffect` with no dependency array that calls
  * `persistJob()` whenever `shouldPersistJobOnUpdate` returns true. A runaway render loop would
  * otherwise just look like a slow test.
+ *
+ * Escape hatch while triaging: `cypress run --env ignoreConsoleErrors=true` (or the same key in
+ * cypress.config.ts) collects and logs errors without failing.
  */
 const consoleErrors: string[] = [];
 
@@ -26,13 +29,29 @@ const consoleErrors: string[] = [];
  */
 const IGNORED_CONSOLE_ERRORS: string[] = [];
 
+/**
+ * NOTE: deliberately a plain monkey-patch rather than `cy.stub(win.console, "error")`.
+ * `cy.stub()` may only be invoked from a currently running test, but `window:before:load` also
+ * fires outside test context - which throws a CypressError that aborts the whole run instead of
+ * failing a single test. This version needs no command context, and it forwards to the original
+ * `console.error` so the real message still shows up in the browser console while debugging.
+ */
 Cypress.on("window:before:load", (win) => {
-    cy.stub(win.console, "error").callsFake((...args: unknown[]) => {
-        const message = args.map((arg) => String(arg)).join(" ");
-        if (!IGNORED_CONSOLE_ERRORS.some((ignored) => message.includes(ignored))) {
-            consoleErrors.push(message);
+    const originalError = win.console.error;
+
+    // eslint-disable-next-line no-param-reassign
+    win.console.error = (...args: unknown[]) => {
+        try {
+            const message = args.map((arg) => String(arg)).join(" ");
+            if (!IGNORED_CONSOLE_ERRORS.some((ignored) => message.includes(ignored))) {
+                consoleErrors.push(message);
+            }
+        } catch {
+            // Never let the collector itself break the app under test.
+            consoleErrors.push("<unstringifiable console.error argument>");
         }
-    });
+        originalError.apply(win.console, args as []);
+    };
 });
 
 beforeEach(() => {
@@ -42,5 +61,13 @@ beforeEach(() => {
 afterEach(() => {
     const errors = [...consoleErrors];
     consoleErrors.length = 0;
+
+    if (!errors.length) return;
+
+    if (Cypress.env("ignoreConsoleErrors")) {
+        cy.log(`console.error output (ignored):\n${errors.join("\n---\n")}`);
+        return;
+    }
+
     expect(errors, `unexpected console.error output:\n${errors.join("\n---\n")}`).to.have.length(0);
 });
