@@ -133,8 +133,8 @@ function App() {
     const handleExportJson = () => {
         const jobInstance = jobRef.current;
         if (!jobInstance) return;
-        const raw = (jobInstance as any).toJSON?.() ?? (jobInstance as any)._json ?? {};
-        const name = (jobInstance as any).name ?? "job";
+        const raw = jobInstance.toJSON();
+        const name = jobInstance.name ?? "job";
         const safeFilename = `job-${name
             .replace(/[^a-z0-9_-]/gi, "_")
             .toLowerCase()}-${Date.now()}.json`;
@@ -251,25 +251,21 @@ function App() {
                     // reducer). The webapp always passes a real project entity; without them the
                     // demo threw "Cannot read properties of undefined (reading 'slug')" on
                     // every save.
-                    project={
-                        {
-                            name: "Demo Project",
-                            _id: "standalone-project",
-                            slug: "demo-project",
-                            owner: { _id: "standalone-account", slug: "demo-account" },
-                        } as any
-                    }
+                    project={{
+                        name: "Demo Project",
+                        _id: "standalone-project",
+                        slug: "demo-project",
+                        owner: { _id: "standalone-account", slug: "demo-account" },
+                    }}
                     metaProperties={[]}
                     accountUsers={[]}
                     accountUsersIsLoading={false}
-                    profile={
-                        {
-                            user: { entity: { id: "1" } },
-                            account: { entity: { id: "1" } },
-                            personalAccount: { entity: { id: "1" } },
-                        } as any
-                    }
-                    publicAccount={{ entity: { id: "public" } } as any}
+                    profile={{
+                        user: { entity: { id: "1" } },
+                        account: { entity: { id: "1" } },
+                        personalAccount: { entity: { id: "1" } },
+                    }}
+                    publicAccount={{ entity: { id: "public" } }}
                     clusters={[]}
                     refreshMetaProperties={() => {}}
                     jobDialogs={{
@@ -288,7 +284,7 @@ function App() {
                     createMetaProperty={async () => undefined}
                     fetchMaterials={async () => []}
                     loadWorkflowEntityById={async () => undefined}
-                    MaterialViewerComponent={StandaloneMaterialViewer as any}
+                    MaterialViewerComponent={StandaloneMaterialViewer}
                 />
             </JobDesignerProvider>
         </Box>

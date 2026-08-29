@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-floating-promises */
 import JSONSchemasInterface from "@mat3ra/esse/dist/js/esse/JSONSchemasInterface";
+import type { JSONSchema } from "@mat3ra/esse/dist/js/esse/utils";
 import esseSchemas from "@mat3ra/esse/dist/js/schemas.json";
 import { Job } from "@mat3ra/jode";
 import { ApplicationRegistry } from "@mat3ra/standata";
@@ -8,12 +9,16 @@ import { Workflow } from "@mat3ra/wode";
 import assert from "node:assert";
 import test from "node:test";
 
-import { initialJobDesignerState, jobDesignerReducer } from "../src/state/jobDesignerReducer";
+import {
+    type JobDesignerAction,
+    initialJobDesignerState,
+    jobDesignerReducer,
+} from "../src/state/jobDesignerReducer";
 
 // The material actions clone the job, which runs schema validation. Register the schemas the
 // same way `src/standalone/preloads.ts` does (minus its browser-only bits), so these tests
 // exercise the real jode/wode entities rather than stubs.
-JSONSchemasInterface.setSchemas(esseSchemas as any);
+JSONSchemasInterface.setSchemas(esseSchemas as JSONSchema[]);
 ApplicationRegistry.setDriver(new StandataDriver());
 
 /**
@@ -38,7 +43,7 @@ function material(id: string) {
 }
 
 /** Ids of the materials in a reducer state, for order-sensitive assertions. */
-function idsOf(materials: any[]) {
+function idsOf(materials: ReturnType<typeof material>[]) {
     return materials.map((m) => m.id);
 }
 
@@ -67,7 +72,12 @@ test("initial state builds from a real Job + Workflow without throwing", () => {
 test("unknown actions return the identical state object", () => {
     const { job } = makeJob();
     const state = initialJobDesignerState(job, [], []);
-    assert.strictEqual(jobDesignerReducer(state, { type: "@@INIT" } as any), state);
+    assert.strictEqual(
+        // Deliberately outside the JobDesignerAction union - this asserts the reducer's default
+        // passthrough for an action type it doesn't recognise (Redux's own bootstrap convention).
+        jobDesignerReducer(state, { type: "@@INIT" } as unknown as JobDesignerAction),
+        state,
+    );
 });
 
 test("MATERIALS_UPDATE_INDEX sets the index immutably", () => {
@@ -88,7 +98,7 @@ test("MATERIALS_UPDATE_INDEX sets the index immutably", () => {
  */
 test("MATERIALS_REMOVE drops the right entries and keeps contexts aligned", () => {
     const { job } = makeJob();
-    const materials = ["a", "b", "c", "d"].map(material) as any[];
+    const materials = ["a", "b", "c", "d"].map(material);
     const state = {
         ...initialJobDesignerState(job, [], []),
         materials,
@@ -116,7 +126,7 @@ test("MATERIALS_REMOVE is a no-op at one material", () => {
     const { job } = makeJob();
     const state = {
         ...initialJobDesignerState(job, [], []),
-        materials: [material("only")] as any[],
+        materials: [material("only")],
     };
     assert.strictEqual(jobDesignerReducer(state, { type: "MATERIALS_REMOVE" }), state);
 });
@@ -125,14 +135,14 @@ test("MATERIALS_ADD appends a cloned context per new material without mutating s
     const { job } = makeJob();
     const state = {
         ...initialJobDesignerState(job, [], []),
-        materials: [material("a")] as any[],
+        materials: [material("a")],
         workflowContexts: [{ tag: "ctx" }],
         index: 0,
     };
 
     const next = jobDesignerReducer(state, {
         type: "MATERIALS_ADD",
-        materials: ["b", "c"].map(material) as any[],
+        materials: ["b", "c"].map(material),
     });
 
     assert.deepStrictEqual(idsOf(next.materials), ["a", "b", "c"]);
@@ -151,14 +161,14 @@ test("MATERIALS_SET resets contexts to one clone per material and returns to ind
     const { job } = makeJob();
     const state = {
         ...initialJobDesignerState(job, [], []),
-        materials: ["a", "b"].map(material) as any[],
+        materials: ["a", "b"].map(material),
         workflowContexts: [{ n: 0 }, { n: 1 }],
         index: 1,
     };
 
     const next = jobDesignerReducer(state, {
         type: "MATERIALS_SET",
-        materials: ["x", "y", "z"].map(material) as any[],
+        materials: ["x", "y", "z"].map(material),
     });
 
     assert.deepStrictEqual(idsOf(next.materials), ["x", "y", "z"]);

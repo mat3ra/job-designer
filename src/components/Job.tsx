@@ -25,16 +25,18 @@ import WorkflowTab from "./WorkflowTab";
 // Resolved lazily (not at module load) so it picks up the real webapp DAOProvider injected via
 // setDependencies(), which runs after this module is first imported.
 const getDAOProvider = () =>
-    (getInjectedDeps() as any).DAOProvider ?? { get: () => ({ findByIds: () => [] }) };
+    getInjectedDeps().DAOProvider ?? { get: () => ({ findByIds: () => [] }) };
 // Same lazy-resolution pattern: pulls host-app file helpers already registered via
-// setDependencies() for forwarding into ResultsTab (see the render below).
+// setDependencies() for forwarding into ResultsTab (see the render below). Returns undefined
+// unless all three are present, matching ResultsTab's own `fileUtils?: {...}` contract - an
+// object with some handlers missing isn't a valid `fileUtils` value, only "no fileUtils" is.
 const getFileUtils = () => {
-    const deps = getInjectedDeps() as any;
-    return {
-        downloadAndProcessFile: deps.downloadAndProcessFile,
-        handleGetSignedURL: deps.handleGetSignedURL,
-        handleGetSignedUrlAsCSV: deps.handleGetSignedUrlAsCSV,
-    };
+    const { downloadAndProcessFile, handleGetSignedURL, handleGetSignedUrlAsCSV } =
+        getInjectedDeps();
+    if (!downloadAndProcessFile || !handleGetSignedURL || !handleGetSignedUrlAsCSV) {
+        return undefined;
+    }
+    return { downloadAndProcessFile, handleGetSignedURL, handleGetSignedUrlAsCSV };
 };
 const triggerChartsResize = () => {};
 const getConditionalTabs = (
@@ -544,9 +546,7 @@ function Job(props: JobProps) {
                     // in cove's IconByName map and fell back to a plain Circle glyph.
                     iconName: "actions.save",
                     onClick: (...args: any[]) =>
-                        resetEntityAndUpdateParents(entityRef.current, () =>
-                            (onSave as any)(...args),
-                        ),
+                        resetEntityAndUpdateParents(entityRef.current, () => onSave(...args)),
                 },
             ],
             localStorageKey: "job-designer-save-button",
@@ -612,7 +612,7 @@ function Job(props: JobProps) {
 
     // The webapp injects its full EntityHeader organism (description toggle/editor, Save & Exit
     // split button) for production parity; standalone falls back to cove's minimal EntityHeader.
-    const InjectedEntityHeader = (getInjectedDeps() as any).EntityHeaderComponent;
+    const InjectedEntityHeader = getInjectedDeps().EntityHeaderComponent;
 
     return (
         <ErrorBoundary fallback={<div />}>
@@ -762,7 +762,7 @@ function Job(props: JobProps) {
                                     fetchMaterials={fetchMaterials}
                                     MaterialComponent={MaterialViewerComponent}
                                     fileUtils={getFileUtils()}
-                                    DataGridComponent={(getInjectedDeps() as any).DataGridComponent}
+                                    DataGridComponent={getInjectedDeps().DataGridComponent}
                                 />
                             )}
                             {isCurrentTabFiles && (

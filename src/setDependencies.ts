@@ -76,7 +76,14 @@ export function getDependency(name: string): any {
     return _injectedDeps[name];
 }
 
+declare global {
+    // `var` is required syntax for ambient global declarations (not a real hoisted variable);
+    // both rules below are false positives against that TS-specific meaning.
+    // eslint-disable-next-line no-var, vars-on-top
+    var getDependency: (name: string) => any;
+}
+
 // Attach to globalThis for webapp compatibility (legacy usage expects a global getDependency)
 if (typeof globalThis !== "undefined") {
-    (globalThis as any).getDependency = getDependency;
+    globalThis.getDependency = getDependency;
 }
