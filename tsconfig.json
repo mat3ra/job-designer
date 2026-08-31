@@ -10,14 +10,7 @@
         "declaration": true,
         "declarationMap": true,
         "skipLibCheck": true,
-        "strict": false,
-        "noImplicitAny": false,
-        "strictNullChecks": false,
-        "strictFunctionTypes": false,
-        "strictBindCallApply": false,
-        "strictPropertyInitialization": false,
-        "noImplicitThis": false,
-        "alwaysStrict": false,
+        "strict": true,
         "paths": {
             "@mat3ra/wode": [
                 "node_modules/@mat3ra/wode"
@@ -106,6 +99,12 @@
             "@mat3ra/jode/*": [
                 "node_modules/@mat3ra/jode/dist/js/*"
             ],
+            "@mat3ra/cove": [
+                "node_modules/@mat3ra/cove"
+            ],
+            "@mat3ra/cove/*": [
+                "node_modules/@mat3ra/cove/*"
+            ],
             "@mat3ra/wave.js": [
                 "node_modules/@mat3ra/wave.js/dist/exports"
             ],
@@ -122,9 +121,6 @@
                 "src/typings.d.ts"
             ],
             "simple-react-form": [
-                "src/typings.d.ts"
-            ],
-            "redux-logger": [
                 "src/typings.d.ts"
             ],
             "flat": [

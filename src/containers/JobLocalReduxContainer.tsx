@@ -3,23 +3,15 @@ import type { Template } from "@mat3ra/ade";
 import type { Job } from "@mat3ra/jode";
 import { setJobNameBasedOnMaterials } from "@mat3ra/jode";
 import type { ResultsProps } from "@mat3ra/jove";
-import React, { memo, useCallback, useEffect, useMemo } from "react";
-import { Provider } from "react-redux";
-import { applyMiddleware, createStore } from "redux";
-import logger from "redux-logger";
+import React, { memo, useCallback, useEffect } from "react";
 
-import { setMaterials, syncJobWorkflow, updateJob } from "../actions";
-import { useJobDesignerDeps } from "../JobDesignerContext";
-import { createJobDesignerReducer } from "../reducers";
-import JobContainer from "./JobContainer";
-import {
-    JobDesignerReduxContext,
-    useJobDesignerDispatch,
-    useJobDesignerSelector,
-} from "./JobDesignerReduxContext";
+import JobComponent from "../components/Job";
+import { JobStatus } from "../exports";
+import { type JobDesignerDialogTuple, useJobDesignerDeps } from "../JobDesignerContext";
+import useJobDesignerState from "../state/useJobDesignerState";
 
 interface JobDesignerUser {
-    entity: { id: string; firstName?: string; lastName?: string; email?: string };
+    entity: { id?: string; firstName?: string; lastName?: string; email?: string };
 }
 
 interface JobDesignerProfile {
@@ -29,39 +21,43 @@ interface JobDesignerProfile {
 }
 
 interface JobDesignerAccount {
-    entity: { id: string; slug?: string; name?: string };
+    entity: { id?: string; slug?: string; name?: string };
 }
 
 interface JobDesignerCluster {
-    name: string;
-    slug?: string;
-    [key: string]: unknown;
+    hostname: string;
+    displayName?: string;
+    isDefault?: boolean;
 }
 
-interface JobDesignerMetaProperty {
-    [key: string]: unknown;
-}
+type JobDesignerMetaProperty = object;
 
-interface JobDesignerProperty {
-    [key: string]: unknown;
-}
+type JobDesignerProperty = object;
 
-interface JobDesignerDialogState {
-    isOpen: boolean;
-    open: (...args: any[]) => void;
-    close: () => void;
-}
+type JobDesignerMaterialSchema = object;
 
-interface JobDesignerMaterialSchema {
-    [key: string]: unknown;
-}
-
-interface JobDesignerMetaPropertyHolderSchema {
-    [key: string]: unknown;
-}
+type JobDesignerMetaPropertyHolderSchema = object;
 
 interface JobDesignerCreateMetaPropertyConfig {
-    [key: string]: unknown;
+    element: string;
+    approximation: string;
+    functional: string;
+    type: "us" | "nc" | "nc-fr" | "paw" | "coulomb";
+    filename: string;
+    application: string;
+    content: string;
+}
+
+/**
+ * `workflowDialogs` is populated by the webapp's own `useReduxDialog` (bypassing job-designer's
+ * DI shim), which returns a `ReduxDialogState` - an interface extending `Array<unknown>` with
+ * required indices 0/1/2, not a literal tuple type. A literal readonly tuple isn't structurally
+ * assignable from that (mismatched inherited Array<T> method signatures), so this mirrors the
+ * same "interface extends Array<unknown>" shape instead of declaring a tuple.
+ */
+interface JobDesignerWorkflowDialogTuple extends Array<unknown> {
+    0: (...args: any[]) => void;
+    1: () => void;
 }
 
 interface JobStoreLocalReduxContainerProps {
@@ -78,14 +74,14 @@ interface JobStoreLocalReduxContainerProps {
     clusters: JobDesignerCluster[];
     refreshMetaProperties: (val: string[]) => void;
     jobDialogs: {
-        selectMaterialsReduxDialog: JobDesignerDialogState;
-        selectParentJobExplorerDialog: JobDesignerDialogState;
-        selectWorkflowReduxDialog: JobDesignerDialogState;
-        datasetUploadsReduxDialog: JobDesignerDialogState;
+        selectMaterialsReduxDialog: JobDesignerDialogTuple;
+        selectParentJobExplorerDialog: JobDesignerDialogTuple;
+        selectWorkflowReduxDialog: JobDesignerDialogTuple;
+        datasetUploadsReduxDialog: JobDesignerDialogTuple;
     };
     workflowDialogs: {
-        pseudoUploadReduxDialog: JobDesignerDialogState;
-        unitTypeReduxDialog: JobDesignerDialogState;
+        pseudoUploadReduxDialog: JobDesignerWorkflowDialogTuple;
+        unitTypeReduxDialog: JobDesignerWorkflowDialogTuple;
     };
     templates: Template[];
     resultsProperties: ResultsProps[];
@@ -102,28 +98,29 @@ interface JobStoreLocalReduxContainerProps {
     MaterialViewerComponent?: React.ComponentType<{ material: any }>;
     /** Optional children rendered in the EntityHeader right slot (selectors, export button, etc.). */
     headerChildren?: React.ReactNode;
-    /** Whether the job is editable. */
+    /**
+     * Accepted (web-app passes it) but deliberately not read: the old `mapStateToProps` spread
+     * `...ownProps` first and then set `editable` from job status, so the computed value has
+     * always won over the prop. Preserved rather than quietly changed.
+     */
+    // eslint-disable-next-line react/no-unused-prop-types
     editable?: boolean;
 }
 
-type JobStoreLocalReduxContainerInnerProps = JobStoreLocalReduxContainerProps & {
+type JobLocalReduxContainerProps = JobStoreLocalReduxContainerProps & {
+    jobMaterials: any[];
+    /** Used by `JobGlobalReduxContainer` to build the default job; not read by the state layer. */
+    workflow?: any;
     loadWorkflowEntityById: (workflowId: string) => Promise<any | undefined>;
 };
 
-type State = {
-    materials: any[];
-    material: any;
-    job: Job;
-    workflowContexts: object[];
-    index: number;
-    materialsSet?: any;
-};
-
-function JobStoreLocalReduxContainer({
+function JobLocalReduxContainer({
     jobId,
     workflowId,
     materials,
     job,
+    jobMaterials,
+    workflow: _workflowBootstrap,
     project,
     publicAccount,
     metaProperties,
@@ -146,64 +143,41 @@ function JobStoreLocalReduxContainer({
     getJobMaterialClient,
     MaterialViewerComponent,
     headerChildren,
-    editable,
-}: JobStoreLocalReduxContainerInnerProps) {
-    const dispatch = useJobDesignerDispatch();
-    const stateMaterials = useJobDesignerSelector((state: State) => state.materials);
-    const stateMaterial = useJobDesignerSelector((state: State) => state.material);
-    const stateJob = useJobDesignerSelector((state: State) => state.job);
-    const stateWorkflowContexts = useJobDesignerSelector((state: State) => state.workflowContexts);
-    const stateIndex = useJobDesignerSelector((state: State) => state.index);
-    const stateMaterialsSet = useJobDesignerSelector((state: State) => state.materialsSet);
+}: JobLocalReduxContainerProps) {
+    const {
+        job: stateJob,
+        material: stateMaterial,
+        materials: stateMaterials,
+        materialsSet: stateMaterialsSet,
+        workflowContexts: stateWorkflowContexts,
+        index: stateIndex,
+        currentMaterial,
+        isMultiMaterial,
+        datasetConfig,
+        renderGeneration,
+        isLoading,
+        updateJob,
+        syncJobWorkflow,
+        setJobMultiMaterial,
+        setMaterials,
+        addMaterials,
+        removeMaterials,
+        switchMaterialByIndex,
+        setDataset,
+        saveJob,
+        submitJob,
+        terminateJob,
+    } = useJobDesignerState({ job, jobMaterials, metaProperties });
     const { getRouteQueryTab } = useJobDesignerDeps();
 
-    const syncWorkflowWithJob = useCallback(
-        (nextWorkflow: any) => {
-            const nextJob = stateJob.clone();
-            const nextContexts = [...(stateWorkflowContexts || [])];
-            const materialForRender = stateMaterials[stateIndex] || stateMaterial;
-
-            nextWorkflow.updateMethodData(stateMaterials, metaProperties);
-            nextJob.setWorkflow(nextWorkflow);
-
-            if (materialForRender) {
-                if (stateMaterial) {
-                    nextJob.setMaterial(stateMaterial);
-                }
-                if (stateMaterials.length) {
-                    nextJob.setMaterials(stateMaterials);
-                }
-                if (stateMaterialsSet) {
-                    nextJob.setMaterialsSet(stateMaterialsSet);
-                }
-            }
-
-            nextContexts[stateIndex] = nextContexts[stateIndex] || {};
-
-            dispatch(
-                syncJobWorkflow(
-                    nextJob,
-                    nextContexts,
-                    Boolean(nextWorkflow.isMultiMaterial),
-                    metaProperties,
-                ),
-            );
-        },
-        [
-            dispatch,
-            metaProperties,
-            stateIndex,
-            stateJob,
-            stateMaterial,
-            stateMaterials,
-            stateMaterialsSet,
-            stateWorkflowContexts,
-        ],
-    );
-
+    // NOTE: a `syncWorkflowWithJob` callback used to live here and be passed down as
+    // `onWorkflowUpdate`. It was unreachable: `Job` defined its own `onWorkflowUpdate` method and
+    // passed THAT to `WorkflowTab` (Job.jsx:710), so the prop threaded through JobContainer.js:90
+    // was never read. Removed rather than carried forward — see git history if the richer
+    // clone/updateMethodData/re-attach behaviour is ever actually wanted.
     const handleWorkflowSelect = useCallback(
-        async (workflowId: string) => {
-            const nextWorkflow = await loadWorkflowEntityById(workflowId);
+        async (selectedWorkflowId: string) => {
+            const nextWorkflow = await loadWorkflowEntityById(selectedWorkflowId);
             if (!nextWorkflow) {
                 return;
             }
@@ -219,17 +193,15 @@ function JobStoreLocalReduxContainer({
             setJobNameBasedOnMaterials(nextJob, stateMaterials);
             nextContexts[stateIndex] = nextContexts[stateIndex] || {};
 
-            dispatch(
-                syncJobWorkflow(
-                    nextJob,
-                    nextContexts,
-                    Boolean(nextWorkflow.isMultiMaterial),
-                    metaProperties,
-                ),
+            syncJobWorkflow(
+                nextJob,
+                nextContexts,
+                Boolean(nextWorkflow.isMultiMaterial),
+                metaProperties,
             );
         },
         [
-            dispatch,
+            syncJobWorkflow,
             loadWorkflowEntityById,
             metaProperties,
             stateIndex,
@@ -243,23 +215,23 @@ function JobStoreLocalReduxContainer({
 
     useEffect(() => {
         if (!jobId) return;
-        dispatch(updateJob(job));
-    }, [job, jobId, dispatch]);
+        updateJob(job);
+    }, [job, jobId, updateJob]);
 
     useEffect(() => {
         // Sync URL/query materials when opening an existing job before the user picks materials.
-        // Create mode initializes materials from the local store; query ids are resolved upstream.
+        // Create mode initializes materials from the state hook; query ids are resolved upstream.
         // Do not pass materialsSet: undefined — that would drop ordered-set ordering for NEB images.
         if (!jobId || stateMaterials.length > 0 || !materials?.length) {
             return;
         }
-        dispatch(setMaterials(materials, job.materialsSet ?? stateMaterialsSet, metaProperties));
+        setMaterials(materials, job.materialsSet ?? stateMaterialsSet, metaProperties);
     }, [
         jobId,
         job.materialsSet,
         materials,
         metaProperties,
-        dispatch,
+        setMaterials,
         stateMaterials.length,
         stateMaterialsSet,
     ]);
@@ -267,23 +239,63 @@ function JobStoreLocalReduxContainer({
     useEffect(() => {
         if (stateMaterials.length) {
             const elementsArrays = stateMaterials
-                .filter((material) => material)
-                .map((material) => material.uniqueElements);
-            const newElements = Array.from(new Set(elementsArrays.flat()));
+                .filter((material: any) => material)
+                .map((material: any) => material.uniqueElements);
+            const newElements = Array.from(new Set<string>(elementsArrays.flat()));
             refreshMetaProperties(newElements);
         } else if (stateMaterial) {
             const newElements = stateMaterial.uniqueElements;
             refreshMetaProperties(newElements);
         }
-    }, [stateMaterials, stateMaterial, dispatch, refreshMetaProperties]);
+    }, [stateMaterials, stateMaterial, refreshMetaProperties]);
 
     useEffect(() => {
         if (!workflowId || jobId) return;
         handleWorkflowSelect(workflowId).catch(console.error);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [jobId, workflowId]);
 
+    // Previously `JobContainer`'s mapStateToProps/mapDispatchToProps. Dead passthroughs it used
+    // to fabricate are gone: `allowedMaterials`/`allowedWorkflows` (always []) and
+    // `onOutputUpdateRequest` (a no-op), plus the duplicated `onUpdateIndex`/`onMaterialSwitch`
+    // pair its own TODO flagged - both dispatched the same action, so one remains.
     return (
-        <JobContainer
+        <JobComponent
+            job={stateJob}
+            isLoading={isLoading}
+            editable={stateJob.status === JobStatus.pre_submission}
+            isMultiMaterial={isMultiMaterial || false}
+            index={stateIndex}
+            length={stateMaterials.length}
+            material={currentMaterial}
+            materials={stateMaterials}
+            materialsSet={stateMaterialsSet}
+            datasetConfig={datasetConfig}
+            renderGeneration={renderGeneration}
+            onUpdate={(nextJob: any) => updateJob(nextJob, metaProperties)}
+            onSave={(omitRedirect?: boolean) => saveJob(project, omitRedirect)}
+            onSubmit={submitJob}
+            onTerminate={terminateJob}
+            onIsMultiMaterialChanged={setJobMultiMaterial}
+            onUpdateIndex={switchMaterialByIndex}
+            onMaterialSwitch={switchMaterialByIndex}
+            onMaterialAdd={(nextMaterials: any[], accounts?: any[]) => {
+                addMaterials(nextMaterials, metaProperties);
+                onMaterialAdd?.(nextMaterials, accounts);
+            }}
+            onMaterialRemove={(indices: number[]) => {
+                removeMaterials(indices, metaProperties);
+                onMaterialRemove?.(indices);
+            }}
+            onSetMaterials={(nextMaterials: any[], nextMaterialsSet?: any) =>
+                setMaterials(nextMaterials, nextMaterialsSet, metaProperties)
+            }
+            onSetDataset={setDataset}
+            onWorkflowSelect={handleWorkflowSelect}
+            onDestroy={() => onDestroy?.()}
+            getJobMaterialClient={async (parentJob: any) =>
+                getJobMaterialClient ? getJobMaterialClient(parentJob) : null
+            }
             project={project}
             publicAccount={publicAccount}
             metaProperties={metaProperties}
@@ -298,44 +310,10 @@ function JobStoreLocalReduxContainer({
             jobProperties={jobProperties}
             createMetaProperty={createMetaProperty}
             fetchMaterials={fetchMaterials}
-            onMaterialAdd={onMaterialAdd}
-            onMaterialRemove={onMaterialRemove}
-            onDestroy={onDestroy}
-            getJobMaterialClient={getJobMaterialClient}
-            onWorkflowSelect={handleWorkflowSelect}
-            onWorkflowUpdate={syncWorkflowWithJob}
             getRouteQueryTab={getRouteQueryTab}
             MaterialViewerComponent={MaterialViewerComponent}
             headerChildren={headerChildren}
-            editable={editable}
         />
-    );
-}
-
-type JobLocalReduxContainerProps = JobStoreLocalReduxContainerProps & {
-    jobMaterials: any[];
-    /** Used by `JobGlobalReduxContainer` to build the default job; not read by the local store layer. */
-    workflow?: any;
-    loadWorkflowEntityById: (workflowId: string) => Promise<any | undefined>;
-};
-
-function JobLocalReduxContainer(props: JobLocalReduxContainerProps) {
-    const { job, jobMaterials, metaProperties, workflow: _workflowBootstrap, ...restProps } = props;
-    const storeContainerProps = { ...restProps, job, metaProperties };
-
-    const store = useMemo(() => {
-        const reducer = createJobDesignerReducer(job, jobMaterials, metaProperties);
-
-        const enableLogging =
-            typeof window !== "undefined" &&
-            (window as any).Meteor?.settings?.public?.enableJobDesignerLogging;
-        return createStore(reducer, enableLogging ? applyMiddleware(logger as any) : undefined);
-    }, []);
-
-    return (
-        <Provider store={store} context={JobDesignerReduxContext}>
-            <JobStoreLocalReduxContainer {...storeContainerProps} />
-        </Provider>
     );
 }
 

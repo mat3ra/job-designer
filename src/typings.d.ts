@@ -220,7 +220,6 @@ declare module "/imports/*" {
     export const Loading: any;
     export const HeightContainer: any;
     export const applySubworkflowUpdateToWorkflow: any;
-    export const createJobDesignerReducer: any;
     export const updateJob: any;
     export const setMaterials: any;
     export const syncJobWorkflow: any;
@@ -265,7 +264,6 @@ declare module "meteor/*" {
     export const updateJob: any;
     export const setMaterials: any;
     export const syncJobWorkflow: any;
-    export const createJobDesignerReducer: any;
     export const BaseUnit: any;
     export const UnitStatus: any;
     export const Made: any;
@@ -302,10 +300,6 @@ declare module "meteor/session" {
     export default Session;
 }
 
-declare module "redux-logger" {
-    const logger: any;
-    export default logger;
-}
 declare module "simple-react-form" {
     export const Field: any;
     export const Form: any;

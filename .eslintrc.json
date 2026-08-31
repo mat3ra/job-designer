@@ -21,6 +21,16 @@
         "react-hooks/exhaustive-deps": "warn",
         "default-param-last": "off"
     },
+    "overrides": [
+        {
+            "files": ["tests/*.tests.ts"],
+            "rules": {
+                // tests/ has its own package.json, so this rule flags ../src imports and
+                // suggests @mat3ra/job-designer/src/... - not installed, 404s at runtime.
+                "import/no-relative-packages": "off"
+            }
+        }
+    ],
     "settings": {
         "import/resolver": {
             "node": {

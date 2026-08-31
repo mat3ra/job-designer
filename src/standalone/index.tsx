@@ -1,9 +1,9 @@
 import "./preloads";
 
-import { ThreeDEditor } from "@mat3ra/wave.js";
 import { Job } from "@mat3ra/jode";
 import { Material } from "@mat3ra/made";
 import { MaterialStandata, WorkflowStandata } from "@mat3ra/standata";
+import { ThreeDEditor } from "@mat3ra/wave.js";
 import { Workflow as WodeWorkflow } from "@mat3ra/wode";
 import WorkIcon from "@mui/icons-material/AccountTree";
 import DownloadIcon from "@mui/icons-material/Download";
@@ -107,19 +107,18 @@ function App() {
             // pre-submission status makes the header editable (name input + Save button),
             // matching how the webapp shows a new job - without it the demo header hides
             // the exact controls the designer is meant to demo.
-            const newJob = new Job({ name, status: "pre-submission" });
+            // `compute` and `_project` are required by jode's `JobEntity` (they come straight
+            // from esse's job schema). The webapp always supplies them from the real project and
+            // cluster defaults; the demo has neither, so it provides minimal stand-ins rather
+            // than casting the requirement away.
+            const newJob = new Job({
+                name,
+                status: "pre-submission",
+                compute: { queue: "D", nodes: 1, ppn: 1, timeLimit: "01:00:00" },
+                _project: { _id: "standalone-project", slug: "demo-project" },
+            } as ConstructorParameters<typeof Job>[0]);
             newJob.setWorkflow(wodeWorkflow);
             newJob.setMaterial(selectedMaterial);
-
-            // job-designer's own reducers (inherited from the webapp's original Job
-            // model) read `job.workflow.updateMethodData(...)` directly; jode's Job
-            // class exposes the live instance as `workflowInstance` instead. Bridge
-            // the two here at the demo boundary only — do not change job-designer's
-            // reducer code or jode's Job class.
-            Object.defineProperty(newJob, "workflow", {
-                get: () => (newJob as any).workflowInstance,
-                configurable: true,
-            });
 
             return newJob;
         } catch (e) {
@@ -134,8 +133,8 @@ function App() {
     const handleExportJson = () => {
         const jobInstance = jobRef.current;
         if (!jobInstance) return;
-        const raw = (jobInstance as any).toJSON?.() ?? (jobInstance as any)._json ?? {};
-        const name = (jobInstance as any).name ?? "job";
+        const raw = jobInstance.toJSON();
+        const name = jobInstance.name ?? "job";
         const safeFilename = `job-${name
             .replace(/[^a-z0-9_-]/gi, "_")
             .toLowerCase()}-${Date.now()}.json`;
@@ -246,45 +245,38 @@ function App() {
                     job={job}
                     jobMaterials={[selectedMaterial]}
                     materials={[selectedMaterial]}
-                    project={{ name: "Demo Project", _id: "standalone-project" } as any}
+                    // `owner` and `slug` are not decoration: saving reads
+                    // `project.owner.slug` / `project.slug` to build the post-save redirect
+                    // (see `useJobDesignerState`'s saveJob, unchanged from the old jobSave
+                    // reducer). The webapp always passes a real project entity; without them the
+                    // demo threw "Cannot read properties of undefined (reading 'slug')" on
+                    // every save.
+                    project={{
+                        name: "Demo Project",
+                        _id: "standalone-project",
+                        slug: "demo-project",
+                        owner: { _id: "standalone-account", slug: "demo-account" },
+                    }}
                     metaProperties={[]}
                     accountUsers={[]}
                     accountUsersIsLoading={false}
-                    profile={
-                        {
-                            user: { entity: { id: "1" } },
-                            account: { entity: { id: "1" } },
-                            personalAccount: { entity: { id: "1" } },
-                        } as any
-                    }
-                    publicAccount={{ entity: { id: "public" } } as any}
+                    profile={{
+                        user: { entity: { id: "1" } },
+                        account: { entity: { id: "1" } },
+                        personalAccount: { entity: { id: "1" } },
+                    }}
+                    publicAccount={{ entity: { id: "public" } }}
                     clusters={[]}
                     refreshMetaProperties={() => {}}
                     jobDialogs={{
-                        selectMaterialsReduxDialog: {
-                            isOpen: false,
-                            open: () => {},
-                            close: () => {},
-                        },
-                        selectParentJobExplorerDialog: {
-                            isOpen: false,
-                            open: () => {},
-                            close: () => {},
-                        },
-                        selectWorkflowReduxDialog: {
-                            isOpen: false,
-                            open: () => {},
-                            close: () => {},
-                        },
-                        datasetUploadsReduxDialog: {
-                            isOpen: false,
-                            open: () => {},
-                            close: () => {},
-                        },
+                        selectMaterialsReduxDialog: [() => {}, () => {}],
+                        selectParentJobExplorerDialog: [() => {}, () => {}],
+                        selectWorkflowReduxDialog: [() => {}, () => {}],
+                        datasetUploadsReduxDialog: [() => {}, () => {}],
                     }}
                     workflowDialogs={{
-                        pseudoUploadReduxDialog: [() => {}, () => {}] as any,
-                        unitTypeReduxDialog: [() => {}, () => {}] as any,
+                        pseudoUploadReduxDialog: [() => {}, () => {}],
+                        unitTypeReduxDialog: [() => {}, () => {}],
                     }}
                     templates={[]}
                     resultsProperties={[]}
@@ -292,7 +284,7 @@ function App() {
                     createMetaProperty={async () => undefined}
                     fetchMaterials={async () => []}
                     loadWorkflowEntityById={async () => undefined}
-                    MaterialViewerComponent={StandaloneMaterialViewer as any}
+                    MaterialViewerComponent={StandaloneMaterialViewer}
                 />
             </JobDesignerProvider>
         </Box>
