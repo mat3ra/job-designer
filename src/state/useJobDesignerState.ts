@@ -139,13 +139,7 @@ export default function useJobDesignerState({
                 configsToUpdate.length ? asyncDeps.updateJobAPI(configsToUpdate) : null,
             ]);
             if (omitRedirect !== true) {
-                asyncDeps.router.go(
-                    "projectsEditOrView",
-                    { accountSlug: project.owner.slug, projectSlug: project.slug },
-                    {
-                        query: asyncDeps.getRouteQueryParametersFromInSet(current.job.inSet),
-                    },
-                );
+                asyncDeps.redirectAfterSave({ project, inSet: current.job.inSet });
             }
         } catch (err: any) {
             console.error("Error saving job", err);

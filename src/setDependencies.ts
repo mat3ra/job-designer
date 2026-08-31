@@ -52,7 +52,7 @@ export function setDependencies(deps: Record<string, unknown>): void {
 
     _injectedDeps = { ..._injectedDeps, ...deps, ...mapped };
 
-    // Inject webapp-specific deps for the async job operations (createJob, updateJob, Router, etc.)
+    // Inject webapp-specific deps for the async job operations (createJob, updateJob, redirectAfterSave, etc.)
     setAsyncDeps(deps);
 }
 

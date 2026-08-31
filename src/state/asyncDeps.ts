@@ -15,8 +15,13 @@ export interface JobDesignerAsyncDeps {
     accountsSelector: { currentUser: () => { getAsEntityReference: () => any } };
     createJobAPI: (configs: any[]) => Promise<any>;
     updateJobAPI: (configs: any[]) => Promise<any>;
-    getRouteQueryParametersFromInSet: (inSet: any) => Record<string, any>;
-    router: { current: () => any; go: (route: string, params?: any, options?: any) => void };
+    /**
+     * Navigates away from the designer once a save completes. Takes the saved project and the
+     * job's `inSet` rather than a route name/params - the webapp owns all routing concerns
+     * (route naming, query-string shape, Meteor Router/FlowRouter), job-designer just reports
+     * what was saved.
+     */
+    redirectAfterSave: (params: { project: any; inSet: any }) => void;
     submitJobAPI: (params: { ids: string[] }) => Promise<any>;
     terminateJobAPI: (params: { ids: string[] }) => Promise<any>;
 }
@@ -25,8 +30,7 @@ export const asyncDeps: JobDesignerAsyncDeps = {
     accountsSelector: { currentUser: () => ({ getAsEntityReference: () => ({}) }) },
     createJobAPI: async () => {},
     updateJobAPI: async () => {},
-    getRouteQueryParametersFromInSet: () => ({}),
-    router: { current: () => null, go: () => {} },
+    redirectAfterSave: () => {},
     submitJobAPI: async () => {},
     terminateJobAPI: async () => {},
 };
@@ -39,9 +43,7 @@ export function setAsyncDeps(deps: Record<string, any>) {
     if (deps.AccountsSelector) asyncDeps.accountsSelector = deps.AccountsSelector;
     if (deps.createJob) asyncDeps.createJobAPI = deps.createJob;
     if (deps.updateJob) asyncDeps.updateJobAPI = deps.updateJob;
-    if (deps.getRouteQueryParametersFromInSet)
-        asyncDeps.getRouteQueryParametersFromInSet = deps.getRouteQueryParametersFromInSet;
-    if (deps.Router) asyncDeps.router = deps.Router;
+    if (deps.redirectAfterSave) asyncDeps.redirectAfterSave = deps.redirectAfterSave;
     if (deps.submitJob) asyncDeps.submitJobAPI = deps.submitJob;
     if (deps.terminateJob) asyncDeps.terminateJobAPI = deps.terminateJob;
 }
