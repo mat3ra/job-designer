@@ -219,6 +219,12 @@ function Job(props: JobProps) {
 
     // componentDidUpdate: resync the working copy when the parent swaps the job, and persist
     // when external context changed without the job being replaced (see shouldPersistJobOnUpdate).
+    // Deliberately no dependency array: this must run after EVERY render to diff `prevPropsRef`
+    // against the current `props`, exactly like class-based componentDidUpdate. The lint rule's
+    // own suggested fix ([props, job, persistJob]) would change that to "only when these
+    // identities change" - since `props` is a fresh object every render, that reads as
+    // "every render" too at first glance, but it's fragile (a future props destructure or memo
+    // could silently narrow it) and obscures that this is an every-render effect by design.
     const prevPropsRef = useRef(props);
     useEffect(() => {
         const prevProps = prevPropsRef.current;
@@ -232,6 +238,7 @@ function Job(props: JobProps) {
         if (shouldPersistJobOnUpdate(prevProps, nextProps)) {
             persistJob();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     });
 
     const isUsingDatasetTab = useMemo(() => isUsingDatasetTabFor(entity), [entity]);

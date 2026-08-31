@@ -3,11 +3,7 @@ import { renderConfigsFromJobMaterialsWorkflows } from "@mat3ra/jode";
 import { useCallback, useMemo, useReducer, useRef, useState } from "react";
 
 import { asyncDeps } from "./asyncDeps";
-import {
-    initialJobDesignerState,
-    type JobDesignerState,
-    jobDesignerReducer,
-} from "./jobDesignerReducer";
+import { initialJobDesignerState, jobDesignerReducer } from "./jobDesignerReducer";
 
 export interface UseJobDesignerStateArgs {
     job: any;

@@ -1,6 +1,6 @@
 import JSONSchemasInterface from "@mat3ra/esse/dist/js/esse/JSONSchemasInterface";
-import esseSchemas from "@mat3ra/esse/dist/js/schemas.json";
 import type { JSONSchema } from "@mat3ra/esse/dist/js/esse/utils";
+import esseSchemas from "@mat3ra/esse/dist/js/schemas.json";
 import { ApplicationRegistry } from "@mat3ra/standata";
 import StandataDriver from "@mat3ra/standata/dist/js/StandataDriver";
 import moment from "moment";
