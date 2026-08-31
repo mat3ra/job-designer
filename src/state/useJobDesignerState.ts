@@ -129,9 +129,15 @@ export default function useJobDesignerState({
             isMultiMaterial,
         }).map((c: any) => ({ ...c, creator: user.getAsEntityReference() }));
 
+        const configsToUpdate = configs.filter((c: any) => c._id || c.id);
+        const configsToCreate = configs.filter((c: any) => !c._id && !c.id);
+
         setIsLoading(true);
         try {
-            await asyncDeps.createOrUpdate(configs);
+            await Promise.all([
+                configsToCreate.length ? asyncDeps.createJobAPI(configsToCreate) : null,
+                configsToUpdate.length ? asyncDeps.updateJobAPI(configsToUpdate) : null,
+            ]);
             if (omitRedirect !== true) {
                 asyncDeps.router.go(
                     "projectsEditOrView",

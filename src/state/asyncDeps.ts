@@ -13,7 +13,8 @@
  */
 export interface JobDesignerAsyncDeps {
     accountsSelector: { currentUser: () => { getAsEntityReference: () => any } };
-    createOrUpdate: (configs: any[]) => Promise<any>;
+    createJobAPI: (configs: any[]) => Promise<any>;
+    updateJobAPI: (configs: any[]) => Promise<any>;
     getRouteQueryParametersFromInSet: (inSet: any) => Record<string, any>;
     router: { current: () => any; go: (route: string, params?: any, options?: any) => void };
     submitJobAPI: (params: { ids: string[] }) => Promise<any>;
@@ -22,7 +23,8 @@ export interface JobDesignerAsyncDeps {
 
 export const asyncDeps: JobDesignerAsyncDeps = {
     accountsSelector: { currentUser: () => ({ getAsEntityReference: () => ({}) }) },
-    createOrUpdate: async () => {},
+    createJobAPI: async () => {},
+    updateJobAPI: async () => {},
     getRouteQueryParametersFromInSet: () => ({}),
     router: { current: () => null, go: () => {} },
     submitJobAPI: async () => {},
@@ -35,7 +37,8 @@ export const asyncDeps: JobDesignerAsyncDeps = {
  */
 export function setAsyncDeps(deps: Record<string, any>) {
     if (deps.AccountsSelector) asyncDeps.accountsSelector = deps.AccountsSelector;
-    if (deps.createOrUpdate) asyncDeps.createOrUpdate = deps.createOrUpdate;
+    if (deps.createJob) asyncDeps.createJobAPI = deps.createJob;
+    if (deps.updateJob) asyncDeps.updateJobAPI = deps.updateJob;
     if (deps.getRouteQueryParametersFromInSet)
         asyncDeps.getRouteQueryParametersFromInSet = deps.getRouteQueryParametersFromInSet;
     if (deps.Router) asyncDeps.router = deps.Router;
