@@ -217,14 +217,9 @@ function Job(props: JobProps) {
     // componentWillUnmount
     useEffect(() => () => onDestroy?.(), [onDestroy]);
 
-    // componentDidUpdate: resync the working copy when the parent swaps the job, and persist
-    // when external context changed without the job being replaced (see shouldPersistJobOnUpdate).
-    // Deliberately no dependency array: this must run after EVERY render to diff `prevPropsRef`
-    // against the current `props`, exactly like class-based componentDidUpdate. The lint rule's
-    // own suggested fix ([props, job, persistJob]) would change that to "only when these
-    // identities change" - since `props` is a fresh object every render, that reads as
-    // "every render" too at first glance, but it's fragile (a future props destructure or memo
-    // could silently narrow it) and obscures that this is an every-render effect by design.
+    // componentDidUpdate. No deps array is deliberate - must run every render to diff
+    // prevPropsRef against props. Don't accept the lint rule's suggested deps array;
+    // that narrows this to "only when those identities change."
     const prevPropsRef = useRef(props);
     useEffect(() => {
         const prevProps = prevPropsRef.current;
