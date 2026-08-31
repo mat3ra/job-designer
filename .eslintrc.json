@@ -21,6 +21,21 @@
         "react-hooks/exhaustive-deps": "warn",
         "default-param-last": "off"
     },
+    "overrides": [
+        {
+            "files": ["tests/*.tests.ts"],
+            "rules": {
+                // `tests/` has its own package.json (for Cypress's deps), which makes
+                // `import/no-relative-packages` treat `../src/...` as crossing a package
+                // boundary and suggest `@mat3ra/job-designer/src/...` instead. But these
+                // node:test unit tests run via the root package's own `npm test`
+                // (`node --test tests/*.tests.ts`), resolving imports as plain relative
+                // paths - `@mat3ra/job-designer` isn't installed under tests/node_modules
+                // (nor under the root's own), so the rule's suggested fix doesn't resolve.
+                "import/no-relative-packages": "off"
+            }
+        }
+    ],
     "settings": {
         "import/resolver": {
             "node": {
