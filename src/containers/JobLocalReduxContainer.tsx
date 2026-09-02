@@ -1,7 +1,7 @@
 /* eslint-disable react/jsx-props-no-spreading */
 import type { Template } from "@mat3ra/ade";
-import type { Job } from "@mat3ra/jode";
-import { setJobNameBasedOnMaterials } from "@mat3ra/jode";
+import type { Job, JupyterEndpointProperty, JupyterEndpointUrls } from "@mat3ra/jode";
+import { getJupyterEndpointUrls, setJobNameBasedOnMaterials } from "@mat3ra/jode";
 import type { ResultsProps } from "@mat3ra/jove";
 import React, { memo, useCallback, useEffect, useMemo } from "react";
 import { Provider } from "react-redux";
@@ -282,6 +282,21 @@ function JobStoreLocalReduxContainer({
         handleWorkflowSelect(workflowId).catch(console.error);
     }, [jobId, workflowId]);
 
+    const jupyterUrlsByUnitFlowchartId = useMemo(() => {
+        const map: Record<string, JupyterEndpointUrls> = {};
+        if (!jobId) return map;
+        const properties = jobProperties as unknown as JupyterEndpointProperty[];
+        properties.forEach((property) => {
+            const unitId = property.source?.info?.unitId;
+            if (!unitId || map[unitId]) return;
+            const urls = getJupyterEndpointUrls(jobId, unitId, properties);
+            if (urls) {
+                map[unitId] = urls;
+            }
+        });
+        return map;
+    }, [jobId, jobProperties]);
+
     return (
         <JobContainer
             project={project}
@@ -296,6 +311,7 @@ function JobStoreLocalReduxContainer({
             templates={templates}
             resultsProperties={resultsProperties}
             jobProperties={jobProperties}
+            jupyterUrlsByUnitFlowchartId={jupyterUrlsByUnitFlowchartId}
             createMetaProperty={createMetaProperty}
             fetchMaterials={fetchMaterials}
             onMaterialAdd={onMaterialAdd}
