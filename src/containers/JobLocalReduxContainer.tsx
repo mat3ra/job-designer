@@ -282,6 +282,9 @@ function JobStoreLocalReduxContainer({
         handleWorkflowSelect(workflowId).catch(console.error);
     }, [jobId, workflowId]);
 
+    // Notebook and lab URLs per unit flowchart id, then per repetition (a mapped unit runs once
+    // per branch). The cast is the one typed seam in this chain: jobProperties arrives from the
+    // webapp as Record<string, unknown> rows, which jode reads through esse's property schema.
     const jupyterUrlsByUnitFlowchartId = useMemo(() => {
         if (!jobId) return {};
         return getJupyterEndpointUrlsByUnitFlowchartId(
