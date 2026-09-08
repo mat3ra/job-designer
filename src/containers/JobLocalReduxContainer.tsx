@@ -289,10 +289,7 @@ function JobStoreLocalReduxContainer({
     // through esse's property schema.
     const extraTabsByUnitFlowchartId = useMemo(() => {
         if (!jobId) return {};
-        return getExtraTabsByUnitFlowchartId(
-            jobId,
-            jobProperties as unknown as JobPropertyRow[],
-        );
+        return getExtraTabsByUnitFlowchartId(jobId, jobProperties as unknown as JobPropertyRow[]);
     }, [jobId, jobProperties]);
 
     return (
