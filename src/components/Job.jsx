@@ -537,7 +537,7 @@ class Job extends mix(React.Component).with(
             templates,
             resultsProperties,
             jobProperties,
-            jupyterUrlsByUnitFlowchartId,
+            extraTabsByUnitFlowchartId,
             createMetaProperty,
             fetchMaterials,
             renderGeneration,
@@ -719,7 +719,7 @@ class Job extends mix(React.Component).with(
                                         templates={templates}
                                         createMetaProperty={createMetaProperty}
                                         jobProperties={jobProperties}
-                                        jupyterUrlsByUnitFlowchartId={jupyterUrlsByUnitFlowchartId}
+                                        extraTabsByUnitFlowchartId={extraTabsByUnitFlowchartId}
                                         isDescriptionEditable={isDescriptionEditable}
                                     />
                                 )}
