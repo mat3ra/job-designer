@@ -282,11 +282,14 @@ function JobStoreLocalReduxContainer({
         handleWorkflowSelect(workflowId).catch(console.error);
     }, [jobId, workflowId]);
 
-    // Extra viewer tabs per unit flowchart id, then per repetition (a mapped unit runs once per
-    // branch). jode decides which units publish tabs and what they say; everything below here
-    // carries them without looking inside. The cast is the one typed seam in this chain:
-    // jobProperties arrives from the webapp as Record<string, unknown> rows, which jode reads
-    // through esse's property schema.
+    /**
+     * Extra viewer tabs per unit flowchart id, then per repetition — a mapped unit runs once per
+     * branch. jode decides which units publish tabs and what they say; everything below here
+     * carries them without looking inside.
+     *
+     * The cast is the one typed seam in this chain: `jobProperties` arrives from the webapp as
+     * `Record<string, unknown>` rows, which jode reads through esse's property schema.
+     */
     const extraTabsByUnitFlowchartId = useMemo(() => {
         if (!jobId) return {};
         return getExtraTabsByUnitFlowchartId(jobId, jobProperties as unknown as JobPropertyRow[]);
