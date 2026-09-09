@@ -282,14 +282,8 @@ function JobStoreLocalReduxContainer({
         handleWorkflowSelect(workflowId).catch(console.error);
     }, [jobId, workflowId]);
 
-    /**
-     * Endpoints each unit serves, per unit flowchart id and then per repetition — a mapped unit
-     * runs once per branch. jode decides which units serve what; everything below here carries
-     * the result without looking inside, and ave decides how it is shown.
-     *
-     * The cast is the one typed seam in this chain: `jobProperties` arrives from the webapp as
-     * `Record<string, unknown>` rows, which jode reads through esse's property schema.
-     */
+    // The cast is the one typed seam here: jobProperties arrives from the webapp as
+    // Record<string, unknown> rows, which jode reads through esse's property schema.
     const unitEndpointsByFlowchartId = useMemo(() => {
         if (!jobId) return {};
         return getUnitEndpointsByFlowchartId(jobId, jobProperties as unknown as JobPropertyRow[]);
