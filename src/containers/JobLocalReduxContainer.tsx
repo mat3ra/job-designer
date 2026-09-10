@@ -1,7 +1,7 @@
 /* eslint-disable react/jsx-props-no-spreading */
 import type { Template } from "@mat3ra/ade";
-import type { Job, JobPropertyRow } from "@mat3ra/jode";
-import { getUnitEndpointsByFlowchartId, setJobNameBasedOnMaterials } from "@mat3ra/jode";
+import type { Job } from "@mat3ra/jode";
+import { setJobNameBasedOnMaterials } from "@mat3ra/jode";
 import type { ResultsProps } from "@mat3ra/jove";
 import React, { memo, useCallback, useEffect, useMemo } from "react";
 import { Provider } from "react-redux";
@@ -12,6 +12,7 @@ import { setMaterials, syncJobWorkflow, updateJob } from "../actions";
 import { useJobDesignerDeps } from "../JobDesignerContext";
 import { createJobDesignerReducer } from "../reducers";
 import JobContainer from "./JobContainer";
+import { getUnitEndpointsByFlowchartId, type JobPropertyRow } from "./utils/unitEndpoints";
 import {
     JobDesignerReduxContext,
     useJobDesignerDispatch,
@@ -283,7 +284,7 @@ function JobStoreLocalReduxContainer({
     }, [jobId, workflowId]);
 
     // The cast is the one typed seam here: jobProperties arrives from the webapp as
-    // Record<string, unknown> rows, which jode reads through esse's property schema.
+    // Record<string, unknown> rows, read through esse's property schema.
     const unitEndpointsByFlowchartId = useMemo(() => {
         if (!jobId) return {};
         return getUnitEndpointsByFlowchartId(jobId, jobProperties as unknown as JobPropertyRow[]);
