@@ -177,7 +177,6 @@ declare module "/imports/*" {
     export const useReduxDialog: any;
     export const ACCESS_TYPES: any;
     export const useFetchMaterialsList: any;
-    export const setJobNameBasedOnMaterials: any;
     export const DEFAULT_FILES_PREFIX: any;
     export const defaultDataset: any;
     export const isLoadingReducer: any;
@@ -406,22 +405,9 @@ declare module "@mat3ra/job-designer" {
     export const JobGlobalReduxContainer: any;
 }
 
-declare module "@mat3ra/made" {
-    export const Made: any;
-    export type Made = any;
-    export const Material: any;
-    export type Material = any;
-}
-
 declare module "@mat3ra/ide" {
     const DefaultExport: any;
     export default DefaultExport;
-}
-
-declare module "@mat3ra/prode" {
-    const DefaultExport: any;
-    export default DefaultExport;
-    export const PropertyName: any;
 }
 
 declare module "@mat3ra/prove" {

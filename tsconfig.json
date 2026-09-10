@@ -105,6 +105,18 @@
             "@mat3ra/cove/*": [
                 "node_modules/@mat3ra/cove/*"
             ],
+            "@mat3ra/made": [
+                "node_modules/@mat3ra/made/dist/js/made"
+            ],
+            "@mat3ra/made/*": [
+                "node_modules/@mat3ra/made/*"
+            ],
+            "@mat3ra/prode": [
+                "node_modules/@mat3ra/prode"
+            ],
+            "@mat3ra/prode/*": [
+                "node_modules/@mat3ra/prode/*"
+            ],
             "@mat3ra/wave.js": [
                 "node_modules/@mat3ra/wave.js/dist/exports"
             ],

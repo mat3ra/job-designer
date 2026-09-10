@@ -1,23 +1,38 @@
 import { showErrorAlert } from "@mat3ra/cove/dist/other/alerts";
+import type { EntityReference, Job } from "@mat3ra/jode";
 import { renderConfigsFromJobMaterialsWorkflows } from "@mat3ra/jode";
-import { useCallback, useMemo, useReducer, useRef, useState } from "react";
+import type { MetaPropertyHolder } from "@mat3ra/prode";
+import type { OrderedMaterial } from "@mat3ra/wode";
+import { useCallback, useMemo, useRef, useState } from "react";
 
+import type { DatasetConfig } from "../components/DatasetTab";
 import { asyncDeps } from "./asyncDeps";
-import { initialJobDesignerState, jobDesignerReducer } from "./jobDesignerReducer";
+import {
+    applyDatasetUpdate,
+    applyJobMultiMaterialSet,
+    applyJobUpdate,
+    applyJobWorkflowSync,
+    applyMaterialsAdd,
+    applyMaterialsRemove,
+    applyMaterialsSet,
+    applyMaterialSwitch,
+    initialJobDesignerState,
+} from "./jobDesignerState";
 
 export interface UseJobDesignerStateArgs {
-    job: any;
-    jobMaterials: any[];
-    metaProperties: any[];
+    job: Job;
+    jobMaterials: OrderedMaterial[];
+    metaProperties: MetaPropertyHolder[];
 }
 
 /**
  * Owns all job-designer state. Replaces the per-instance Redux store that used to be created in
  * `JobLocalReduxContainer` and read through a dedicated react-redux context.
  *
- * The interdependent cluster (job / materials / index / workflowContexts) goes through a single
- * `useReducer`, keeping the original reducer semantics; `isLoading` is plain `useState` since
- * only the async operations below touch it.
+ * The interdependent cluster (job / materials / index / workflowContexts) lives in a single
+ * `useState`, updated through the pure `applyXxx` helpers in `./jobDesignerState` (each mirrors
+ * one case of the old reducer); `isLoading` is separate `useState` since only the async
+ * operations below touch it.
  */
 export default function useJobDesignerState({
     job,
@@ -25,78 +40,82 @@ export default function useJobDesignerState({
     metaProperties,
 }: UseJobDesignerStateArgs) {
     // Lazy initializer, and intentionally NOT re-run when `job`/`jobMaterials` change: the old
-    // store was likewise built once (`useMemo(..., [])`), with later changes arriving as
-    // dispatched actions from the container's effects.
-    const [state, dispatch] = useReducer(jobDesignerReducer, undefined, () =>
+    // store was likewise built once (`useMemo(..., [])`), with later changes arriving through the
+    // setters below.
+    const [state, setState] = useState(() =>
         initialJobDesignerState(job, jobMaterials, metaProperties),
     );
     const [isLoading, setIsLoading] = useState(false);
 
     const updateJob = useCallback(
-        (nextJob: any, nextMetaProperties?: any[]) =>
-            dispatch({ type: "JOB_UPDATE", job: nextJob, metaProperties: nextMetaProperties }),
+        (nextJob: Job, nextMetaProperties?: MetaPropertyHolder[]) =>
+            setState((prev) => applyJobUpdate(prev, nextJob, nextMetaProperties ?? [])),
         [],
     );
 
     const syncJobWorkflow = useCallback(
         (
-            nextJob: any,
+            nextJob: Job,
             workflowContexts: Record<string, unknown>[],
             isMultiMaterial: boolean,
-            nextMetaProperties?: any[],
+            nextMetaProperties?: MetaPropertyHolder[],
         ) =>
-            dispatch({
-                type: "JOB_WORKFLOW_SYNC",
-                job: nextJob,
-                workflowContexts,
-                isMultiMaterial,
-                metaProperties: nextMetaProperties,
-            }),
+            setState((prev) =>
+                applyJobWorkflowSync(
+                    prev,
+                    nextJob,
+                    workflowContexts,
+                    isMultiMaterial,
+                    nextMetaProperties ?? [],
+                ),
+            ),
         [],
     );
 
     const setJobMultiMaterial = useCallback(
         (isMultiMaterial: boolean) =>
-            dispatch({ type: "JOB_IS_MULTI_MATERIAL_SET", isMultiMaterial }),
+            setState((prev) => applyJobMultiMaterialSet(prev, isMultiMaterial)),
         [],
     );
 
     const setMaterials = useCallback(
-        (materials: any[], materialsSet?: any, nextMetaProperties?: any[]) =>
-            dispatch({
-                type: "MATERIALS_SET",
-                materials,
-                materialsSet,
-                metaProperties: nextMetaProperties,
-            }),
+        (
+            materials: OrderedMaterial[],
+            materialsSet?: EntityReference,
+            nextMetaProperties?: MetaPropertyHolder[],
+        ) =>
+            setState((prev) =>
+                applyMaterialsSet(prev, materials, materialsSet, nextMetaProperties ?? []),
+            ),
         [],
     );
 
     const addMaterials = useCallback(
-        (materials: any[], nextMetaProperties?: any[]) =>
-            dispatch({ type: "MATERIALS_ADD", materials, metaProperties: nextMetaProperties }),
+        (materials: OrderedMaterial[], nextMetaProperties?: MetaPropertyHolder[]) =>
+            setState((prev) => applyMaterialsAdd(prev, materials, nextMetaProperties ?? [])),
         [],
     );
 
     const removeMaterials = useCallback(
-        (indices: number[], nextMetaProperties?: any[]) =>
-            dispatch({ type: "MATERIALS_REMOVE", indices, metaProperties: nextMetaProperties }),
+        (indices: number[], nextMetaProperties?: MetaPropertyHolder[]) =>
+            setState((prev) => applyMaterialsRemove(prev, indices, nextMetaProperties ?? [])),
         [],
     );
 
     const switchMaterialByIndex = useCallback(
-        (index: number) => dispatch({ type: "MATERIAL_SWITCH", index }),
+        (index: number) => setState((prev) => applyMaterialSwitch(prev, index)),
         [],
     );
 
     const setDataset = useCallback(
-        (datasetConfig: any) => dispatch({ type: "DATASET_UPDATE", datasetConfig }),
+        (datasetConfig: DatasetConfig) =>
+            setState((prev) => applyDatasetUpdate(prev, datasetConfig)),
         [],
     );
 
     // ─── Async operations ─────────────────────────────────────────────────────────────
     // These were previously reducers that fired API calls, redirected and re-dispatched a
-    // loading action from inside a promise. As plain callbacks they no longer make the reducer
+    // loading action from inside a promise. As plain callbacks they no longer make state updates
     // impure, and the loading flag is just component state.
 
     // The async operations must read state at call time rather than close over the render that
@@ -139,7 +158,10 @@ export default function useJobDesignerState({
                 configsToUpdate.length ? asyncDeps.updateJobAPI(configsToUpdate) : null,
             ]);
             if (omitRedirect !== true) {
-                asyncDeps.redirectAfterSave({ project, inSet: current.job.inSet });
+                // `inSet` isn't a `Job` field - jode's schema has no such property, and
+                // pre-refactor this read was already always `undefined`. Left explicit rather
+                // than silently dropped, since `redirectAfterSave` still declares the param.
+                asyncDeps.redirectAfterSave({ project, inSet: undefined });
             }
         } catch (err: any) {
             console.error("Error saving job", err);
@@ -152,7 +174,9 @@ export default function useJobDesignerState({
     const submitJob = useCallback(async () => {
         setIsLoading(true);
         try {
-            await asyncDeps.submitJobAPI({ ids: [stateRef.current.job.id] });
+            // `id` is `string | undefined` on an unsaved job, but submit is only reachable once
+            // the job has already been created and has a real `_id`.
+            await asyncDeps.submitJobAPI({ ids: [stateRef.current.job.id as string] });
         } catch (err: any) {
             showErrorAlert(err.message);
         } finally {
@@ -163,7 +187,7 @@ export default function useJobDesignerState({
     const terminateJob = useCallback(async () => {
         setIsLoading(true);
         try {
-            await asyncDeps.terminateJobAPI({ ids: [stateRef.current.job.id] });
+            await asyncDeps.terminateJobAPI({ ids: [stateRef.current.job.id as string] });
         } catch (err: any) {
             showErrorAlert(err.message);
         } finally {

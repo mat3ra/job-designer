@@ -4,7 +4,7 @@ import { Job } from "@mat3ra/jode";
 import { Material } from "@mat3ra/made";
 import { MaterialStandata, WorkflowStandata } from "@mat3ra/standata";
 import { ThreeDEditor } from "@mat3ra/wave.js";
-import { Workflow as WodeWorkflow } from "@mat3ra/wode";
+import { type OrderedMaterial, Workflow as WodeWorkflow } from "@mat3ra/wode";
 import WorkIcon from "@mui/icons-material/AccountTree";
 import DownloadIcon from "@mui/icons-material/Download";
 import ScienceIcon from "@mui/icons-material/Science";
@@ -89,8 +89,11 @@ function App() {
         const idx = allMaterialJsons.findIndex((m: any) => /silicon|^si\b/i.test(m.name ?? ""));
         return idx >= 0 ? idx : 0;
     });
+    // Cast once here rather than at each of this demo material's use sites: `OrderedMaterial`
+    // adds set-membership methods (e.g. `getIndexByIdInOrderedSet`) that a bare `Material` lacks
+    // and that the single-material demo path never calls.
     const selectedMaterial = useMemo(
-        () => new Material(allMaterialJsons[materialIndex]),
+        () => new Material(allMaterialJsons[materialIndex]) as unknown as OrderedMaterial,
         [materialIndex, allMaterialJsons],
     );
 

@@ -10,23 +10,25 @@ import assert from "node:assert";
 import test from "node:test";
 
 import {
-    type JobDesignerAction,
+    applyMaterialsAdd,
+    applyMaterialsRemove,
+    applyMaterialsSet,
     initialJobDesignerState,
-    jobDesignerReducer,
-} from "../src/state/jobDesignerReducer";
+} from "../src/state/jobDesignerState";
 
-// The material actions clone the job, which runs schema validation. Register the schemas the
+// The material helpers clone the job, which runs schema validation. Register the schemas the
 // same way `src/standalone/preloads.ts` does (minus its browser-only bits), so these tests
 // exercise the real jode/wode entities rather than stubs.
 JSONSchemasInterface.setSchemas(esseSchemas as JSONSchema[]);
 ApplicationRegistry.setDriver(new StandataDriver());
 
 /**
- * Replaces `createJobDesignerReducer.tests.ts`. job-designer no longer has a Redux store - the
- * same state now lives in `useJobDesignerState`'s `useReducer` - but the reducer itself is
- * exported standalone precisely so it can still be tested without mounting a component (the bare
- * `node:test` runner has no DOM, and importing the Job component pulls in Highcharts, which
- * throws outside a browser).
+ * Replaces `createJobDesignerReducer.tests.ts`. job-designer no longer has a Redux store, nor a
+ * reducer/action layer - the interdependent state lives in `useJobDesignerState`'s `useState`,
+ * updated through the pure `applyXxx` functions exported from `./jobDesignerState`. Those
+ * functions are exported standalone precisely so they can still be tested without mounting a
+ * component (the bare `node:test` runner has no DOM, and importing the Job component pulls in
+ * Highcharts, which throws outside a browser).
  *
  * The first test carries over the original regression guard for the `job.workflow` vs
  * `job.workflowInstance` crash.
@@ -42,7 +44,7 @@ function material(id: string) {
     return { id, getAsEntityReference: () => ({ _id: id }) };
 }
 
-/** Ids of the materials in a reducer state, for order-sensitive assertions. */
+/** Ids of the materials in a state, for order-sensitive assertions. */
 function idsOf(materials: ReturnType<typeof material>[]) {
     return materials.map((m) => m.id);
 }
@@ -69,34 +71,13 @@ test("initial state builds from a real Job + Workflow without throwing", () => {
     assert.strictEqual(state.renderGeneration, 0);
 });
 
-test("unknown actions return the identical state object", () => {
-    const { job } = makeJob();
-    const state = initialJobDesignerState(job, [], []);
-    assert.strictEqual(
-        // Deliberately outside the JobDesignerAction union - this asserts the reducer's default
-        // passthrough for an action type it doesn't recognise (Redux's own bootstrap convention).
-        jobDesignerReducer(state, { type: "@@INIT" } as unknown as JobDesignerAction),
-        state,
-    );
-});
-
-test("MATERIALS_UPDATE_INDEX sets the index immutably", () => {
-    const { job } = makeJob();
-    const state = initialJobDesignerState(job, [], []);
-
-    const next = jobDesignerReducer(state, { type: "MATERIALS_UPDATE_INDEX", index: 2 });
-
-    assert.strictEqual(next.index, 2);
-    assert.notStrictEqual(next, state, "must return a new object, not mutate in place");
-    assert.strictEqual(state.index, 0, "previous state must be untouched");
-});
-
 /**
- * `MATERIALS_REMOVE` is the most intricate path: it splices both `materials` and
+ * `applyMaterialsRemove` is the most intricate path: it splices both `materials` and
  * `workflowContexts` with an ascending-index/position compensation, then clamps the active index.
- * It previously spliced `state.workflowContexts` IN PLACE, which is invisible to `useReducer`.
+ * It previously spliced `state.workflowContexts` IN PLACE under the old reducer, which is
+ * invisible to React state.
  */
-test("MATERIALS_REMOVE drops the right entries and keeps contexts aligned", () => {
+test("applyMaterialsRemove drops the right entries and keeps contexts aligned", () => {
     const { job } = makeJob();
     const materials = ["a", "b", "c", "d"].map(material);
     const state = {
@@ -106,7 +87,7 @@ test("MATERIALS_REMOVE drops the right entries and keeps contexts aligned", () =
         index: 3,
     };
 
-    const next = jobDesignerReducer(state, { type: "MATERIALS_REMOVE", indices: [0, 2] });
+    const next = applyMaterialsRemove(state, [0, 2]);
 
     assert.deepStrictEqual(idsOf(next.materials), ["b", "d"]);
     assert.deepStrictEqual(
@@ -122,16 +103,16 @@ test("MATERIALS_REMOVE drops the right entries and keeps contexts aligned", () =
     assert.strictEqual(state.index, 3);
 });
 
-test("MATERIALS_REMOVE is a no-op at one material", () => {
+test("applyMaterialsRemove is a no-op at one material", () => {
     const { job } = makeJob();
     const state = {
         ...initialJobDesignerState(job, [], []),
         materials: [material("only")],
     };
-    assert.strictEqual(jobDesignerReducer(state, { type: "MATERIALS_REMOVE" }), state);
+    assert.strictEqual(applyMaterialsRemove(state), state);
 });
 
-test("MATERIALS_ADD appends a cloned context per new material without mutating state", () => {
+test("applyMaterialsAdd appends a cloned context per new material without mutating state", () => {
     const { job } = makeJob();
     const state = {
         ...initialJobDesignerState(job, [], []),
@@ -140,10 +121,7 @@ test("MATERIALS_ADD appends a cloned context per new material without mutating s
         index: 0,
     };
 
-    const next = jobDesignerReducer(state, {
-        type: "MATERIALS_ADD",
-        materials: ["b", "c"].map(material),
-    });
+    const next = applyMaterialsAdd(state, ["b", "c"].map(material));
 
     assert.deepStrictEqual(idsOf(next.materials), ["a", "b", "c"]);
     assert.strictEqual(next.workflowContexts.length, 3);
@@ -157,7 +135,7 @@ test("MATERIALS_ADD appends a cloned context per new material without mutating s
     assert.strictEqual(state.workflowContexts.length, 1, "previous state must be untouched");
 });
 
-test("MATERIALS_SET resets contexts to one clone per material and returns to index 0", () => {
+test("applyMaterialsSet resets contexts to one clone per material and returns to index 0", () => {
     const { job } = makeJob();
     const state = {
         ...initialJobDesignerState(job, [], []),
@@ -166,10 +144,7 @@ test("MATERIALS_SET resets contexts to one clone per material and returns to ind
         index: 1,
     };
 
-    const next = jobDesignerReducer(state, {
-        type: "MATERIALS_SET",
-        materials: ["x", "y", "z"].map(material),
-    });
+    const next = applyMaterialsSet(state, ["x", "y", "z"].map(material), state.materialsSet);
 
     assert.deepStrictEqual(idsOf(next.materials), ["x", "y", "z"]);
     assert.strictEqual(next.workflowContexts.length, 3);

@@ -1,14 +1,9 @@
 export { default as JobContainer } from "./components/Job";
 export { default as JobLocalReduxContainer } from "./containers/JobLocalReduxContainer";
-// State layer (replaces the removed local Redux store). The reducer is exported standalone so
-// it can be unit-tested without mounting a component.
+// State layer (replaces the removed local Redux store). `initialJobDesignerState` is exported
+// standalone so it can be unit-tested without mounting a component.
 export { default as useJobDesignerState } from "./state/useJobDesignerState";
-export {
-    initialJobDesignerState,
-    jobDesignerReducer,
-    type JobDesignerAction,
-    type JobDesignerState,
-} from "./state/jobDesignerReducer";
+export { initialJobDesignerState, type JobDesignerState } from "./state/jobDesignerState";
 export { syncSubworkflowSchemaOnWorkflow } from "./syncSubworkflowSchemaOnWorkflow";
 export { shouldPersistJobOnUpdate } from "./shouldPersistJobOnUpdate";
 export {
@@ -42,5 +37,4 @@ export {
     defaultDataset,
     renderJinjaTemplate,
     renderConfigsFromJobMaterialsWorkflows,
-    setJobNameBasedOnMaterials,
 } from "@mat3ra/jode";

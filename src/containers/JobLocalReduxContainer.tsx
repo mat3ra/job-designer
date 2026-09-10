@@ -1,8 +1,9 @@
 /* eslint-disable react/jsx-props-no-spreading */
 import type { Template } from "@mat3ra/ade";
 import type { Job } from "@mat3ra/jode";
-import { setJobNameBasedOnMaterials } from "@mat3ra/jode";
 import type { ResultsProps } from "@mat3ra/jove";
+import type { MetaPropertyHolder } from "@mat3ra/prode";
+import type { OrderedMaterial } from "@mat3ra/wode";
 import React, { memo, useCallback, useEffect } from "react";
 
 import JobComponent from "../components/Job";
@@ -30,7 +31,7 @@ interface JobDesignerCluster {
     isDefault?: boolean;
 }
 
-type JobDesignerMetaProperty = object;
+type JobDesignerMetaProperty = MetaPropertyHolder;
 
 type JobDesignerProperty = object;
 
@@ -65,7 +66,7 @@ interface JobStoreLocalReduxContainerProps {
     job: Job;
     project: any;
     workflowId?: string;
-    materials: any[];
+    materials: OrderedMaterial[];
     metaProperties: JobDesignerMetaProperty[];
     accountUsers: JobDesignerUser[];
     accountUsersIsLoading: boolean;
@@ -90,7 +91,7 @@ interface JobStoreLocalReduxContainerProps {
         property: JobDesignerCreateMetaPropertyConfig,
     ) => Promise<JobDesignerMetaPropertyHolderSchema | undefined>;
     fetchMaterials: (ids: string[]) => Promise<JobDesignerMaterialSchema[]>;
-    onMaterialAdd?: (materials: any[], accounts?: any[]) => void;
+    onMaterialAdd?: (materials: OrderedMaterial[], accounts?: any[]) => void;
     onMaterialRemove?: (indices: number[]) => void;
     onDestroy?: () => void;
     getJobMaterialClient?: (job: Job) => Promise<any>;
@@ -108,7 +109,7 @@ interface JobStoreLocalReduxContainerProps {
 }
 
 type JobLocalReduxContainerProps = JobStoreLocalReduxContainerProps & {
-    jobMaterials: any[];
+    jobMaterials: OrderedMaterial[];
     /** Used by `JobGlobalReduxContainer` to build the default job; not read by the state layer. */
     workflow?: any;
     loadWorkflowEntityById: (workflowId: string) => Promise<any | undefined>;
@@ -187,10 +188,12 @@ function JobLocalReduxContainer({
 
             nextWorkflow.updateMethodData(stateMaterials, metaProperties);
             nextJob.setWorkflow(nextWorkflow);
-            nextJob.setMaterial(stateMaterial);
+            // `stateMaterial` is `undefined` only when there are no materials at all, matching
+            // pre-refactor behavior of passing it through as-is.
+            nextJob.setMaterial(stateMaterial as OrderedMaterial);
             nextJob.setMaterials(stateMaterials);
             nextJob.setMaterialsSet(stateMaterialsSet);
-            setJobNameBasedOnMaterials(nextJob, stateMaterials);
+            nextJob.setNameBasedOnMaterials(stateMaterials);
             nextContexts[stateIndex] = nextContexts[stateIndex] || {};
 
             syncJobWorkflow(
