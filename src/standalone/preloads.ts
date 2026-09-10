@@ -1,33 +1,29 @@
-import { math } from "@mat3ra/code/dist/js/math";
 import JSONSchemasInterface from "@mat3ra/esse/dist/js/esse/JSONSchemasInterface";
+import type { JSONSchema } from "@mat3ra/esse/dist/js/esse/utils";
 import esseSchemas from "@mat3ra/esse/dist/js/schemas.json";
 import { ApplicationRegistry } from "@mat3ra/standata";
 import StandataDriver from "@mat3ra/standata/dist/js/StandataDriver";
-import { sharedUtils } from "@mat3ra/utils";
 import moment from "moment";
 
 // Bootstrap — must run before any component renders
-JSONSchemasInterface.setSchemas(esseSchemas as any);
+//
+// `esseSchemas` is a JSON import: `resolveJsonModule` infers its string-literal fields (e.g.
+// `type: "object"`) as plain `string`, which can never structurally satisfy JSONSchema7's
+// `JSONSchema7TypeName` union - there is no way to write literal types in JSON. The cast to the
+// exact expected element type (not `any`) is the narrowest fix; the same pattern is used by
+// workflow-designer's own standalone bootstrap for the identical call.
+JSONSchemasInterface.setSchemas(esseSchemas as JSONSchema[]);
 ApplicationRegistry.setDriver(new StandataDriver());
 
-(window as any).moment = moment;
-
-/**
- * Compatibility patch: wave.js bonds.js calls sharedUtils.math.max / sharedUtils.math.vDist,
- * but the current @mat3ra/utils only exposes { math: { numberToPrecision, default } }.
- * The full mathjs instance is available from @mat3ra/code — we merge it in here.
- */
-if (sharedUtils?.math && typeof (sharedUtils.math as any).max !== "function") {
-    const mathFull = math as any;
-    // Add standard mathjs functions that wave.js bonds.js relies on
-    (sharedUtils.math as any).max = (...args: any[]) => mathFull.max(...args);
-    (sharedUtils.math as any).min = (...args: any[]) => mathFull.min(...args);
-    // vDist: Euclidean distance between two coordinate arrays
-    (sharedUtils.math as any).vDist = (a: number[], b: number[]) => {
-        const sum = a.reduce((acc, ai, i) => acc + (ai - b[i]) ** 2, 0);
-        return Math.sqrt(sum);
-    };
-    // vLen: vector length
-    (sharedUtils.math as any).vLen = (v: number[]) =>
-        Math.sqrt(v.reduce((acc, vi) => acc + vi ** 2, 0));
+declare global {
+    interface Window {
+        /**
+         * Mirrors the same bootstrap line in workflow-designer's standalone demo. No current
+         * consumer was found by searching wave.js/jove/workflow-designer's source for
+         * `window.moment` - left in place unchanged (removing a global some transitive dependency
+         * might read is not a type-safety change), just no longer typed away with `any`.
+         */
+        moment: typeof moment;
+    }
 }
+window.moment = moment;

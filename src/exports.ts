@@ -1,6 +1,9 @@
 export { default as JobContainer } from "./components/Job";
 export { default as JobLocalReduxContainer } from "./containers/JobLocalReduxContainer";
-export { createJobDesignerReducer } from "./reducers";
+// State layer (replaces the removed local Redux store). `initialJobDesignerState` is exported
+// standalone so it can be unit-tested without mounting a component.
+export { default as useJobDesignerState } from "./state/useJobDesignerState";
+export { initialJobDesignerState, type JobDesignerState } from "./state/jobDesignerState";
 export { syncSubworkflowSchemaOnWorkflow } from "./syncSubworkflowSchemaOnWorkflow";
 export { shouldPersistJobOnUpdate } from "./shouldPersistJobOnUpdate";
 export {
@@ -17,6 +20,9 @@ export { JobDesignerProvider, useJobDesignerDeps } from "./JobDesignerContext";
 export { setDependencies, getDependency } from "./setDependencies";
 export type { JobDesignerDeps, JobDesignerDialogTuple } from "./JobDesignerContext";
 export type { MaterialViewerComponentProps } from "./components/MaterialTab";
+// web-app's imports/client/dialogTypes.ts already imports this from "@mat3ra/job-designer",
+// but it was never re-exported here - the import was unresolvable through the public surface.
+export type { SelectProjectModalProps } from "./components/SelectProjectModal";
 
 // Re-export core job design elements from @mat3ra/jode for convenience
 export {
@@ -31,5 +37,4 @@ export {
     defaultDataset,
     renderJinjaTemplate,
     renderConfigsFromJobMaterialsWorkflows,
-    setJobNameBasedOnMaterials,
 } from "@mat3ra/jode";

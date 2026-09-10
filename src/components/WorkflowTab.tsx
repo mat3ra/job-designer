@@ -86,7 +86,7 @@ export default function WorkflowTab({
     const onUnitUpdate = useCallback(
         (unit: { flowchartId: string }) => {
             const unitIndex = workflow.unitInstances.findIndex(
-                (u) => u.flowchartId === unit.flowchartId,
+                (u: { flowchartId: string }) => u.flowchartId === unit.flowchartId,
             );
             if (unitIndex >= 0) {
                 const nextUnits = [...workflow.unitInstances];

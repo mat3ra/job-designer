@@ -49,6 +49,26 @@ export interface JobDesignerDeps {
      * In standalone mode the stub returns null so the default tab is used.
      */
     getRouteQueryTab: () => string | null;
+    /**
+     * Legacy DAO lookup for the "select parent job" dialog (`Job`'s `onSelectParentJobSubmit`).
+     * Optional and unstubbed in standalone - that flow is unreachable there anyway, since the
+     * demo passes no-op dialog tuples.
+     */
+    DAOProvider?: { get: (key: string) => { findByIds: (ids: string[]) => any[] } };
+    /**
+     * File-download helpers forwarded to `@mat3ra/jove`'s `ResultsTab` (`fileUtils` prop) -
+     * signatures copied from its own (unexported) `ResultsTabProps`, not invented here.
+     */
+    downloadAndProcessFile?: (
+        accountId: string,
+        fileConfig: any,
+        onSuccess: (contents: string, fileMetadata: any) => void,
+        handler: (files: any[], onLoad: any) => void,
+    ) => void;
+    handleGetSignedURL?: (files: any[], onLoad: any) => void;
+    handleGetSignedUrlAsCSV?: (files: any[], onLoad: any) => void;
+    /** Forwarded to `ResultsTab`'s `DataGridComponent` prop, typed `React.ComponentType<any>` there. */
+    DataGridComponent?: React.ComponentType<any>;
 }
 
 /** Stub implementations safe for standalone (no Meteor, no Redux store). */
