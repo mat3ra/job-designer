@@ -12,6 +12,7 @@ import { setMaterials, syncJobWorkflow, updateJob } from "../actions";
 import { useJobDesignerDeps } from "../JobDesignerContext";
 import { createJobDesignerReducer } from "../reducers";
 import JobContainer from "./JobContainer";
+import { getUnitEndpointsByFlowchartId, type JobPropertyRow } from "./utils/unitEndpoints";
 import {
     JobDesignerReduxContext,
     useJobDesignerDispatch,
@@ -282,6 +283,13 @@ function JobStoreLocalReduxContainer({
         handleWorkflowSelect(workflowId).catch(console.error);
     }, [jobId, workflowId]);
 
+    // The cast is the one typed seam here: jobProperties arrives from the webapp as
+    // Record<string, unknown> rows, read through esse's property schema.
+    const unitEndpointsByFlowchartId = useMemo(() => {
+        if (!jobId) return {};
+        return getUnitEndpointsByFlowchartId(jobId, jobProperties as unknown as JobPropertyRow[]);
+    }, [jobId, jobProperties]);
+
     return (
         <JobContainer
             project={project}
@@ -296,6 +304,7 @@ function JobStoreLocalReduxContainer({
             templates={templates}
             resultsProperties={resultsProperties}
             jobProperties={jobProperties}
+            unitEndpointsByFlowchartId={unitEndpointsByFlowchartId}
             createMetaProperty={createMetaProperty}
             fetchMaterials={fetchMaterials}
             onMaterialAdd={onMaterialAdd}

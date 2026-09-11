@@ -537,6 +537,7 @@ class Job extends mix(React.Component).with(
             templates,
             resultsProperties,
             jobProperties,
+            unitEndpointsByFlowchartId,
             createMetaProperty,
             fetchMaterials,
             renderGeneration,
@@ -718,6 +719,7 @@ class Job extends mix(React.Component).with(
                                         templates={templates}
                                         createMetaProperty={createMetaProperty}
                                         jobProperties={jobProperties}
+                                        unitEndpointsByFlowchartId={unitEndpointsByFlowchartId}
                                         isDescriptionEditable={isDescriptionEditable}
                                     />
                                 )}
