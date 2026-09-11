@@ -78,7 +78,7 @@
         "@mat3ra/utils": "2026.8.18-1",
         "@mat3ra/wave.js": "2026.8.19-0",
         "@mat3ra/wode": "2026.8.18-0",
-        "@mat3ra/workflow-designer": "https://github.com/mat3ra/workflow-designer/releases/download/wip-468958b/workflow-designer.tgz",
+        "@mat3ra/workflow-designer": "https://github.com/mat3ra/workflow-designer/releases/download/wip-9e0378b/workflow-designer.tgz",
         "@mat3ra/wove": "2026.8.19-0",
         "@mui/icons-material": "^5.11.9",
         "@mui/lab": "^5.0.0-alpha.120",
