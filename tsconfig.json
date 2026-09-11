@@ -11,139 +11,51 @@
         "declarationMap": true,
         "skipLibCheck": true,
         "strict": true,
+        "types": ["node"],
         "paths": {
-            "@mat3ra/wode": [
-                "node_modules/@mat3ra/wode"
-            ],
-            "@mat3ra/wode/*": [
-                "node_modules/@mat3ra/wode/*"
-            ],
-            "@mat3ra/esse": [
-                "node_modules/@mat3ra/esse"
-            ],
-            "@mat3ra/esse/*": [
-                "node_modules/@mat3ra/esse/*"
-            ],
-            "@mat3ra/ade": [
-                "node_modules/@mat3ra/ade"
-            ],
-            "@mat3ra/ade/*": [
-                "node_modules/@mat3ra/ade/*"
-            ],
-            "@mat3ra/mode": [
-                "node_modules/@mat3ra/mode"
-            ],
-            "@mat3ra/mode/*": [
-                "node_modules/@mat3ra/mode/*"
-            ],
-            "@mat3ra/code": [
-                "node_modules/@mat3ra/code"
-            ],
-            "@mat3ra/code/*": [
-                "node_modules/@mat3ra/code/*"
-            ],
-            "@mat3ra/standata": [
-                "node_modules/@mat3ra/standata"
-            ],
-            "@mat3ra/standata/*": [
-                "node_modules/@mat3ra/standata/*"
-            ],
-            "@mat3ra/utils": [
-                "node_modules/@mat3ra/utils"
-            ],
-            "@mat3ra/utils/*": [
-                "node_modules/@mat3ra/utils/*"
-            ],
-            "@mat3ra/wove": [
-                "node_modules/@mat3ra/wove/dist/exports"
-            ],
-            "@mat3ra/wove/*": [
-                "node_modules/@mat3ra/wove/dist/*"
-            ],
-            "@mat3ra/workflow-designer": [
-                "node_modules/@mat3ra/workflow-designer/dist/exports"
-            ],
-            "@mat3ra/workflow-designer/*": [
-                "node_modules/@mat3ra/workflow-designer/dist/*"
-            ],
-            "@mat3ra/ive": [
-                "node_modules/@mat3ra/ive/dist/exports"
-            ],
-            "@mat3ra/ive/*": [
-                "node_modules/@mat3ra/ive/dist/*"
-            ],
-            "@mat3ra/ave": [
-                "node_modules/@mat3ra/ave/dist/exports"
-            ],
-            "@mat3ra/ave/*": [
-                "node_modules/@mat3ra/ave/dist/*"
-            ],
-            "@mat3ra/move": [
-                "node_modules/@mat3ra/move/dist/exports"
-            ],
-            "@mat3ra/move/pseudo": [
-                "node_modules/@mat3ra/move/dist/pseudo"
-            ],
-            "@mat3ra/move/*": [
-                "node_modules/@mat3ra/move/dist/*"
-            ],
-            "@mat3ra/jove": [
-                "node_modules/@mat3ra/jove/dist/exports"
-            ],
-            "@mat3ra/jove/*": [
-                "node_modules/@mat3ra/jove/dist/*"
-            ],
-            "@mat3ra/jode": [
-                "node_modules/@mat3ra/jode/dist/js/index"
-            ],
-            "@mat3ra/jode/*": [
-                "node_modules/@mat3ra/jode/dist/js/*"
-            ],
-            "@mat3ra/cove": [
-                "node_modules/@mat3ra/cove"
-            ],
-            "@mat3ra/cove/*": [
-                "node_modules/@mat3ra/cove/*"
-            ],
-            "@mat3ra/made": [
-                "node_modules/@mat3ra/made/dist/js/made"
-            ],
-            "@mat3ra/made/*": [
-                "node_modules/@mat3ra/made/*"
-            ],
-            "@mat3ra/prode": [
-                "node_modules/@mat3ra/prode"
-            ],
-            "@mat3ra/prode/*": [
-                "node_modules/@mat3ra/prode/*"
-            ],
-            "@mat3ra/wave.js": [
-                "node_modules/@mat3ra/wave.js/dist/exports"
-            ],
-            "@mat3ra/wave.js/*": [
-                "node_modules/@mat3ra/wave.js/dist/*"
-            ],
-            "@mat3ra/*": [
-                "src/typings.d.ts"
-            ],
-            "/imports/*": [
-                "src/typings.d.ts"
-            ],
-            "meteor/*": [
-                "src/typings.d.ts"
-            ],
-            "simple-react-form": [
-                "src/typings.d.ts"
-            ],
-            "flat": [
-                "src/typings.d.ts"
-            ],
-            "path": [
-                "src/typings.d.ts"
-            ]
+            "@mat3ra/wode": ["node_modules/@mat3ra/wode"],
+            "@mat3ra/wode/*": ["node_modules/@mat3ra/wode/*"],
+            "@mat3ra/esse": ["node_modules/@mat3ra/esse"],
+            "@mat3ra/esse/*": ["node_modules/@mat3ra/esse/*"],
+            "@mat3ra/ade": ["node_modules/@mat3ra/ade"],
+            "@mat3ra/ade/*": ["node_modules/@mat3ra/ade/*"],
+            "@mat3ra/mode": ["node_modules/@mat3ra/mode"],
+            "@mat3ra/mode/*": ["node_modules/@mat3ra/mode/*"],
+            "@mat3ra/code": ["node_modules/@mat3ra/code"],
+            "@mat3ra/code/*": ["node_modules/@mat3ra/code/*"],
+            "@mat3ra/standata": ["node_modules/@mat3ra/standata"],
+            "@mat3ra/standata/*": ["node_modules/@mat3ra/standata/*"],
+            "@mat3ra/utils": ["node_modules/@mat3ra/utils"],
+            "@mat3ra/utils/*": ["node_modules/@mat3ra/utils/*"],
+            "@mat3ra/wove": ["node_modules/@mat3ra/wove/dist/exports"],
+            "@mat3ra/wove/*": ["node_modules/@mat3ra/wove/dist/*"],
+            "@mat3ra/workflow-designer": ["node_modules/@mat3ra/workflow-designer/dist/exports"],
+            "@mat3ra/workflow-designer/*": ["node_modules/@mat3ra/workflow-designer/dist/*"],
+            "@mat3ra/ive": ["node_modules/@mat3ra/ive/dist/exports"],
+            "@mat3ra/ive/*": ["node_modules/@mat3ra/ive/dist/*"],
+            "@mat3ra/ave": ["node_modules/@mat3ra/ave/dist/exports"],
+            "@mat3ra/ave/*": ["node_modules/@mat3ra/ave/dist/*"],
+            "@mat3ra/move": ["node_modules/@mat3ra/move/dist/exports"],
+            "@mat3ra/move/pseudo": ["node_modules/@mat3ra/move/dist/pseudo"],
+            "@mat3ra/move/*": ["node_modules/@mat3ra/move/dist/*"],
+            "@mat3ra/jove": ["node_modules/@mat3ra/jove/dist/exports"],
+            "@mat3ra/jove/*": ["node_modules/@mat3ra/jove/dist/*"],
+            "@mat3ra/jode": ["node_modules/@mat3ra/jode/dist/js/index"],
+            "@mat3ra/jode/*": ["node_modules/@mat3ra/jode/dist/js/*"],
+            "@mat3ra/cove": ["node_modules/@mat3ra/cove"],
+            "@mat3ra/cove/*": ["node_modules/@mat3ra/cove/*"],
+            "@mat3ra/made": ["node_modules/@mat3ra/made/dist/js/made"],
+            "@mat3ra/made/*": ["node_modules/@mat3ra/made/*"],
+            "@mat3ra/prode": ["node_modules/@mat3ra/prode"],
+            "@mat3ra/prode/*": ["node_modules/@mat3ra/prode/*"],
+            "@mat3ra/wave.js": ["node_modules/@mat3ra/wave.js/dist/exports"],
+            "@mat3ra/wave.js/*": ["node_modules/@mat3ra/wave.js/dist/*"],
+            "@mat3ra/*": ["src/typings.d.ts"],
+            "/imports/*": ["src/typings.d.ts"],
+            "meteor/*": ["src/typings.d.ts"],
+            "simple-react-form": ["src/typings.d.ts"],
+            "flat": ["src/typings.d.ts"]
         }
     },
-    "include": [
-        "src/**/*"
-    ]
+    "include": ["src/**/*"]
 }

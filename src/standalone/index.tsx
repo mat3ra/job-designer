@@ -278,8 +278,8 @@ function App() {
                         datasetUploadsReduxDialog: [() => {}, () => {}],
                     }}
                     workflowDialogs={{
-                        pseudoUploadReduxDialog: [() => {}, () => {}],
-                        unitTypeReduxDialog: [() => {}, () => {}],
+                        pseudoUploadReduxDialog: [() => {}, () => {}, () => {}],
+                        unitTypeReduxDialog: [() => {}, () => {}, () => {}],
                     }}
                     templates={[]}
                     resultsProperties={[]}

@@ -12,7 +12,7 @@ export interface ComputeTabProps {
     showHeader?: boolean;
     showAdvancedOptions?: boolean;
     /* handlers */
-    onUpdate?: (compute: any) => void;
+    onUpdate: (compute: any) => void;
     /* compute */
     accountUsers: any[];
     accountUsersIsLoading: boolean;

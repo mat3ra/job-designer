@@ -10,6 +10,7 @@ import assert from "node:assert";
 import test from "node:test";
 
 import {
+    applyDatasetUpdate,
     applyMaterialsAdd,
     applyMaterialsRemove,
     applyMaterialsSet,
@@ -69,6 +70,31 @@ test("initial state builds from a real Job + Workflow without throwing", () => {
     assert.strictEqual(state.index, 0);
     assert.deepStrictEqual(state.workflowContexts, []);
     assert.strictEqual(state.renderGeneration, 0);
+});
+
+// Regression guard: `objectStorageContainerData` stores uppercase esse keys (CONTAINER/NAME/...),
+// while `DatasetTab`'s `DatasetConfig` uses lowercase ones - a mismatched field mapping here
+// previously left a re-opened job's dataset config blank even though it had been saved correctly.
+test("dataset config round-trips through job.dataset", () => {
+    const { job } = makeJob();
+    const state = initialJobDesignerState(job, [], []);
+
+    const updated = applyDatasetUpdate(state, {
+        name: "file.csv",
+        key: "someuser/nested/file.csv",
+        provider: "aws",
+        region: "us-east-1",
+        bucket: "my-bucket",
+    });
+
+    const rehydrated = initialJobDesignerState(updated.job, [], []);
+
+    assert.deepStrictEqual(rehydrated.datasetConfig, {
+        name: "file.csv",
+        provider: "aws",
+        region: "us-east-1",
+        bucket: "my-bucket",
+    });
 });
 
 /**

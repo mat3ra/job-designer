@@ -4,6 +4,7 @@ import type { Job } from "@mat3ra/jode";
 import type { ResultsProps } from "@mat3ra/jove";
 import type { MetaPropertyHolder } from "@mat3ra/prode";
 import type { OrderedMaterial } from "@mat3ra/wode";
+import type { WorkflowDesignerDialogs } from "@mat3ra/workflow-designer";
 import React, { memo, useCallback, useEffect } from "react";
 
 import JobComponent from "../components/Job";
@@ -49,18 +50,6 @@ interface JobDesignerCreateMetaPropertyConfig {
     content: string;
 }
 
-/**
- * `workflowDialogs` is populated by the webapp's own `useReduxDialog` (bypassing job-designer's
- * DI shim), which returns a `ReduxDialogState` - an interface extending `Array<unknown>` with
- * required indices 0/1/2, not a literal tuple type. A literal readonly tuple isn't structurally
- * assignable from that (mismatched inherited Array<T> method signatures), so this mirrors the
- * same "interface extends Array<unknown>" shape instead of declaring a tuple.
- */
-interface JobDesignerWorkflowDialogTuple extends Array<unknown> {
-    0: (...args: any[]) => void;
-    1: () => void;
-}
-
 interface JobStoreLocalReduxContainerProps {
     jobId?: string;
     job: Job;
@@ -80,10 +69,7 @@ interface JobStoreLocalReduxContainerProps {
         selectWorkflowReduxDialog: JobDesignerDialogTuple;
         datasetUploadsReduxDialog: JobDesignerDialogTuple;
     };
-    workflowDialogs: {
-        pseudoUploadReduxDialog: JobDesignerWorkflowDialogTuple;
-        unitTypeReduxDialog: JobDesignerWorkflowDialogTuple;
-    };
+    workflowDialogs: WorkflowDesignerDialogs;
     templates: Template[];
     resultsProperties: ResultsProps[];
     jobProperties: JobDesignerProperty[];

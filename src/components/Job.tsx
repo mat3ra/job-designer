@@ -8,6 +8,7 @@ import LoadingIndicator from "@mat3ra/cove/dist/mui-composed/components/loading/
 import { showWarningAlert } from "@mat3ra/cove/dist/other/alerts";
 import { TAB_NAVIGATION_CONFIG } from "@mat3ra/jode";
 import { ResultsTab } from "@mat3ra/jove";
+import type { WorkflowDesignerDialogs } from "@mat3ra/workflow-designer";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import React, { memo, useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
@@ -65,14 +66,14 @@ export interface JobProps {
     project?: any;
     accountUsers: any[];
     accountUsersIsLoading: boolean;
-    templates?: any[];
-    resultsProperties?: any[];
-    jobProperties?: any[];
+    templates: any[];
+    resultsProperties: any[];
+    jobProperties: any[];
     renderGeneration?: number;
     jobDialogs: Record<string, any>;
-    workflowDialogs?: Record<string, any>;
+    workflowDialogs: WorkflowDesignerDialogs;
     createMetaProperty?: (config: any) => Promise<any>;
-    fetchMaterials?: (ids: string[]) => Promise<any[]>;
+    fetchMaterials: (ids: string[]) => Promise<any[]>;
     getRouteQueryTab?: () => string | null;
     /** Optional injectable material viewer component (e.g. ThreeDEditor from wave.js). */
     MaterialViewerComponent?: React.ComponentType<any>;
@@ -718,7 +719,9 @@ function Job(props: JobProps) {
                                     materialsSet={materialsSet}
                                     materialsIndex={index}
                                     onIsMultiMaterialChanged={onIsMultiMaterialChanged}
-                                    onMaterialSwitch={onMaterialSwitch}
+                                    onMaterialSwitch={(...args: unknown[]) =>
+                                        onMaterialSwitch?.(args[0] as number)
+                                    }
                                     onWorkflowUpdate={onWorkflowUpdate}
                                     adjustable={entity.isInInitialStatus}
                                     iconCls={`text-${entity.statusCls}`}
@@ -757,7 +760,6 @@ function Job(props: JobProps) {
                                     role="tabpanel"
                                     job={entity}
                                     material={material}
-                                    publicAccount={publicAccount}
                                     profile={profile}
                                     resultsProperties={resultsProperties}
                                     jobProperties={jobProperties}

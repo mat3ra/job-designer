@@ -1,6 +1,5 @@
 import { deepClone } from "@mat3ra/code/dist/js/utils";
-import type { EntityReference, Job, JobEntity } from "@mat3ra/jode";
-import { defaultDataset } from "@mat3ra/jode";
+import type { EntityReference, Job } from "@mat3ra/jode";
 import type { MetaPropertyHolder } from "@mat3ra/prode";
 import type { OrderedMaterial } from "@mat3ra/wode";
 import path from "path";
@@ -8,25 +7,16 @@ import path from "path";
 import type { DatasetConfig } from "../components/DatasetTab";
 import { renderJobForDesignerState } from "./renderJobForDesignerState";
 
-/** The shape job-designer writes to `job.dataset` — esse models the field itself as `{}`. */
-export interface JobDataset {
-    objectStorageContainerData: DatasetConfig;
-    datasetBasename: string;
-    datasetFilepath: string;
-}
+/** `job.dataset.objectStorageContainerData` (esse, uppercase keys) <-> `DatasetTab`'s `DatasetConfig`. */
+function toDatasetConfig(job: Job): DatasetConfig {
+    const containerData = job.dataset?.objectStorageContainerData;
 
-/**
- * jode's own `JobSchemaMixin.d.ts` has no `dataset` accessor - a type-generation gap, not a
- * runtime one: the compiled `JobSchemaMixin.js` does define a real `get`/`set dataset()` pair
- * that routes through `_json` (so it does survive `toJSON()`/`clone()`). This augmentation just
- * lets TS see what the class already does at runtime.
- */
-declare module "@mat3ra/jode" {
-    // `S` must match Job's own type parameter list for this declaration merge to apply.
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    interface Job<S extends JobEntity = JobEntity> {
-        dataset?: JobDataset;
-    }
+    return {
+        name: containerData?.NAME,
+        provider: containerData?.PROVIDER,
+        region: containerData?.REGION,
+        bucket: containerData?.CONTAINER,
+    };
 }
 
 export interface JobDesignerState {
@@ -56,12 +46,7 @@ export function initialJobDesignerState(
     materials: OrderedMaterial[] = [],
     metaProperties: MetaPropertyHolder[] = [],
 ): JobDesignerState {
-    const datasetConfig =
-        job.dataset?.objectStorageContainerData ??
-        // jode's own default uses legacy uppercase keys (CONTAINER/NAME/...) that predate the
-        // lowercase `DatasetConfig` contract `DatasetTab` actually reads; kept only as a
-        // placeholder value until a real dataset is picked.
-        (defaultDataset.objectStorageContainerData as unknown as DatasetConfig);
+    const datasetConfig = toDatasetConfig(job);
 
     job.workflowInstance?.updateMethodData(materials, metaProperties);
 
@@ -252,12 +237,16 @@ export function applyDatasetUpdate(state: JobDesignerState, datasetConfig: Datas
     const basename = basenameArray.slice(1, basenameArray.length).join("/");
 
     const { job } = state;
-    const dataset: JobDataset = {
-        objectStorageContainerData: datasetConfig,
+    job.dataset = {
+        objectStorageContainerData: {
+            CONTAINER: datasetConfig.bucket,
+            NAME: datasetConfig.name,
+            PROVIDER: datasetConfig.provider,
+            REGION: datasetConfig.region,
+        },
         datasetBasename: basename,
         datasetFilepath: filepath,
     };
-    job.dataset = dataset;
 
     return { ...state, datasetConfig, job };
 }
