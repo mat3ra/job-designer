@@ -174,7 +174,6 @@ declare module "/imports/*" {
     export const useTemplatesListAll: any;
     export const LoadingIndicator: any;
     export const resolveUISchema: any;
-    export const useReduxDialog: any;
     export const ACCESS_TYPES: any;
     export const useFetchMaterialsList: any;
     export const DEFAULT_FILES_PREFIX: any;

@@ -9,7 +9,7 @@ let _injectedDeps: Record<string, any> = {};
  * Called from the webapp's registerDependencies.ts before any components mount.
  *
  * Only the subset matching {@link JobDesignerDeps} is extracted and stored;
- * the remaining webapp-specific props (DAOProvider, store, etc.) are stored in
+ * the remaining webapp-specific props (getJobMaterialClient, store, etc.) are stored in
  * the module-level _injectedDeps for access via getDependency().
  */
 export function setDependencies(deps: Record<string, unknown>): void {
@@ -25,9 +25,6 @@ export function setDependencies(deps: Record<string, unknown>): void {
     if (deps.useFetchProjectsList) {
         mapped.useFetchProjectsList =
             deps.useFetchProjectsList as JobDesignerDeps["useFetchProjectsList"];
-    }
-    if (deps.useReduxDialog) {
-        mapped.useReduxDialog = deps.useReduxDialog as JobDesignerDeps["useReduxDialog"];
     }
     if (deps.FilesExplorerContainer) {
         mapped.FilesExplorerContainer =

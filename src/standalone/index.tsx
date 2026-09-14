@@ -271,12 +271,11 @@ function App() {
                     publicAccount={{ entity: { id: "public" } }}
                     clusters={[]}
                     refreshMetaProperties={() => {}}
-                    jobDialogs={{
-                        selectMaterialsReduxDialog: [() => {}, () => {}],
-                        selectParentJobExplorerDialog: [() => {}, () => {}],
-                        selectWorkflowReduxDialog: [() => {}, () => {}],
-                        datasetUploadsReduxDialog: [() => {}, () => {}],
-                    }}
+                    openSelectParentJobDialog={() => {}}
+                    openAddMaterialsDialog={() => {}}
+                    openSelectMaterialsDialog={() => {}}
+                    openSelectWorkflowDialog={() => {}}
+                    openDatasetUploadsDialog={() => {}}
                     workflowDialogs={{
                         pseudoUploadReduxDialog: [() => {}, () => {}, () => {}],
                         unitTypeReduxDialog: [() => {}, () => {}, () => {}],

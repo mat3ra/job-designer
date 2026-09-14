@@ -9,7 +9,7 @@ import React, { memo, useCallback, useEffect } from "react";
 
 import JobComponent from "../components/Job";
 import { JobStatus } from "../exports";
-import { type JobDesignerDialogTuple, useJobDesignerDeps } from "../JobDesignerContext";
+import { useJobDesignerDeps } from "../JobDesignerContext";
 import useJobDesignerState from "../state/useJobDesignerState";
 
 interface JobDesignerUser {
@@ -63,12 +63,6 @@ interface JobStoreLocalReduxContainerProps {
     publicAccount: JobDesignerAccount;
     clusters: JobDesignerCluster[];
     refreshMetaProperties: (val: string[]) => void;
-    jobDialogs: {
-        selectMaterialsReduxDialog: JobDesignerDialogTuple;
-        selectParentJobExplorerDialog: JobDesignerDialogTuple;
-        selectWorkflowReduxDialog: JobDesignerDialogTuple;
-        datasetUploadsReduxDialog: JobDesignerDialogTuple;
-    };
     workflowDialogs: WorkflowDesignerDialogs;
     templates: Template[];
     resultsProperties: ResultsProps[];
@@ -80,7 +74,28 @@ interface JobStoreLocalReduxContainerProps {
     onMaterialAdd?: (materials: OrderedMaterial[], accounts?: any[]) => void;
     onMaterialRemove?: (indices: number[]) => void;
     onDestroy?: () => void;
-    getJobMaterialClient?: (job: Job) => Promise<any>;
+    /** Opens the webapp-owned "select parent job" modal; the webapp handles the rest of that flow. */
+    openSelectParentJobDialog: () => void;
+    /** The parent job resolved by the webapp after a selection in that modal. */
+    selectedParentJob?: Job;
+    /** The resolved parent job's material(s), same shape MaterialTab/ResultsTab expect. */
+    selectedParentJobMaterials?: any[];
+    /** Opens the webapp-owned "import materials" modal (adds to the existing material list). */
+    openAddMaterialsDialog: () => void;
+    /** The material(s) picked in that modal. */
+    addedMaterials?: any[];
+    /** Opens the webapp-owned "select materials" modal (replaces the current material list). */
+    openSelectMaterialsDialog: () => void;
+    /** The material(s)/set picked in that modal. */
+    selectedMaterials?: { materials: any[]; materialsSet?: any };
+    /** Opens the webapp-owned "select workflow" modal. */
+    openSelectWorkflowDialog: () => void;
+    /** The workflow id picked in that modal, wrapped so re-picking the same id still re-applies. */
+    selectedWorkflowId?: { id: string };
+    /** Opens the webapp-owned "select dataset" modal. */
+    openDatasetUploadsDialog: () => void;
+    /** The dataset config picked in that modal. */
+    selectedDataset?: any;
     /** Optional injectable material viewer component (e.g. ThreeDEditor from wave.js). */
     MaterialViewerComponent?: React.ComponentType<{ material: any }>;
     /** Optional children rendered in the EntityHeader right slot (selectors, export button, etc.). */
@@ -116,7 +131,6 @@ function JobLocalReduxContainer({
     profile,
     clusters,
     refreshMetaProperties,
-    jobDialogs,
     workflowDialogs,
     templates,
     resultsProperties,
@@ -127,7 +141,17 @@ function JobLocalReduxContainer({
     onMaterialAdd,
     onMaterialRemove,
     onDestroy,
-    getJobMaterialClient,
+    openSelectParentJobDialog,
+    selectedParentJob,
+    selectedParentJobMaterials,
+    openAddMaterialsDialog,
+    addedMaterials,
+    openSelectMaterialsDialog,
+    selectedMaterials,
+    openSelectWorkflowDialog,
+    selectedWorkflowId,
+    openDatasetUploadsDialog,
+    selectedDataset,
     MaterialViewerComponent,
     headerChildren,
 }: JobLocalReduxContainerProps) {
@@ -282,9 +306,17 @@ function JobLocalReduxContainer({
             onSetDataset={setDataset}
             onWorkflowSelect={handleWorkflowSelect}
             onDestroy={() => onDestroy?.()}
-            getJobMaterialClient={async (parentJob: any) =>
-                getJobMaterialClient ? getJobMaterialClient(parentJob) : null
-            }
+            openSelectParentJobDialog={openSelectParentJobDialog}
+            selectedParentJob={selectedParentJob}
+            selectedParentJobMaterials={selectedParentJobMaterials}
+            openAddMaterialsDialog={openAddMaterialsDialog}
+            addedMaterials={addedMaterials}
+            openSelectMaterialsDialog={openSelectMaterialsDialog}
+            selectedMaterials={selectedMaterials}
+            openSelectWorkflowDialog={openSelectWorkflowDialog}
+            selectedWorkflowId={selectedWorkflowId}
+            openDatasetUploadsDialog={openDatasetUploadsDialog}
+            selectedDataset={selectedDataset}
             project={project}
             publicAccount={publicAccount}
             metaProperties={metaProperties}
@@ -292,7 +324,6 @@ function JobLocalReduxContainer({
             accountUsersIsLoading={accountUsersIsLoading}
             profile={profile}
             clusters={clusters}
-            jobDialogs={jobDialogs}
             workflowDialogs={workflowDialogs}
             templates={templates}
             resultsProperties={resultsProperties}

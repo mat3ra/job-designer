@@ -23,10 +23,6 @@ import MaterialTab from "./MaterialTab";
 import useEntityAlerts from "./useEntityAlerts";
 import WorkflowTab from "./WorkflowTab";
 
-// Resolved lazily (not at module load) so it picks up the real webapp DAOProvider injected via
-// setDependencies(), which runs after this module is first imported.
-const getDAOProvider = () =>
-    getInjectedDeps().DAOProvider ?? { get: () => ({ findByIds: () => [] }) };
 // Same lazy-resolution pattern: pulls host-app file helpers already registered via
 // setDependencies() for forwarding into ResultsTab (see the render below). Returns undefined
 // unless all three are present, matching ResultsTab's own `fileUtils?: {...}` contract - an
@@ -70,11 +66,32 @@ export interface JobProps {
     resultsProperties: any[];
     jobProperties: any[];
     renderGeneration?: number;
-    jobDialogs: Record<string, any>;
     workflowDialogs: WorkflowDesignerDialogs;
     createMetaProperty?: (config: any) => Promise<any>;
     fetchMaterials: (ids: string[]) => Promise<any[]>;
     getRouteQueryTab?: () => string | null;
+    /** Opens the webapp-owned "select parent job" modal; the webapp handles the rest of that flow. */
+    openSelectParentJobDialog: () => void;
+    /** The parent job resolved by the webapp after a selection in that modal. */
+    selectedParentJob?: any;
+    /** The resolved parent job's material(s), same shape MaterialTab/ResultsTab expect. */
+    selectedParentJobMaterials?: any[];
+    /** Opens the webapp-owned "import materials" modal (adds to the existing material list). */
+    openAddMaterialsDialog: () => void;
+    /** The material(s) picked in that modal. */
+    addedMaterials?: any[];
+    /** Opens the webapp-owned "select materials" modal (replaces the current material list). */
+    openSelectMaterialsDialog: () => void;
+    /** The material(s)/set picked in that modal. */
+    selectedMaterials?: { materials: any[]; materialsSet?: any };
+    /** Opens the webapp-owned "select workflow" modal. */
+    openSelectWorkflowDialog: () => void;
+    /** The workflow id picked in that modal, wrapped so re-picking the same id still re-applies. */
+    selectedWorkflowId?: { id: string };
+    /** Opens the webapp-owned "select dataset" modal. */
+    openDatasetUploadsDialog: () => void;
+    /** The dataset config picked in that modal. */
+    selectedDataset?: any;
     /** Optional injectable material viewer component (e.g. ThreeDEditor from wave.js). */
     MaterialViewerComponent?: React.ComponentType<any>;
     /** Optional children rendered in the right side of the EntityHeader. */
@@ -94,7 +111,6 @@ export interface JobProps {
     onIsMultiMaterialChanged?: (isMultiMaterial: boolean) => void;
     onWorkflowSelect?: (workflowId: string) => Promise<void> | void;
     onOutputUpdateRequest?: () => void;
-    getJobMaterialClient?: (job: any) => Promise<any>;
 }
 
 /** True when the workflow drives a dataset rather than materials. */
@@ -160,7 +176,6 @@ function Job(props: JobProps) {
         renderGeneration,
         MaterialViewerComponent,
         headerChildren,
-        jobDialogs,
         isMultiMaterial,
         onUpdate,
         onSave,
@@ -170,8 +185,18 @@ function Job(props: JobProps) {
         onSetMaterials,
         onSetDataset,
         onMaterialAdd,
-        getJobMaterialClient,
         getRouteQueryTab,
+        openSelectParentJobDialog,
+        selectedParentJob,
+        selectedParentJobMaterials,
+        openAddMaterialsDialog,
+        addedMaterials,
+        openSelectMaterialsDialog,
+        selectedMaterials,
+        openSelectWorkflowDialog,
+        selectedWorkflowId,
+        openDatasetUploadsDialog,
+        selectedDataset,
     } = props;
 
     // Local working copy of the job, mirroring the class component's `state.entity`.
@@ -306,147 +331,62 @@ function Job(props: JobProps) {
         resetEntityAndUpdateParents(current);
     }, [resetEntityAndUpdateParents]);
 
-    // ─── Dialogs ──────────────────────────────────────────────────────────────────────
+    // Applies a webapp-resolved parent job selection once per new selection (identity-keyed, so
+    // re-picking the same job id still re-applies, but ordinary re-renders don't retrigger it).
+    useEffect(() => {
+        if (!selectedParentJob) return;
+        // TODO: figure out how to deal with multimaterial jobs
+        setParentJob(selectedParentJob);
+        onSetMaterials?.(selectedParentJobMaterials ?? []);
+    }, [selectedParentJob, selectedParentJobMaterials, setParentJob, onSetMaterials]);
 
-    const openAddMaterialsDialog = useCallback(() => {
-        const [open, close] = jobDialogs.selectMaterialsReduxDialog;
-        open({
-            id: "material-add",
-            title: "Import materials",
-            onClose: close,
-            omitEntitySelection: false,
-            selectionLimit: 0,
-            onSubmit: (nextMaterials: any[]) => {
-                onMaterialAdd?.(nextMaterials, profile.accounts);
-                close();
-            },
-        });
-    }, [jobDialogs, onMaterialAdd, profile]);
+    // ─── Dialog results ───────────────────────────────────────────────────────────────
+    // Job no longer owns any dialog's open/close lifecycle - the webapp opens/closes these
+    // modals itself (via the `openXDialog` props above) and hands the picked result down here.
+    // Each effect below is the "apply" half that used to run inside the dialog's own onSubmit.
 
-    const onMaterialsModalSubmit = useCallback(
-        (nextMaterials: any[], nextMaterialsSet?: any) => {
-            // for new or multimaterial jobs - add materials
-            if (nextMaterials.length > 1 && entityRef.current.id && !isMultiMaterial) {
-                // otherwise - throw error re-using generic message for workflows
-                showWarningAlert(createMessageTextTAPi18n("workflow.errors.select.singleOnly"));
-                return;
-            }
-            onSetMaterials?.(nextMaterials, nextMaterialsSet);
-            setCurrentTab(TAB_NAVIGATION_CONFIG.material.id);
-        },
-        [isMultiMaterial, onSetMaterials, setCurrentTab],
-    );
+    // "Import materials" (openAddMaterialsDialog) - adds to the existing material list, no tab switch.
+    useEffect(() => {
+        if (!addedMaterials) return;
+        onMaterialAdd?.(addedMaterials, profile.accounts);
+    }, [addedMaterials, onMaterialAdd, profile]);
 
-    const openSelectMaterialsDialog = useCallback(() => {
-        const [open, close] = jobDialogs.selectMaterialsReduxDialog;
-        open({
-            title: "Select Materials",
-            onClose: close,
-            omitEntitySelection: false,
-            selectionLimit: 0,
-            onSubmit: (nextMaterials: any[], nextMaterialsSet?: any) => {
-                onMaterialsModalSubmit(nextMaterials, nextMaterialsSet);
-                close();
-            },
-        });
-    }, [jobDialogs, onMaterialsModalSubmit]);
+    // "Select Materials" (openSelectMaterialsDialog) - replaces the material list.
+    useEffect(() => {
+        if (!selectedMaterials) return;
+        const { materials: nextMaterials, materialsSet: nextMaterialsSet } = selectedMaterials;
+        // for new or multimaterial jobs - add materials
+        if (nextMaterials.length > 1 && entityRef.current.id && !isMultiMaterial) {
+            // otherwise - throw error re-using generic message for workflows
+            showWarningAlert(createMessageTextTAPi18n("workflow.errors.select.singleOnly"));
+            return;
+        }
+        onSetMaterials?.(nextMaterials, nextMaterialsSet);
+        setCurrentTab(TAB_NAVIGATION_CONFIG.material.id);
+    }, [selectedMaterials, isMultiMaterial, onSetMaterials, setCurrentTab]);
 
-    const closeSelectParentJobDialog = useCallback(() => {
-        const [, close] = jobDialogs.selectParentJobExplorerDialog;
-        close();
-    }, [jobDialogs]);
-
-    const onSelectParentJobSubmit = useCallback(
-        async (ids: string[]) => {
-            // Entity DAO key is the string "Job"; do not use a class's .name - build tools may
-            // mangle/shorten class names during minification (ports mat3ra/web-app#2928, SOF-7962).
-            const jobs = getDAOProvider().get("Job").findByIds(ids);
-
-            if (jobs.length > 1) {
-                showWarningAlert(createMessageTextTAPi18n("workflow.errors.select.singleOnly"));
-                return;
-            }
-
-            const parentJob = jobs[0];
-            if (!parentJob) {
-                // DAO lookup miss for a job the user just picked from a loaded list (e.g. a stale
-                // cache) - getJobMaterialClient's own contract expects a real Job, not undefined.
-                console.error(
-                    "onSelectParentJobSubmit: no Job entity found for the selected id(s)",
-                );
-                return;
-            }
-            // TODO: figure out how to deal with multimaterial jobs
-            const parentMaterials = [await getJobMaterialClient?.(parentJob)];
-            setParentJob(parentJob);
-            onSetMaterials?.(parentMaterials);
-            closeSelectParentJobDialog();
-        },
-        [getJobMaterialClient, setParentJob, onSetMaterials, closeSelectParentJobDialog],
-    );
-
-    const openSelectParentJobDialog = useCallback(() => {
-        const [open, close] = jobDialogs.selectParentJobExplorerDialog;
-        open({
-            onClose: close,
-            customActions: { selectItems: onSelectParentJobSubmit, open: onSelectParentJobSubmit },
-        });
-    }, [jobDialogs, onSelectParentJobSubmit]);
-
-    const closeSelectWorkflowDialog = useCallback(() => {
-        const [, close] = jobDialogs.selectWorkflowReduxDialog;
-        close();
-    }, [jobDialogs]);
-
-    const onSelectWorkflowsSubmit = useCallback(
-        async (ids: string[]) => {
-            if (ids.length !== 1) {
-                showWarningAlert(createMessageTextTAPi18n("workflow.errors.select.singleOnly"));
-                return;
-            }
-
-            closeSelectWorkflowDialog();
-            setIsWorkflowLoading(true);
+    // "Select Workflow" (openSelectWorkflowDialog).
+    useEffect(() => {
+        if (!selectedWorkflowId) return;
+        setIsWorkflowLoading(true);
+        (async () => {
             try {
-                await onWorkflowSelect?.(ids[0]);
+                await onWorkflowSelect?.(selectedWorkflowId.id);
             } catch (error) {
                 console.error("Failed to load selected workflow", error);
             } finally {
                 setIsWorkflowLoading(false);
                 setCurrentTab(TAB_NAVIGATION_CONFIG.workflow.id);
             }
-        },
-        [closeSelectWorkflowDialog, onWorkflowSelect, setCurrentTab],
-    );
+        })();
+    }, [selectedWorkflowId, onWorkflowSelect, setCurrentTab]);
 
-    const openSelectWorkflowDialog = useCallback(() => {
-        const [open, close] = jobDialogs.selectWorkflowReduxDialog;
-        open({
-            onClose: close,
-            customActions: { selectItems: onSelectWorkflowsSubmit, open: onSelectWorkflowsSubmit },
-        });
-    }, [jobDialogs, onSelectWorkflowsSubmit]);
-
-    const openDatasetUploadsDialog = useCallback(() => {
-        const [open, close] = jobDialogs.datasetUploadsReduxDialog;
-        open({
-            onClose: close,
-            account: profile.account.entity,
-            itemClickCallback: (dataset: any) => {
-                onSetDataset?.(dataset);
-                close();
-            },
-            selectItemsCallback: (datasetConfigs: any[]) => {
-                if (datasetConfigs.length > 1) {
-                    showWarningAlert(createMessageTextTAPi18n("workflow.errors.select.singleOnly"));
-                    return;
-                }
-                onSetDataset?.(datasetConfigs[0]);
-                close();
-                setCurrentTab(TAB_NAVIGATION_CONFIG.dataset.id);
-            },
-        });
-    }, [jobDialogs, profile, onSetDataset, setCurrentTab]);
+    // "Select Dataset" (openDatasetUploadsDialog).
+    useEffect(() => {
+        if (!selectedDataset) return;
+        onSetDataset?.(selectedDataset);
+        setCurrentTab(TAB_NAVIGATION_CONFIG.dataset.id);
+    }, [selectedDataset, onSetDataset, setCurrentTab]);
 
     // ─── Header actions ───────────────────────────────────────────────────────────────
 

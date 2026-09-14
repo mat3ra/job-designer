@@ -11,14 +11,13 @@ export {
     queryMaterialIdsCacheKey,
 } from "./containers/utils/normalizeQueryMaterialIds";
 export { default as useJobMaterials } from "./containers/utils/useJobMaterials";
-export { default as useJobReduxDialogs } from "./containers/utils/useJobReduxDialogs";
 export { default as useQueryMaterials } from "./containers/utils/useQueryMaterials";
 export { default as DatasetTab } from "./components/DatasetTab";
 export { default as SelectProjectModal } from "./components/SelectProjectModal";
 export { JobDesignerProvider, useJobDesignerDeps } from "./JobDesignerContext";
 // Imperative dep injection shim — used by webapp's registerDependencies.ts
 export { setDependencies, getDependency } from "./setDependencies";
-export type { JobDesignerDeps, JobDesignerDialogTuple } from "./JobDesignerContext";
+export type { JobDesignerDeps } from "./JobDesignerContext";
 export type { MaterialViewerComponentProps } from "./components/MaterialTab";
 // web-app's imports/client/dialogTypes.ts already imports this from "@mat3ra/job-designer",
 // but it was never re-exported here - the import was unresolvable through the public surface.
