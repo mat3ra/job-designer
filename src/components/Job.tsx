@@ -338,14 +338,16 @@ function Job(props: JobProps) {
         resetEntityAndUpdateParents(current);
     }, [resetEntityAndUpdateParents]);
 
-    // Applies a webapp-resolved parent job selection once per new selection (identity-keyed, so
-    // re-picking the same job id still re-applies, but ordinary re-renders don't retrigger it).
-    // `setParentJob`/`onSetMaterials` are deliberately omitted from the deps below: both
-    // transitively depend on the `onUpdate` prop, which is a fresh function every render of
-    // JobLocalReduxContainer - including them here would retrigger this effect (and its own
-    // onUpdate call) on every subsequent render, looping forever.
+    // Applies a webapp-resolved parent job selection once per new selection. Guarded by a ref
+    // (not just the dependency array) so it stays correct even though setParentJob/onSetMaterials
+    // are included below: they're stable while nothing meaningful changes, but both transitively
+    // depend on `metaProperties`, which can legitimately change for unrelated reasons (e.g. a
+    // material composition edit) while `selectedParentJob` is still sitting here - without the
+    // ref check that would silently re-apply the same parent/materials again.
+    const appliedParentJobRef = useRef<any>(undefined);
     useEffect(() => {
-        if (!selectedParentJob) return;
+        if (!selectedParentJob || selectedParentJob === appliedParentJobRef.current) return;
+        appliedParentJobRef.current = selectedParentJob;
         // TODO: figure out how to deal with multimaterial jobs
         setParentJob(selectedParentJob);
         setParentJobDisplay(selectedParentJob);
@@ -354,30 +356,30 @@ function Job(props: JobProps) {
         if (selectedParentJobMaterials?.length) {
             onSetMaterials?.(selectedParentJobMaterials);
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedParentJob, selectedParentJobMaterials]);
+    }, [selectedParentJob, selectedParentJobMaterials, setParentJob, onSetMaterials]);
 
     // ─── Dialog results ───────────────────────────────────────────────────────────────
     // Job no longer owns any dialog's open/close lifecycle - the webapp opens/closes these
     // modals itself (via the `openXDialog` props above) and hands the picked result down here.
-    // Each effect below is the "apply" half that used to run inside the dialog's own onSubmit.
-
-    // Below: only the webapp-resolved result value belongs in each dependency array.
-    // onMaterialAdd/onSetMaterials/onWorkflowSelect/onSetDataset/setCurrentTab all transitively
-    // depend on the `onUpdate` prop (a fresh function every render of JobLocalReduxContainer, see
-    // the parent-job effect above), and calling any of them causes a render - including them here
-    // would retrigger these effects on every subsequent render, looping forever.
+    // Each effect below is the "apply" half that used to run inside the dialog's own onSubmit,
+    // guarded by a ref (see the parent-job effect above for why the dependency array alone isn't
+    // enough) so a result is applied exactly once no matter what else causes a re-render.
 
     // "Import materials" (openAddMaterialsDialog) - adds to the existing material list, no tab switch.
+    const appliedAddedMaterialsRef = useRef<any>(undefined);
     useEffect(() => {
-        if (!addedMaterials) return;
+        if (!addedMaterials || addedMaterials === appliedAddedMaterialsRef.current) return;
+        appliedAddedMaterialsRef.current = addedMaterials;
         onMaterialAdd?.(addedMaterials, profile.accounts);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [addedMaterials]);
+    }, [addedMaterials, onMaterialAdd, profile]);
 
     // "Select Materials" (openSelectMaterialsDialog) - replaces the material list.
+    const appliedSelectedMaterialsRef = useRef<any>(undefined);
     useEffect(() => {
-        if (!selectedMaterials) return;
+        if (!selectedMaterials || selectedMaterials === appliedSelectedMaterialsRef.current) {
+            return;
+        }
+        appliedSelectedMaterialsRef.current = selectedMaterials;
         const { materials: nextMaterials, materialsSet: nextMaterialsSet } = selectedMaterials;
         // for new or multimaterial jobs - add materials
         if (nextMaterials.length > 1 && entityRef.current.id && !isMultiMaterial) {
@@ -387,12 +389,13 @@ function Job(props: JobProps) {
         }
         onSetMaterials?.(nextMaterials, nextMaterialsSet);
         setCurrentTab(TAB_NAVIGATION_CONFIG.material.id);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedMaterials, isMultiMaterial]);
+    }, [selectedMaterials, isMultiMaterial, onSetMaterials, setCurrentTab]);
 
     // "Select Workflow" (openSelectWorkflowDialog).
+    const appliedWorkflowIdRef = useRef<any>(undefined);
     useEffect(() => {
-        if (!selectedWorkflowId) return;
+        if (!selectedWorkflowId || selectedWorkflowId === appliedWorkflowIdRef.current) return;
+        appliedWorkflowIdRef.current = selectedWorkflowId;
         setIsWorkflowLoading(true);
         (async () => {
             try {
@@ -404,16 +407,16 @@ function Job(props: JobProps) {
                 setCurrentTab(TAB_NAVIGATION_CONFIG.workflow.id);
             }
         })();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedWorkflowId]);
+    }, [selectedWorkflowId, onWorkflowSelect, setCurrentTab]);
 
     // "Select Dataset" (openDatasetUploadsDialog).
+    const appliedDatasetRef = useRef<any>(undefined);
     useEffect(() => {
-        if (!selectedDataset) return;
+        if (!selectedDataset || selectedDataset === appliedDatasetRef.current) return;
+        appliedDatasetRef.current = selectedDataset;
         onSetDataset?.(selectedDataset);
         setCurrentTab(TAB_NAVIGATION_CONFIG.dataset.id);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedDataset]);
+    }, [selectedDataset, onSetDataset, setCurrentTab]);
 
     // ─── Header actions ───────────────────────────────────────────────────────────────
 
