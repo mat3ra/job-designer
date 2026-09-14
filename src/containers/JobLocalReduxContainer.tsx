@@ -268,6 +268,39 @@ function JobLocalReduxContainer({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [jobId, workflowId]);
 
+    // These wrap otherwise-stable state-hook setters (each a `useCallback` with `[]` deps) - as
+    // plain inline arrows in the JSX below, they'd be a new function every render despite nothing
+    // relevant changing, which is exactly what fed Job's dialog-result effects into rendering
+    // forever (they read `onUpdate` transitively through `setParentJob`/`persistJob`/etc.).
+    const handleUpdate = useCallback(
+        (nextJob: any) => updateJob(nextJob, metaProperties),
+        [updateJob, metaProperties],
+    );
+    const handleSave = useCallback(
+        (omitRedirect?: boolean) => saveJob(project, omitRedirect),
+        [saveJob, project],
+    );
+    const handleMaterialAdd = useCallback(
+        (nextMaterials: any[], accounts?: any[]) => {
+            addMaterials(nextMaterials, metaProperties);
+            onMaterialAdd?.(nextMaterials, accounts);
+        },
+        [addMaterials, metaProperties, onMaterialAdd],
+    );
+    const handleMaterialRemove = useCallback(
+        (indices: number[]) => {
+            removeMaterials(indices, metaProperties);
+            onMaterialRemove?.(indices);
+        },
+        [removeMaterials, metaProperties, onMaterialRemove],
+    );
+    const handleSetMaterials = useCallback(
+        (nextMaterials: any[], nextMaterialsSet?: any) =>
+            setMaterials(nextMaterials, nextMaterialsSet, metaProperties),
+        [setMaterials, metaProperties],
+    );
+    const handleDestroy = useCallback(() => onDestroy?.(), [onDestroy]);
+
     // Previously `JobContainer`'s mapStateToProps/mapDispatchToProps. Dead passthroughs it used
     // to fabricate are gone: `allowedMaterials`/`allowedWorkflows` (always []) and
     // `onOutputUpdateRequest` (a no-op), plus the duplicated `onUpdateIndex`/`onMaterialSwitch`
@@ -285,27 +318,19 @@ function JobLocalReduxContainer({
             materialsSet={stateMaterialsSet}
             datasetConfig={datasetConfig}
             renderGeneration={renderGeneration}
-            onUpdate={(nextJob: any) => updateJob(nextJob, metaProperties)}
-            onSave={(omitRedirect?: boolean) => saveJob(project, omitRedirect)}
+            onUpdate={handleUpdate}
+            onSave={handleSave}
             onSubmit={submitJob}
             onTerminate={terminateJob}
             onIsMultiMaterialChanged={setJobMultiMaterial}
             onUpdateIndex={switchMaterialByIndex}
             onMaterialSwitch={switchMaterialByIndex}
-            onMaterialAdd={(nextMaterials: any[], accounts?: any[]) => {
-                addMaterials(nextMaterials, metaProperties);
-                onMaterialAdd?.(nextMaterials, accounts);
-            }}
-            onMaterialRemove={(indices: number[]) => {
-                removeMaterials(indices, metaProperties);
-                onMaterialRemove?.(indices);
-            }}
-            onSetMaterials={(nextMaterials: any[], nextMaterialsSet?: any) =>
-                setMaterials(nextMaterials, nextMaterialsSet, metaProperties)
-            }
+            onMaterialAdd={handleMaterialAdd}
+            onMaterialRemove={handleMaterialRemove}
+            onSetMaterials={handleSetMaterials}
             onSetDataset={setDataset}
             onWorkflowSelect={handleWorkflowSelect}
-            onDestroy={() => onDestroy?.()}
+            onDestroy={handleDestroy}
             openSelectParentJobDialog={openSelectParentJobDialog}
             selectedParentJob={selectedParentJob}
             selectedParentJobMaterials={selectedParentJobMaterials}
