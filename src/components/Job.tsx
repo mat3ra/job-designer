@@ -325,9 +325,16 @@ function Job(props: JobProps) {
         [resetEntityAndUpdateParents],
     );
 
+    // Display info for the currently-attached parent (name/project/open-link) - `entity.parent`
+    // only ever stores a bare EntityReference, not enough to render the alert, and the old
+    // synchronous DAO lookup that used to resolve it (`getParentJobClient`) was removed with the
+    // legacy DAOProvider. `selectedParentJob` (below) is the one moment we have the full entity.
+    const [parentJobDisplay, setParentJobDisplay] = useState<any>(null);
+
     const onParentRemove = useCallback(() => {
         const { current } = entityRef;
         current.unsetParent();
+        setParentJobDisplay(null);
         resetEntityAndUpdateParents(current);
     }, [resetEntityAndUpdateParents]);
 
@@ -337,6 +344,7 @@ function Job(props: JobProps) {
         if (!selectedParentJob) return;
         // TODO: figure out how to deal with multimaterial jobs
         setParentJob(selectedParentJob);
+        setParentJobDisplay(selectedParentJob);
         // A parent job without a material (e.g. dataset-only) has nothing to hand off -
         // job.setMaterial(undefined) crashes downstream, so only apply a real material list.
         if (selectedParentJobMaterials?.length) {
@@ -502,7 +510,7 @@ function Job(props: JobProps) {
         [resetEntityAndUpdateParents, onSave, isDesignerLoading],
     );
 
-    const parentJob = entity.getParentJobClient?.();
+    const parentJob = parentJobDisplay;
     const renderParentJob = () =>
         parentJob ? (
             <Alert severity="info" onClose={editable ? onParentRemove : undefined}>
@@ -656,7 +664,7 @@ function Job(props: JobProps) {
                                     role="tabpanel"
                                     workflow={entity.workflowInstance}
                                     onJobRender={persistJob}
-                                    jobHasParent={Boolean(entity.getParentJobClient?.())}
+                                    jobHasParent={Boolean(entity.parent)}
                                     profile={profile}
                                     publicAccount={publicAccount}
                                     materials={materials}
