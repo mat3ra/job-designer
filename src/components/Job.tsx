@@ -340,6 +340,10 @@ function Job(props: JobProps) {
 
     // Applies a webapp-resolved parent job selection once per new selection (identity-keyed, so
     // re-picking the same job id still re-applies, but ordinary re-renders don't retrigger it).
+    // `setParentJob`/`onSetMaterials` are deliberately omitted from the deps below: both
+    // transitively depend on the `onUpdate` prop, which is a fresh function every render of
+    // JobLocalReduxContainer - including them here would retrigger this effect (and its own
+    // onUpdate call) on every subsequent render, looping forever.
     useEffect(() => {
         if (!selectedParentJob) return;
         // TODO: figure out how to deal with multimaterial jobs
@@ -350,18 +354,26 @@ function Job(props: JobProps) {
         if (selectedParentJobMaterials?.length) {
             onSetMaterials?.(selectedParentJobMaterials);
         }
-    }, [selectedParentJob, selectedParentJobMaterials, setParentJob, onSetMaterials]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedParentJob, selectedParentJobMaterials]);
 
     // ─── Dialog results ───────────────────────────────────────────────────────────────
     // Job no longer owns any dialog's open/close lifecycle - the webapp opens/closes these
     // modals itself (via the `openXDialog` props above) and hands the picked result down here.
     // Each effect below is the "apply" half that used to run inside the dialog's own onSubmit.
 
+    // Below: only the webapp-resolved result value belongs in each dependency array.
+    // onMaterialAdd/onSetMaterials/onWorkflowSelect/onSetDataset/setCurrentTab all transitively
+    // depend on the `onUpdate` prop (a fresh function every render of JobLocalReduxContainer, see
+    // the parent-job effect above), and calling any of them causes a render - including them here
+    // would retrigger these effects on every subsequent render, looping forever.
+
     // "Import materials" (openAddMaterialsDialog) - adds to the existing material list, no tab switch.
     useEffect(() => {
         if (!addedMaterials) return;
         onMaterialAdd?.(addedMaterials, profile.accounts);
-    }, [addedMaterials, onMaterialAdd, profile]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [addedMaterials]);
 
     // "Select Materials" (openSelectMaterialsDialog) - replaces the material list.
     useEffect(() => {
@@ -375,7 +387,8 @@ function Job(props: JobProps) {
         }
         onSetMaterials?.(nextMaterials, nextMaterialsSet);
         setCurrentTab(TAB_NAVIGATION_CONFIG.material.id);
-    }, [selectedMaterials, isMultiMaterial, onSetMaterials, setCurrentTab]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedMaterials, isMultiMaterial]);
 
     // "Select Workflow" (openSelectWorkflowDialog).
     useEffect(() => {
@@ -391,14 +404,16 @@ function Job(props: JobProps) {
                 setCurrentTab(TAB_NAVIGATION_CONFIG.workflow.id);
             }
         })();
-    }, [selectedWorkflowId, onWorkflowSelect, setCurrentTab]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedWorkflowId]);
 
     // "Select Dataset" (openDatasetUploadsDialog).
     useEffect(() => {
         if (!selectedDataset) return;
         onSetDataset?.(selectedDataset);
         setCurrentTab(TAB_NAVIGATION_CONFIG.dataset.id);
-    }, [selectedDataset, onSetDataset, setCurrentTab]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedDataset]);
 
     // ─── Header actions ───────────────────────────────────────────────────────────────
 
