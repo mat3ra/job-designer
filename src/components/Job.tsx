@@ -337,7 +337,11 @@ function Job(props: JobProps) {
         if (!selectedParentJob) return;
         // TODO: figure out how to deal with multimaterial jobs
         setParentJob(selectedParentJob);
-        onSetMaterials?.(selectedParentJobMaterials ?? []);
+        // A parent job without a material (e.g. dataset-only) has nothing to hand off -
+        // job.setMaterial(undefined) crashes downstream, so only apply a real material list.
+        if (selectedParentJobMaterials?.length) {
+            onSetMaterials?.(selectedParentJobMaterials);
+        }
     }, [selectedParentJob, selectedParentJobMaterials, setParentJob, onSetMaterials]);
 
     // ─── Dialog results ───────────────────────────────────────────────────────────────
