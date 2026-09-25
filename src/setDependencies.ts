@@ -1,5 +1,5 @@
 import type { JobDesignerDeps } from "./JobDesignerContext";
-import { setReducerDeps } from "./reducers/reducerDeps";
+import { setAsyncDeps } from "./state/asyncDeps";
 
 /** Module-level store for imperatively injected deps (webapp compat). */
 let _injectedDeps: Record<string, any> = {};
@@ -9,7 +9,7 @@ let _injectedDeps: Record<string, any> = {};
  * Called from the webapp's registerDependencies.ts before any components mount.
  *
  * Only the subset matching {@link JobDesignerDeps} is extracted and stored;
- * the remaining webapp-specific props (DAOProvider, store, etc.) are stored in
+ * the remaining webapp-specific props (getJobMaterialClient, store, etc.) are stored in
  * the module-level _injectedDeps for access via getDependency().
  */
 export function setDependencies(deps: Record<string, unknown>): void {
@@ -25,9 +25,6 @@ export function setDependencies(deps: Record<string, unknown>): void {
     if (deps.useFetchProjectsList) {
         mapped.useFetchProjectsList =
             deps.useFetchProjectsList as JobDesignerDeps["useFetchProjectsList"];
-    }
-    if (deps.useReduxDialog) {
-        mapped.useReduxDialog = deps.useReduxDialog as JobDesignerDeps["useReduxDialog"];
     }
     if (deps.FilesExplorerContainer) {
         mapped.FilesExplorerContainer =
@@ -52,8 +49,8 @@ export function setDependencies(deps: Record<string, unknown>): void {
 
     _injectedDeps = { ..._injectedDeps, ...deps, ...mapped };
 
-    // Inject webapp-specific deps into JobReducer (createOrUpdate, Router, etc.)
-    setReducerDeps(deps);
+    // Inject webapp-specific deps for the async job operations (createJob, updateJob, redirectAfterSave, etc.)
+    setAsyncDeps(deps);
 }
 
 /**
@@ -76,7 +73,14 @@ export function getDependency(name: string): any {
     return _injectedDeps[name];
 }
 
+declare global {
+    // `var` is required syntax for ambient global declarations (not a real hoisted variable);
+    // both rules below are false positives against that TS-specific meaning.
+    // eslint-disable-next-line no-var, vars-on-top
+    var getDependency: (name: string) => any;
+}
+
 // Attach to globalThis for webapp compatibility (legacy usage expects a global getDependency)
 if (typeof globalThis !== "undefined") {
-    (globalThis as any).getDependency = getDependency;
+    globalThis.getDependency = getDependency;
 }

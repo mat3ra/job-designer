@@ -3,12 +3,6 @@ import React, { createContext, useContext, useMemo } from "react";
 import { getInjectedDeps } from "./setDependencies";
 
 /**
- * Stub dialog hook result: [open, close] with no-op functions.
- * Matches the ReduxDialogState tuple shape used in wove/workflow-designer.
- */
-export type JobDesignerDialogTuple = [() => void, () => void];
-
-/**
  * Hooks and components injected from the webapp at the shell boundary.
  * In standalone mode, each field gets a safe stub implementation.
  */
@@ -33,8 +27,6 @@ export interface JobDesignerDeps {
         listId: string,
         params?: { ownerId?: string; limit?: number },
     ) => { list: any[]; loading: boolean } | null;
-    /** Opens/closes a Redux-controlled dialog. Stub returns a no-op tuple. */
-    useReduxDialog: (dialogType: string) => JobDesignerDialogTuple;
     /** Optional Files explorer component. In standalone, renders nothing. */
     FilesExplorerContainer?: React.ComponentType<any>;
     /**
@@ -49,6 +41,20 @@ export interface JobDesignerDeps {
      * In standalone mode the stub returns null so the default tab is used.
      */
     getRouteQueryTab: () => string | null;
+    /**
+     * File-download helpers forwarded to `@mat3ra/jove`'s `ResultsTab` (`fileUtils` prop) -
+     * signatures copied from its own (unexported) `ResultsTabProps`, not invented here.
+     */
+    downloadAndProcessFile?: (
+        accountId: string,
+        fileConfig: any,
+        onSuccess: (contents: string, fileMetadata: any) => void,
+        handler: (files: any[], onLoad: any) => void,
+    ) => void;
+    handleGetSignedURL?: (files: any[], onLoad: any) => void;
+    handleGetSignedUrlAsCSV?: (files: any[], onLoad: any) => void;
+    /** Forwarded to `ResultsTab`'s `DataGridComponent` prop, typed `React.ComponentType<any>` there. */
+    DataGridComponent?: React.ComponentType<any>;
 }
 
 /** Stub implementations safe for standalone (no Meteor, no Redux store). */
@@ -59,7 +65,6 @@ const STANDALONE_JOB_DESIGNER_DEPS: JobDesignerDeps = {
     }),
     useFetchMaterialsList: () => ({ list: [], loading: false }),
     useFetchProjectsList: () => ({ list: [], loading: false }),
-    useReduxDialog: () => [() => {}, () => {}],
     FilesExplorerContainer: undefined,
     getRouteQueryTab: () => null,
 };

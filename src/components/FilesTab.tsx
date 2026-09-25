@@ -6,11 +6,16 @@ import React from "react";
 import { useJobDesignerDeps } from "../JobDesignerContext";
 
 interface FilesTabProps {
-    className: string;
-    id: string;
-    role: string;
+    className?: string;
+    id?: string;
+    role?: string;
     job: any;
-    account: any;
+    /**
+     * Optional: the sole caller (`Job`) has never passed this, and web-app's real
+     * `FilesExplorerContainer` declares `account?: CoreAccount` optional too — the previous
+     * `account: any` here claimed a requirement that never held.
+     */
+    account?: any;
 }
 
 function FilesTab({ className, id, role, job, account }: FilesTabProps) {
