@@ -5,12 +5,13 @@ import type { ResultsProps } from "@mat3ra/jove";
 import type { MetaPropertyHolder } from "@mat3ra/prode";
 import type { OrderedMaterial } from "@mat3ra/wode";
 import type { WorkflowDesignerDialogs } from "@mat3ra/workflow-designer";
-import React, { memo, useCallback, useEffect } from "react";
+import React, { memo, useCallback, useEffect, useMemo } from "react";
 
 import JobComponent from "../components/Job";
 import { JobStatus } from "../exports";
 import { useJobDesignerDeps } from "../JobDesignerContext";
 import useJobDesignerState from "../state/useJobDesignerState";
+import { getUnitEndpointsByFlowchartId, type JobPropertyRow } from "./utils/unitEndpoints";
 
 interface JobDesignerUser {
     entity: { id?: string; firstName?: string; lastName?: string; email?: string };
@@ -305,6 +306,14 @@ function JobLocalReduxContainer({
     // to fabricate are gone: `allowedMaterials`/`allowedWorkflows` (always []) and
     // `onOutputUpdateRequest` (a no-op), plus the duplicated `onUpdateIndex`/`onMaterialSwitch`
     // pair its own TODO flagged - both dispatched the same action, so one remains.
+
+    // The cast is the one typed seam here: jobProperties arrives from the webapp as
+    // Record<string, unknown> rows, read through esse's property schema.
+    const unitEndpointsByFlowchartId = useMemo(() => {
+        if (!jobId) return {};
+        return getUnitEndpointsByFlowchartId(jobId, jobProperties as unknown as JobPropertyRow[]);
+    }, [jobId, jobProperties]);
+
     return (
         <JobComponent
             job={stateJob}
@@ -353,6 +362,7 @@ function JobLocalReduxContainer({
             templates={templates}
             resultsProperties={resultsProperties}
             jobProperties={jobProperties}
+            unitEndpointsByFlowchartId={unitEndpointsByFlowchartId}
             createMetaProperty={createMetaProperty}
             fetchMaterials={fetchMaterials}
             getRouteQueryTab={getRouteQueryTab}

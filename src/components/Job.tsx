@@ -8,7 +8,7 @@ import LoadingIndicator from "@mat3ra/cove/dist/mui-composed/components/loading/
 import { showWarningAlert } from "@mat3ra/cove/dist/other/alerts";
 import { TAB_NAVIGATION_CONFIG } from "@mat3ra/jode";
 import { ResultsTab } from "@mat3ra/jove";
-import type { WorkflowDesignerDialogs } from "@mat3ra/workflow-designer";
+import type { WorkflowDesignerDialogs, WorkflowProps } from "@mat3ra/workflow-designer";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import React, { memo, useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
@@ -65,6 +65,7 @@ export interface JobProps {
     templates: any[];
     resultsProperties: any[];
     jobProperties: any[];
+    unitEndpointsByFlowchartId?: WorkflowProps["unitEndpointsByFlowchartId"];
     renderGeneration?: number;
     workflowDialogs: WorkflowDesignerDialogs;
     createMetaProperty?: (config: any) => Promise<any>;
@@ -171,6 +172,7 @@ function Job(props: JobProps) {
         templates,
         resultsProperties,
         jobProperties,
+        unitEndpointsByFlowchartId,
         createMetaProperty,
         fetchMaterials,
         renderGeneration,
@@ -703,6 +705,7 @@ function Job(props: JobProps) {
                                     templates={templates}
                                     createMetaProperty={createMetaProperty}
                                     jobProperties={jobProperties}
+                                    unitEndpointsByFlowchartId={unitEndpointsByFlowchartId}
                                     isDescriptionEditable={isDescriptionEditable}
                                 />
                             )}
