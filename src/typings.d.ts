@@ -174,10 +174,8 @@ declare module "/imports/*" {
     export const useTemplatesListAll: any;
     export const LoadingIndicator: any;
     export const resolveUISchema: any;
-    export const useReduxDialog: any;
     export const ACCESS_TYPES: any;
     export const useFetchMaterialsList: any;
-    export const setJobNameBasedOnMaterials: any;
     export const DEFAULT_FILES_PREFIX: any;
     export const defaultDataset: any;
     export const isLoadingReducer: any;
@@ -220,7 +218,6 @@ declare module "/imports/*" {
     export const Loading: any;
     export const HeightContainer: any;
     export const applySubworkflowUpdateToWorkflow: any;
-    export const createJobDesignerReducer: any;
     export const updateJob: any;
     export const setMaterials: any;
     export const syncJobWorkflow: any;
@@ -265,7 +262,6 @@ declare module "meteor/*" {
     export const updateJob: any;
     export const setMaterials: any;
     export const syncJobWorkflow: any;
-    export const createJobDesignerReducer: any;
     export const BaseUnit: any;
     export const UnitStatus: any;
     export const Made: any;
@@ -302,10 +298,6 @@ declare module "meteor/session" {
     export default Session;
 }
 
-declare module "redux-logger" {
-    const logger: any;
-    export default logger;
-}
 declare module "simple-react-form" {
     export const Field: any;
     export const Form: any;
@@ -317,123 +309,6 @@ declare module "flat" {
     export const unflatten: any;
     const flat: any;
     export default flat;
-}
-declare module "path" {
-    export const basename: any;
-    export const dirname: any;
-    export const join: any;
-    export const resolve: any;
-    const path: any;
-    export default path;
-}
-
-declare module "@mat3ra/wove" {
-    export const ExtraImportantSettingsByContextProvider: any;
-    export const getUnitStatusCls: any;
-    export const getWorkflowStatusCls: any;
-    export const Properties: any;
-    export const UnitsAccordion: any;
-    export const OverviewAccordion: any;
-    export const WorkflowUnitsFlowchart: any;
-    export const UnitsFlowchartContainer: any;
-    export const UnitCard: any;
-    export const isExecutionUnit: any;
-}
-declare module "@mat3ra/workflow-designer" {
-    export const WorkflowDesignerCreatePage: any;
-    export const WorkflowDesignerEditPage: any;
-    export const WorkflowDesignerContainer: any;
-    export const WorkflowDesignerShell: any;
-    export const Workflow: any;
-    export type WorkflowProps = any;
-    export const WorkflowDefaultLayout: any;
-    export const Convergence: any;
-    export type ConvergenceProps = any;
-    export const UnitModal: any;
-    export const UnitPaste: any;
-    export const UnitTypeSelect: any;
-    export type UnitTypeSelectProps = any;
-    export const isWodeSubworkflowInstance: any;
-    export const applySubworkflowUpdateToWorkflow: any;
-    export type SubworkflowDesignerUpdate = any;
-    export const getWorkflowDesignerTabResetKey: any;
-    export const shouldResetWorkflowDesignerUiState: any;
-    export const UnitPointerField: any;
-    export const Subworkflow: any;
-    export const SubworkflowHeader: any;
-    export const ImportantSettings: any;
-    export const WorkflowValidationAlert: any;
-    export const useWorkflowReduxDialogs: any;
-    export const reportWorkflowSaveError: any;
-    export type SaveWorkflowFromDesigner = any;
-    export const UnitDetails: any;
-}
-declare module "@mat3ra/ive" {
-    export const Compute: any;
-    export const ComputeForm: any;
-    export const ComputeHandler: any;
-    export const QueuesTable: any;
-    export const StatusTrackTable: any;
-}
-declare module "@mat3ra/ave" {
-    export const Application: any;
-    export const UnitOutput: any;
-    export const Results: any;
-    export const ExecutionUnit: any;
-    export const ExecutionUnitViewer: any;
-    export const ExecutionUnitInputFilePanel: any;
-}
-declare module "@mat3ra/move" {
-    const MethodData: any;
-    export default MethodData;
-    export const Model: any;
-    export const Method: any;
-    export const BrillouinZoneImage: any;
-    export const PseudoList: any;
-    export const PseudoPanel: any;
-    export const PseudoSearchBar: any;
-}
-declare module "@mat3ra/move/pseudo" {
-    export const FixedRJSForm: any;
-    export const PseudoUploadDialog: any;
-    export const PseudoForm: any;
-}
-declare module "@mat3ra/jove" {
-    export const ResultsTab: any;
-    export const UnitResult: any;
-    export const ConvergenceChart: any;
-    export type ResultsProps = any;
-    export const ResultsProps: any;
-}
-declare module "@mat3ra/job-designer" {
-    export const Job: any;
-    export const JobContainer: any;
-    export const JobLocalReduxContainer: any;
-    export const JobGlobalReduxContainer: any;
-}
-
-declare module "@mat3ra/made" {
-    export const Made: any;
-    export type Made = any;
-    export const Material: any;
-    export type Material = any;
-}
-
-declare module "@mat3ra/ide" {
-    const DefaultExport: any;
-    export default DefaultExport;
-}
-
-declare module "@mat3ra/prode" {
-    const DefaultExport: any;
-    export default DefaultExport;
-    export const PropertyName: any;
-}
-
-declare module "@mat3ra/prove" {
-    const DefaultExport: any;
-    export default DefaultExport;
-    export const ResultsView: any;
 }
 
 export {};
