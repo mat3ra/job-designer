@@ -10,7 +10,7 @@ import React, { memo, useCallback, useEffect, useMemo } from "react";
 import JobComponent from "../components/Job";
 import { JobStatus } from "../exports";
 import { useJobDesignerDeps } from "../JobDesignerContext";
-import useJobDesignerState from "../state/useJobDesignerState";
+import useJobDesignerState from "../state/hook";
 import { getUnitEndpointsByFlowchartId, type JobPropertyRow } from "./utils/unitEndpoints";
 
 interface JobDesignerUser {
