@@ -2,6 +2,20 @@ import type { EntityReference, Job } from "@mat3ra/jode";
 import type { MetaPropertyHolder } from "@mat3ra/prode";
 import type { OrderedMaterial } from "@mat3ra/wode";
 
+import type { DatasetConfig } from "../components/DatasetTab";
+
+/** `job.dataset.objectStorageContainerData` (esse, uppercase keys) <-> `DatasetTab`'s `DatasetConfig`. */
+export function toDatasetConfig(job: Job): DatasetConfig {
+    const containerData = job.dataset?.objectStorageContainerData;
+
+    return {
+        name: containerData?.NAME,
+        provider: containerData?.PROVIDER,
+        region: containerData?.REGION,
+        bucket: containerData?.CONTAINER,
+    };
+}
+
 /**
  * Shared job designer render: `job.render()` → `workflow.render()` → …
  * Used from `jobUpdate` / `jobWorkflowSync` and the material actions.
