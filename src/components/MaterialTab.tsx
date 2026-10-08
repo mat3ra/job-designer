@@ -24,23 +24,25 @@ export interface MaterialViewerComponentProps {
     publicAccount: any;
     profile: any;
     addRemoveAllowed: boolean | (() => void);
-    onUpdateIndex: () => void;
-    onRemove: () => void;
+    onUpdateIndex: (index: number) => void;
+    onRemove: (indices: number[]) => void;
     onAdd: () => void;
 }
 
 interface MaterialTabProps {
-    className: string;
-    id: string;
-    role: string;
+    className?: string;
+    id?: string;
+    role?: string;
     material: object;
     index: number;
     length: number;
     publicAccount: any;
     profile: any;
     addRemoveAllowed: boolean | (() => void);
-    onUpdateIndex: () => void;
-    onMaterialRemove: () => void;
+    // Called with the target index / the indices to remove - the previous no-arg signatures
+    // did not match how `Job` actually invokes them.
+    onUpdateIndex: (index: number) => void;
+    onMaterialRemove: (indices: number[]) => void;
     openAddMaterialsDialog: () => void;
     /**
      * Optional injectable material viewer component (e.g. ThreeDEditor from wave.js or a mave component).
