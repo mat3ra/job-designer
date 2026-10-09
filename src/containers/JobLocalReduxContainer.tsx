@@ -68,8 +68,6 @@ interface JobStoreLocalReduxContainerProps {
     templates: Template[];
     resultsProperties: ResultsProps[];
     jobProperties: JobDesignerProperty[];
-    /** Stdout of each unit of this job, per unit flowchart id and repetition. */
-    unitOutputsByFlowchartId?: Record<string, Record<number, string>>;
     createMetaProperty: (
         property: JobDesignerCreateMetaPropertyConfig,
     ) => Promise<JobDesignerMetaPropertyHolderSchema | undefined>;
@@ -138,7 +136,6 @@ function JobLocalReduxContainer({
     templates,
     resultsProperties,
     jobProperties,
-    unitOutputsByFlowchartId,
     createMetaProperty,
     fetchMaterials,
     loadWorkflowEntityById,
@@ -366,7 +363,6 @@ function JobLocalReduxContainer({
             resultsProperties={resultsProperties}
             jobProperties={jobProperties}
             unitEndpointsByFlowchartId={unitEndpointsByFlowchartId}
-            unitOutputsByFlowchartId={unitOutputsByFlowchartId}
             createMetaProperty={createMetaProperty}
             fetchMaterials={fetchMaterials}
             getRouteQueryTab={getRouteQueryTab}
