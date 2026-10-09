@@ -7,6 +7,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 
 import type { DatasetConfig } from "../components/DatasetTab";
 import { asyncDeps } from "./asyncDeps";
+import { initialJobDesignerState } from "./initialState";
 import {
     applyDatasetUpdate,
     applyJobMultiMaterialSet,
@@ -16,8 +17,7 @@ import {
     applyMaterialsRemove,
     applyMaterialsSet,
     applyMaterialSwitch,
-    initialJobDesignerState,
-} from "./jobDesignerState";
+} from "./transitions";
 
 export interface UseJobDesignerStateArgs {
     job: Job;
@@ -30,7 +30,7 @@ export interface UseJobDesignerStateArgs {
  * `JobLocalReduxContainer` and read through a dedicated react-redux context.
  *
  * The interdependent cluster (job / materials / index / workflowContexts) lives in a single
- * `useState`, updated through the pure `applyXxx` helpers in `./jobDesignerState` (each mirrors
+ * `useState`, updated through the pure `applyXxx` helpers in `./transitions` (each mirrors
  * one case of the old reducer); `isLoading` is separate `useState` since only the async
  * operations below touch it.
  */

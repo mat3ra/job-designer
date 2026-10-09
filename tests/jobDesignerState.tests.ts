@@ -9,13 +9,13 @@ import { Workflow } from "@mat3ra/wode";
 import assert from "node:assert";
 import test from "node:test";
 
+import { initialJobDesignerState } from "../src/state/initialState";
 import {
     applyDatasetUpdate,
     applyMaterialsAdd,
     applyMaterialsRemove,
     applyMaterialsSet,
-    initialJobDesignerState,
-} from "../src/state/jobDesignerState";
+} from "../src/state/transitions";
 
 // The material helpers clone the job, which runs schema validation. Register the schemas the
 // same way `src/standalone/preloads.ts` does (minus its browser-only bits), so these tests
@@ -26,7 +26,7 @@ ApplicationRegistry.setDriver(new StandataDriver());
 /**
  * Replaces `createJobDesignerReducer.tests.ts`. job-designer no longer has a Redux store, nor a
  * reducer/action layer - the interdependent state lives in `useJobDesignerState`'s `useState`,
- * updated through the pure `applyXxx` functions exported from `./jobDesignerState`. Those
+ * updated through the pure `applyXxx` functions exported from `../src/state/transitions`. Those
  * functions are exported standalone precisely so they can still be tested without mounting a
  * component (the bare `node:test` runner has no DOM, and importing the Job component pulls in
  * Highcharts, which throws outside a browser).

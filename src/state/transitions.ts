@@ -5,72 +5,8 @@ import type { OrderedMaterial } from "@mat3ra/wode";
 import path from "path";
 
 import type { DatasetConfig } from "../components/DatasetTab";
-import { renderJobForDesignerState } from "./renderJobForDesignerState";
-
-/** `job.dataset.objectStorageContainerData` (esse, uppercase keys) <-> `DatasetTab`'s `DatasetConfig`. */
-function toDatasetConfig(job: Job): DatasetConfig {
-    const containerData = job.dataset?.objectStorageContainerData;
-
-    return {
-        name: containerData?.NAME,
-        provider: containerData?.PROVIDER,
-        region: containerData?.REGION,
-        bucket: containerData?.CONTAINER,
-    };
-}
-
-export interface JobDesignerState {
-    /** Active material index, shared by `materials` and `workflowContexts`. */
-    index: number;
-    /**
-     * NOTE: this can go stale — `applyMaterialSwitch` updates `index` but not `material`,
-     * matching the pre-refactor reducer exactly. Consumers should prefer `materials[index]`
-     * (which is what the old `mapStateToProps` passed down, and what `useJobDesignerState`
-     * derives).
-     */
-    material: OrderedMaterial | undefined;
-    materials: OrderedMaterial[];
-    materialsSet?: EntityReference;
-    job: Job;
-    /** Deliberately `boolean | undefined`: wode's `Workflow.isMultiMaterial` is `undefined`
-     *  (not `false`) for a default workflow, and tests assert strict equality against it. */
-    isMultiMaterial: boolean | undefined;
-    workflowContexts: Record<string, unknown>[];
-    datasetConfig: DatasetConfig;
-    /** Bumped to force a re-render: `job` is mutated in place, so its identity never changes. */
-    renderGeneration: number;
-}
-
-export function initialJobDesignerState(
-    job: Job,
-    materials: OrderedMaterial[] = [],
-    metaProperties: MetaPropertyHolder[] = [],
-): JobDesignerState {
-    const datasetConfig = toDatasetConfig(job);
-
-    job.workflowInstance?.updateMethodData(materials, metaProperties);
-
-    const materialForRender = materials[0];
-    if (materialForRender && job.workflowInstance) {
-        job.setMaterials(materials);
-        job.setMaterial(materialForRender);
-    }
-
-    return {
-        index: 0,
-        material: materials[0],
-        materials,
-        materialsSet: job.materialsSet,
-        job,
-        // Preserved verbatim rather than coerced with Boolean(): `Workflow.isMultiMaterial` is
-        // `undefined` for a default workflow, and coercing it to `false` breaks strict-equality
-        // assertions against the workflow's own value.
-        isMultiMaterial: job.workflowInstance?.isMultiMaterial,
-        workflowContexts: materials.map(() => ({})),
-        datasetConfig,
-        renderGeneration: 0,
-    };
-}
+import type { JobDesignerState } from "./types";
+import { renderJobForDesignerState } from "./utils";
 
 /**
  * Core of the old `MaterialReducer.materialsSet`, shared by `applyMaterialsSet`,

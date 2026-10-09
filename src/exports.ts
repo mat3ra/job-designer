@@ -2,8 +2,9 @@ export { default as JobContainer } from "./components/Job";
 export { default as JobLocalReduxContainer } from "./containers/JobLocalReduxContainer";
 // State layer (replaces the removed local Redux store). `initialJobDesignerState` is exported
 // standalone so it can be unit-tested without mounting a component.
-export { default as useJobDesignerState } from "./state/useJobDesignerState";
-export { initialJobDesignerState, type JobDesignerState } from "./state/jobDesignerState";
+export { default as useJobDesignerState } from "./state/hook";
+export { initialJobDesignerState } from "./state/initialState";
+export type { JobDesignerState } from "./state/types";
 export { syncSubworkflowSchemaOnWorkflow } from "./syncSubworkflowSchemaOnWorkflow";
 export { shouldPersistJobOnUpdate } from "./shouldPersistJobOnUpdate";
 export {
