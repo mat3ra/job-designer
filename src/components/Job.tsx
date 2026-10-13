@@ -778,7 +778,9 @@ function arePropsEqual(prev: JobProps, next: JobProps) {
             next.job.status === prev.job.status &&
             // reload JobDesigner on index change when job.isInFinalStatus=1
             next.index === prev.index &&
-            next.isLoading === prev.isLoading,
+            next.isLoading === prev.isLoading &&
+            // the output of a unit is loaded after the job, once its modal opens
+            next.unitOutput === prev.unitOutput,
     );
 }
 
