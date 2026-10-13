@@ -66,6 +66,7 @@ export interface JobProps {
     resultsProperties: any[];
     jobProperties: any[];
     unitEndpointsByFlowchartId?: WorkflowProps["unitEndpointsByFlowchartId"];
+    unitOutput?: WorkflowProps["unitOutput"];
     renderGeneration?: number;
     workflowDialogs: WorkflowDesignerDialogs;
     createMetaProperty?: (config: any) => Promise<any>;
@@ -173,6 +174,7 @@ function Job(props: JobProps) {
         resultsProperties,
         jobProperties,
         unitEndpointsByFlowchartId,
+        unitOutput,
         createMetaProperty,
         fetchMaterials,
         renderGeneration,
@@ -706,6 +708,7 @@ function Job(props: JobProps) {
                                     createMetaProperty={createMetaProperty}
                                     jobProperties={jobProperties}
                                     unitEndpointsByFlowchartId={unitEndpointsByFlowchartId}
+                                    unitOutput={unitOutput}
                                     isDescriptionEditable={isDescriptionEditable}
                                 />
                             )}

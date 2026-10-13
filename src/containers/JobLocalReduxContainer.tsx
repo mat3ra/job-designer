@@ -4,14 +4,14 @@ import type { Job } from "@mat3ra/jode";
 import type { ResultsProps } from "@mat3ra/jove";
 import type { MetaPropertyHolder } from "@mat3ra/prode";
 import type { OrderedMaterial } from "@mat3ra/wode";
-import type { WorkflowDesignerDialogs } from "@mat3ra/workflow-designer";
+import type { WorkflowDesignerDialogs, WorkflowProps } from "@mat3ra/workflow-designer";
 import React, { memo, useCallback, useEffect, useMemo } from "react";
 
 import JobComponent from "../components/Job";
 import { JobStatus } from "../exports";
 import { useJobDesignerDeps } from "../JobDesignerContext";
 import useJobDesignerState from "../state/hook";
-import { getUnitEndpointsByFlowchartId, type JobPropertyRow } from "./utils/unitEndpoints";
+import { type JobPropertyRow, getUnitEndpointsByFlowchartId } from "./utils/unitEndpoints";
 
 interface JobDesignerUser {
     entity: { id?: string; firstName?: string; lastName?: string; email?: string };
@@ -68,6 +68,8 @@ interface JobStoreLocalReduxContainerProps {
     templates: Template[];
     resultsProperties: ResultsProps[];
     jobProperties: JobDesignerProperty[];
+    /** The open unit's output and the open/close hooks of its loading, served by the host app. */
+    unitOutput?: WorkflowProps["unitOutput"];
     createMetaProperty: (
         property: JobDesignerCreateMetaPropertyConfig,
     ) => Promise<JobDesignerMetaPropertyHolderSchema | undefined>;
@@ -136,6 +138,7 @@ function JobLocalReduxContainer({
     templates,
     resultsProperties,
     jobProperties,
+    unitOutput,
     createMetaProperty,
     fetchMaterials,
     loadWorkflowEntityById,
@@ -363,6 +366,7 @@ function JobLocalReduxContainer({
             resultsProperties={resultsProperties}
             jobProperties={jobProperties}
             unitEndpointsByFlowchartId={unitEndpointsByFlowchartId}
+            unitOutput={unitOutput}
             createMetaProperty={createMetaProperty}
             fetchMaterials={fetchMaterials}
             getRouteQueryTab={getRouteQueryTab}

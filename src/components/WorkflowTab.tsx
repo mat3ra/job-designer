@@ -20,6 +20,7 @@ export type WorkflowTabProps = Pick<
     | "createMetaProperty"
     | "jobProperties"
     | "unitEndpointsByFlowchartId"
+    | "unitOutput"
     | "jobHasParent"
     | "workflowRenderGeneration"
 > & {
@@ -64,6 +65,7 @@ export default function WorkflowTab({
     createMetaProperty,
     jobProperties,
     unitEndpointsByFlowchartId,
+    unitOutput,
     jobHasParent = false,
     isDescriptionEditable,
     workflowRenderGeneration,
@@ -134,6 +136,7 @@ export default function WorkflowTab({
                 isDescriptionEditable={isDescriptionEditable}
                 jobProperties={jobProperties}
                 unitEndpointsByFlowchartId={unitEndpointsByFlowchartId}
+                unitOutput={unitOutput}
             />
         </div>
     );
