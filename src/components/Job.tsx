@@ -66,7 +66,7 @@ export interface JobProps {
     resultsProperties: any[];
     jobProperties: any[];
     unitEndpointsByFlowchartId?: WorkflowProps["unitEndpointsByFlowchartId"];
-    unitOutputsByFlowchartId?: WorkflowProps["unitOutputsByFlowchartId"];
+    unitOutput?: WorkflowProps["unitOutput"];
     renderGeneration?: number;
     workflowDialogs: WorkflowDesignerDialogs;
     createMetaProperty?: (config: any) => Promise<any>;
@@ -174,7 +174,7 @@ function Job(props: JobProps) {
         resultsProperties,
         jobProperties,
         unitEndpointsByFlowchartId,
-        unitOutputsByFlowchartId,
+        unitOutput,
         createMetaProperty,
         fetchMaterials,
         renderGeneration,
@@ -708,7 +708,7 @@ function Job(props: JobProps) {
                                     createMetaProperty={createMetaProperty}
                                     jobProperties={jobProperties}
                                     unitEndpointsByFlowchartId={unitEndpointsByFlowchartId}
-                                    unitOutputsByFlowchartId={unitOutputsByFlowchartId}
+                                    unitOutput={unitOutput}
                                     isDescriptionEditable={isDescriptionEditable}
                                 />
                             )}
@@ -778,7 +778,9 @@ function arePropsEqual(prev: JobProps, next: JobProps) {
             next.job.status === prev.job.status &&
             // reload JobDesigner on index change when job.isInFinalStatus=1
             next.index === prev.index &&
-            next.isLoading === prev.isLoading,
+            next.isLoading === prev.isLoading &&
+            // the output of a unit is loaded after the job, once its modal opens
+            next.unitOutput === prev.unitOutput,
     );
 }
 
