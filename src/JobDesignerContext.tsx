@@ -37,7 +37,7 @@ export interface JobDesignerDeps {
     EntityHeaderComponent?: React.ComponentType<any>;
     /**
      * Returns the current URL query parameter `tab` if present, or null.
-     * In the webapp this reads from Meteor's FlowRouter (Router.current()).
+     * In the webapp this reads the router's current query.
      * In standalone mode the stub returns null so the default tab is used.
      */
     getRouteQueryTab: () => string | null;
