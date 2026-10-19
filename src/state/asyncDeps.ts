@@ -1,3 +1,5 @@
+import type { EntityReference } from "@mat3ra/jode";
+
 /**
  * Mutable dependency slots for job-designer's async job operations (save / submit / terminate).
  *
@@ -12,13 +14,14 @@
  * promise, and loading is now plain component state in `useJobDesignerState`.
  */
 export interface JobDesignerAsyncDeps {
-    accountsSelector: { currentUser: () => { getAsEntityReference: () => any } };
+    /** Reference to the signed-in user, stored as the `creator` of a saved job. */
+    getCurrentUserReference: () => EntityReference;
     createJobAPI: (configs: any[]) => Promise<any>;
     updateJobAPI: (configs: any[]) => Promise<any>;
     /**
      * Navigates away from the designer once a save completes. Takes the saved project and the
      * job's `inSet` rather than a route name/params - the webapp owns all routing concerns
-     * (route naming, query-string shape, Meteor Router/FlowRouter), job-designer just reports
+     * (route naming, query-string shape, the router itself), job-designer just reports
      * what was saved.
      */
     redirectAfterSave: (params: { project: any; inSet: any }) => void;
@@ -27,7 +30,7 @@ export interface JobDesignerAsyncDeps {
 }
 
 export const asyncDeps: JobDesignerAsyncDeps = {
-    accountsSelector: { currentUser: () => ({ getAsEntityReference: () => ({}) }) },
+    getCurrentUserReference: () => ({ _id: "" }),
     createJobAPI: async () => {},
     updateJobAPI: async () => {},
     redirectAfterSave: () => {},
@@ -40,7 +43,9 @@ export const asyncDeps: JobDesignerAsyncDeps = {
  * Called from `setDependencies.ts` before any components mount.
  */
 export function setAsyncDeps(deps: Record<string, any>) {
-    if (deps.AccountsSelector) asyncDeps.accountsSelector = deps.AccountsSelector;
+    if (deps.getCurrentUserReference) {
+        asyncDeps.getCurrentUserReference = deps.getCurrentUserReference;
+    }
     if (deps.createJob) asyncDeps.createJobAPI = deps.createJob;
     if (deps.updateJob) asyncDeps.updateJobAPI = deps.updateJob;
     if (deps.redirectAfterSave) asyncDeps.redirectAfterSave = deps.redirectAfterSave;
