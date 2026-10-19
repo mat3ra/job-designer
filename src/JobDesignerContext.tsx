@@ -55,6 +55,12 @@ export interface JobDesignerDeps {
     handleGetSignedUrlAsCSV?: (files: any[], onLoad: any) => void;
     /** Forwarded to `ResultsTab`'s `DataGridComponent` prop, typed `React.ComponentType<any>` there. */
     DataGridComponent?: React.ComponentType<any>;
+    /** Forwarded to `ResultsTab`'s `calculateFermiEnergy` prop - signature copied from its `ResultsTabProps`. */
+    calculateFermiEnergy?: (
+        subworkflow: any,
+        firstResult: any,
+        jobProperties: any[],
+    ) => number | undefined;
 }
 
 /** Stub implementations safe for standalone (no Meteor, no Redux store). */
