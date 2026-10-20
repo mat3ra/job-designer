@@ -127,7 +127,7 @@ export default function useJobDesignerState({
 
     const saveJob = useCallback(async (project: any, omitRedirect?: boolean) => {
         const { current } = stateRef;
-        const user = asyncDeps.accountsSelector.currentUser();
+        const creator = asyncDeps.getCurrentUserReference();
 
         let { materials } = current;
         if (materials.length === 0 && current.job.materials?.length) {
@@ -146,7 +146,7 @@ export default function useJobDesignerState({
             materials,
             materialsSet: current.materialsSet,
             isMultiMaterial,
-        }).map((c: any) => ({ ...c, creator: user.getAsEntityReference() }));
+        }).map((c: any) => ({ ...c, creator }));
 
         const configsToUpdate = configs.filter((c: any) => c._id || c.id);
         const configsToCreate = configs.filter((c: any) => !c._id && !c.id);
