@@ -743,6 +743,7 @@ function Job(props: JobProps) {
                                     MaterialComponent={MaterialViewerComponent}
                                     fileUtils={getFileUtils()}
                                     DataGridComponent={getInjectedDeps().DataGridComponent}
+                                    calculateFermiEnergy={getInjectedDeps().calculateFermiEnergy}
                                 />
                             )}
                             {isCurrentTabFiles && (
