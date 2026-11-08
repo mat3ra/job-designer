@@ -38,13 +38,15 @@ function applyMaterials(
         job.setNameBasedOnMaterials(materials);
     }
 
-    renderJobForDesignerState({ ...state, materials, materialsSet, index }, job, metaProperties);
-
     return {
         ...state,
         materials,
         material: materials[index],
-        job,
+        ...renderJobForDesignerState(
+            { ...state, materials, materialsSet, index },
+            job,
+            metaProperties,
+        ),
         materialsSet,
         workflowContexts,
         index,
@@ -57,8 +59,11 @@ export function applyJobUpdate(
     job: Job,
     metaProperties: MetaPropertyHolder[] = [],
 ) {
-    const nextJob = renderJobForDesignerState(state, job, metaProperties);
-    return { ...state, job: nextJob, renderGeneration: (state.renderGeneration || 0) + 1 };
+    return {
+        ...state,
+        ...renderJobForDesignerState(state, job, metaProperties),
+        renderGeneration: (state.renderGeneration || 0) + 1,
+    };
 }
 
 export function applyJobWorkflowSync(
@@ -68,10 +73,9 @@ export function applyJobWorkflowSync(
     isMultiMaterial: boolean,
     metaProperties: MetaPropertyHolder[] = [],
 ) {
-    const nextJob = renderJobForDesignerState(state, job, metaProperties);
     return {
         ...state,
-        job: nextJob,
+        ...renderJobForDesignerState(state, job, metaProperties),
         workflowContexts,
         isMultiMaterial,
         renderGeneration: (state.renderGeneration || 0) + 1,

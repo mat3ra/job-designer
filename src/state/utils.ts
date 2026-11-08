@@ -1,4 +1,3 @@
-import { showErrorAlert } from "@mat3ra/cove/dist/other/alerts";
 import type { EntityReference, Job } from "@mat3ra/jode";
 import type { MetaPropertyHolder } from "@mat3ra/prode";
 import type { OrderedMaterial } from "@mat3ra/wode";
@@ -29,7 +28,7 @@ export function renderJobForDesignerState(
     const materials = state.materials || [];
     const materialForRender = materials[state.index ?? 0] ?? materials[0];
     if (!materialForRender || !job.workflowInstance) {
-        return job;
+        return { job };
     }
 
     job.workflowInstance.updateMethodData(materials, metaProperties);
@@ -41,8 +40,9 @@ export function renderJobForDesignerState(
     try {
         job.render();
     } catch (error: any) {
-        showErrorAlert(error.message);
+        console.error("Error rendering job", error);
+        return { job, renderErrorMessage: error.message };
     }
 
-    return job;
+    return { job, renderErrorMessage: undefined };
 }
