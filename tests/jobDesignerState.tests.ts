@@ -7,11 +7,13 @@ import { ApplicationRegistry } from "@mat3ra/standata";
 import StandataDriver from "@mat3ra/standata/dist/js/StandataDriver";
 import { Workflow } from "@mat3ra/wode";
 import assert from "node:assert";
-import test from "node:test";
+import test, { mock } from "node:test";
+import notistack = require("notistack");
 
 import { initialJobDesignerState } from "../src/state/initialState";
 import {
     applyDatasetUpdate,
+    applyJobUpdate,
     applyMaterialsAdd,
     applyMaterialsRemove,
     applyMaterialsSet,
@@ -179,4 +181,22 @@ test("applyMaterialsSet resets contexts to one clone per material and returns to
     );
     assert.strictEqual(next.index, 0);
     assert.strictEqual(state.index, 1, "previous state must be untouched");
+});
+
+test("applyJobUpdate shows a render error as an alert and keeps the designer state", () => {
+    const { job, workflow } = makeJob();
+    const state = { ...initialJobDesignerState(job, [], []), materials: [material("FeO")] };
+    const enqueueSnackbar = mock.fn();
+    Object.assign(notistack, { enqueueSnackbar });
+    workflow.render = () => {
+        throw new Error('Hubbard row "Fe1" is not an element of this material');
+    };
+
+    const next = applyJobUpdate(state, job);
+
+    assert.strictEqual(
+        enqueueSnackbar.mock.calls[0].arguments[0],
+        'Hubbard row "Fe1" is not an element of this material',
+    );
+    assert.strictEqual(next.job, state.job);
 });

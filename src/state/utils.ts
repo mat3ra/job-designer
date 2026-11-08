@@ -1,3 +1,4 @@
+import { showErrorAlert } from "@mat3ra/cove/dist/other/alerts";
 import type { EntityReference, Job } from "@mat3ra/jode";
 import type { MetaPropertyHolder } from "@mat3ra/prode";
 import type { OrderedMaterial } from "@mat3ra/wode";
@@ -37,7 +38,11 @@ export function renderJobForDesignerState(
     if (state.materialsSet) {
         job.setMaterialsSet(state.materialsSet);
     }
-    job.render();
+    try {
+        job.render();
+    } catch (error: any) {
+        showErrorAlert(error.message);
+    }
 
     return job;
 }
