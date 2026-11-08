@@ -141,18 +141,18 @@ export default function useJobDesignerState({
         // ignored - `renderConfigsFromJobMaterialsWorkflows` only reads job/materials/
         // materialsSet/isMultiMaterial. Dataset data reaches the saved job through
         // `job.dataset`, which is schema-backed and survives `toJSON()`.
-        const configs = renderConfigsFromJobMaterialsWorkflows({
-            job: current.job,
-            materials,
-            materialsSet: current.materialsSet,
-            isMultiMaterial,
-        }).map((c: any) => ({ ...c, creator }));
-
-        const configsToUpdate = configs.filter((c: any) => c._id || c.id);
-        const configsToCreate = configs.filter((c: any) => !c._id && !c.id);
-
         setIsLoading(true);
         try {
+            const configs = renderConfigsFromJobMaterialsWorkflows({
+                job: current.job,
+                materials,
+                materialsSet: current.materialsSet,
+                isMultiMaterial,
+            }).map((c: any) => ({ ...c, creator }));
+
+            const configsToUpdate = configs.filter((c: any) => c._id || c.id);
+            const configsToCreate = configs.filter((c: any) => !c._id && !c.id);
+
             await Promise.all([
                 configsToCreate.length ? asyncDeps.createJobAPI(configsToCreate) : null,
                 configsToUpdate.length ? asyncDeps.updateJobAPI(configsToUpdate) : null,
