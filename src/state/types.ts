@@ -23,5 +23,6 @@ export interface JobDesignerState {
     datasetConfig: DatasetConfig;
     /** Bumped to force a re-render: `job` is mutated in place, so its identity never changes. */
     renderGeneration: number;
+    /** Set by a failed render, cleared by a clean one; the hook alerts when it changes. */
     renderErrorMessage?: string;
 }

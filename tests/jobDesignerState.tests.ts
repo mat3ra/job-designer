@@ -182,18 +182,17 @@ test("applyMaterialsSet resets contexts to one clone per material and returns to
     assert.strictEqual(state.index, 1, "previous state must be untouched");
 });
 
-test("render transitions put a render error's message in the state and clear it after a clean render", () => {
+test("render transitions put a render error's message in the state and clear it after a clean render", (t) => {
     const { job } = makeJob();
     const state = { ...initialJobDesignerState(job, [], []), materials: [material("FeO")] };
-    const { render } = Workflow.prototype;
     const message = 'Hubbard row "Fe1" is not an element of this material';
-    Workflow.prototype.render = () => {
+    const render = t.mock.method(Workflow.prototype, "render", () => {
         throw new Error(message);
-    };
+    });
 
     const failed = applyJobUpdate(state, job);
     const switched = applyMaterialsSet(state, [material("NiO")], undefined);
-    Workflow.prototype.render = render;
+    render.mock.restore();
     const rendered = applyJobUpdate(failed, job);
 
     assert.strictEqual(failed.renderErrorMessage, message);
