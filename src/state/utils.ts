@@ -3,7 +3,6 @@ import type { MetaPropertyHolder } from "@mat3ra/prode";
 import type { OrderedMaterial } from "@mat3ra/wode";
 
 import type { DatasetConfig } from "../components/DatasetTab";
-import type { JobDesignerState } from "./types";
 
 /** `job.dataset.objectStorageContainerData` (esse, uppercase keys) <-> `DatasetTab`'s `DatasetConfig`. */
 export function toDatasetConfig(job: Job): DatasetConfig {
@@ -25,7 +24,7 @@ export function renderJobForDesignerState(
     state: { materials?: OrderedMaterial[]; index?: number; materialsSet?: EntityReference },
     job: Job,
     metaProperties: MetaPropertyHolder[] = [],
-): Pick<JobDesignerState, "job" | "renderErrorMessage"> {
+) {
     const materials = state.materials || [];
     const materialForRender = materials[state.index ?? 0] ?? materials[0];
     if (!materialForRender || !job.workflowInstance) {
@@ -40,9 +39,9 @@ export function renderJobForDesignerState(
     }
     try {
         job.render();
-    } catch (error: any) {
+    } catch (error) {
         console.error("Error rendering job", error);
-        return { job, renderErrorMessage: error.message };
+        return { job, renderErrorMessage: (error as Error).message };
     }
 
     return { job, renderErrorMessage: undefined };
