@@ -6,6 +6,7 @@ import type { MetaPropertyHolder } from "@mat3ra/prode";
 import type { OrderedMaterial } from "@mat3ra/wode";
 import type { WorkflowDesignerDialogs, WorkflowProps } from "@mat3ra/workflow-designer";
 import React, { memo, useCallback, useEffect, useMemo } from "react";
+import { flushSync } from "react-dom";
 
 import JobComponent from "../components/Job";
 import { JobStatus } from "../exports";
@@ -210,12 +211,16 @@ function JobLocalReduxContainer({
             nextJob.setNameBasedOnMaterials(stateMaterials);
             nextContexts[stateIndex] = nextContexts[stateIndex] || {};
 
-            syncJobWorkflow(
-                nextJob,
-                nextContexts,
-                Boolean(nextWorkflow.isMultiMaterial),
-                metaProperties,
-            );
+            // Sync: React 18 batches an update made after an `await`, so the `persistJob` that
+            // follows (`Job` switching to the workflow tab) would still push the previous job.
+            flushSync(() => {
+                syncJobWorkflow(
+                    nextJob,
+                    nextContexts,
+                    Boolean(nextWorkflow.isMultiMaterial),
+                    metaProperties,
+                );
+            });
         },
         [
             syncJobWorkflow,
