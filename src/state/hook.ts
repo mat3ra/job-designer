@@ -3,7 +3,7 @@ import type { EntityReference, Job } from "@mat3ra/jode";
 import { renderConfigsFromJobMaterialsWorkflows } from "@mat3ra/jode";
 import type { MetaPropertyHolder } from "@mat3ra/prode";
 import type { OrderedMaterial } from "@mat3ra/wode";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { DatasetConfig } from "../components/DatasetTab";
 import { asyncDeps } from "./asyncDeps";
@@ -46,6 +46,9 @@ export default function useJobDesignerState({
         initialJobDesignerState(job, jobMaterials, metaProperties),
     );
     const [isLoading, setIsLoading] = useState(false);
+    useEffect(() => {
+        if (state.renderErrorMessage) showErrorAlert(state.renderErrorMessage);
+    }, [state.renderErrorMessage]);
 
     const updateJob = useCallback(
         (nextJob: Job, nextMetaProperties?: MetaPropertyHolder[]) =>
@@ -141,18 +144,18 @@ export default function useJobDesignerState({
         // ignored - `renderConfigsFromJobMaterialsWorkflows` only reads job/materials/
         // materialsSet/isMultiMaterial. Dataset data reaches the saved job through
         // `job.dataset`, which is schema-backed and survives `toJSON()`.
-        const configs = renderConfigsFromJobMaterialsWorkflows({
-            job: current.job,
-            materials,
-            materialsSet: current.materialsSet,
-            isMultiMaterial,
-        }).map((c: any) => ({ ...c, creator }));
-
-        const configsToUpdate = configs.filter((c: any) => c._id || c.id);
-        const configsToCreate = configs.filter((c: any) => !c._id && !c.id);
-
         setIsLoading(true);
         try {
+            const configs = renderConfigsFromJobMaterialsWorkflows({
+                job: current.job,
+                materials,
+                materialsSet: current.materialsSet,
+                isMultiMaterial,
+            }).map((c: any) => ({ ...c, creator }));
+
+            const configsToUpdate = configs.filter((c: any) => c._id || c.id);
+            const configsToCreate = configs.filter((c: any) => !c._id && !c.id);
+
             await Promise.all([
                 configsToCreate.length ? asyncDeps.createJobAPI(configsToCreate) : null,
                 configsToUpdate.length ? asyncDeps.updateJobAPI(configsToUpdate) : null,

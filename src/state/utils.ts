@@ -28,7 +28,7 @@ export function renderJobForDesignerState(
     const materials = state.materials || [];
     const materialForRender = materials[state.index ?? 0] ?? materials[0];
     if (!materialForRender || !job.workflowInstance) {
-        return job;
+        return { job };
     }
 
     job.workflowInstance.updateMethodData(materials, metaProperties);
@@ -37,7 +37,12 @@ export function renderJobForDesignerState(
     if (state.materialsSet) {
         job.setMaterialsSet(state.materialsSet);
     }
-    job.render();
+    try {
+        job.render();
+    } catch (error) {
+        console.error("Error rendering job", error);
+        return { job, renderErrorMessage: (error as Error).message };
+    }
 
-    return job;
+    return { job, renderErrorMessage: undefined };
 }

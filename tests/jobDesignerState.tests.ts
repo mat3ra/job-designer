@@ -12,6 +12,7 @@ import test from "node:test";
 import { initialJobDesignerState } from "../src/state/initialState";
 import {
     applyDatasetUpdate,
+    applyJobUpdate,
     applyMaterialsAdd,
     applyMaterialsRemove,
     applyMaterialsSet,
@@ -179,4 +180,22 @@ test("applyMaterialsSet resets contexts to one clone per material and returns to
     );
     assert.strictEqual(next.index, 0);
     assert.strictEqual(state.index, 1, "previous state must be untouched");
+});
+
+test("render transitions put a render error's message in the state and clear it after a clean render", (t) => {
+    const { job } = makeJob();
+    const state = { ...initialJobDesignerState(job, [], []), materials: [material("FeO")] };
+    const message = 'Hubbard row "Fe1" is not an element of this material';
+    const render = t.mock.method(Workflow.prototype, "render", () => {
+        throw new Error(message);
+    });
+
+    const failed = applyJobUpdate(state, job);
+    const switched = applyMaterialsSet(state, [material("NiO")], undefined);
+    render.mock.restore();
+    const rendered = applyJobUpdate(failed, job);
+
+    assert.strictEqual(failed.renderErrorMessage, message);
+    assert.strictEqual(switched.renderErrorMessage, message);
+    assert.strictEqual(rendered.renderErrorMessage, undefined);
 });
